@@ -15,6 +15,7 @@ extends Node3D
 ##   --cam=gate        camera looks at the first standing gate
 ##   --hero=X,Z        put the hero there (after any --ff)
 ##   --build=S:K[:N],… build kind K on spot S (N levels) for free
+##   --newgame         open the menu, then press New game (restart path)
 ##   --load            start from the saved run (as Continue does)
 ##   --drops           a coin, a coin stack and an ingot beside the hero
 ##   --ff-idle         during --ff the hero starts the wave, then stands aside
@@ -110,8 +111,10 @@ func _ready() -> void:
 		if _args.has(k):
 			_persist = false
 	_start(Save.load_run() if _args.has("load") else {})
-	if _persist and not _args.has("load"):
+	if (_persist and not _args.has("load")) or _args.has("newgame"):
 		_open_menu()
+	if _args.has("newgame"):  # as if New game were pressed (the menu -> game path)
+		menu.new_game.emit()
 
 
 ## Title menu over the idle map (also: Esc / Android back during a game;
@@ -190,6 +193,8 @@ func _start(save := {}) -> void:
 	_gate_fx.clear()
 	_flying_pay.clear()
 	_enemy.clear()
+	_drop_mm.clear()  # (v0.1.13 bug: kept the freed batches of the last game:
+	_drop_buf.clear()  # no gold drawn after New game / Play again)
 	_lane_labels.clear()
 	_phase_seen = ""
 	sim = Sim.from_save(save) if not save.is_empty() else Sim.new(int(_args.get("seed", str(randi() % 100000 if _persist else 1))))
