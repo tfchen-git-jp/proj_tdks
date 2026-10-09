@@ -5,8 +5,11 @@ extends RefCounted
 ## their tuning lives here; Sim applies them. Design: docs/DESIGN.md
 ## "Hero upgrades".
 
-## Kills within this distance of the hero give XP (whoever lands the hit).
+## Kills within this distance of the hero give XP (whoever lands the hit),
+## or within XP_PAST_RANGE beyond the hero's range if that is larger
+## (Long Shot): Sim.xp_radius().
 const XP_RADIUS := 8.0
+const XP_PAST_RANGE := 2.0
 ## XP for the next level: XP_BASE + XP_STEP * levels so far.
 const XP_BASE := 10
 const XP_STEP := 12
@@ -45,8 +48,9 @@ const CARDS := {
 		desc = ["+40% damage to giants", "+80% damage to giants", "+120% damage to giants"]},
 	boots = {name = "Swift Boots", v = [1.1, 1.2, 1.3],
 		desc = ["+10% move speed", "+20% move speed", "+30% move speed"]},
-	magnet = {name = "Magnet", v = [1.0, 2.0, 3.0],
-		desc = ["Pick up gold from 1 m further", "...2 m further", "...3 m further"]},
+	# Replaced Magnet (v0.1.17: coins fly to the hero at every wave's end).
+	scholar = {name = "Scholar", v = [1.2, 1.4, 1.6],
+		desc = ["+20% XP", "+40% XP", "+60% XP"]},
 	rally = {name = "Rally", v = [0.1, 0.2, 0.3],
 		desc = ["Towers within 5 m of you attack 10% faster", "...20% faster", "...30% faster"]},
 	spotter = {name = "Spotter", v = [1.0, 2.0, 3.0],

@@ -21,6 +21,7 @@ extends Node3D
 ##   --perks=ID[:T],…  start with these cards (tier T) / relics
 ##   --lightning       strike + set the crowd ablaze every 0.35 s (FX shots)
 ##   --offer[=cards]   open the picker: a relic (unless =cards), then two level-ups
+##   --preview=KIND    the hero's empty tower spot previews KIND's range
 ##   --drops           a coin, a coin stack and an ingot beside the hero
 ##   --ff-idle         during --ff the hero starts the wave, then stands aside
 ##   --noshadow        sun casts no shadows (performance / artefact tests)
@@ -88,6 +89,14 @@ var _start_pad: Node3D
 var _built := {}  # spot id -> {root, head, extra, kind, level, reload, broken}
 var _gate_fx := {}  # lane -> {dust, prev}
 var _range_ring: MeshInstance3D
+var _ring_next: MeshInstance3D  # build popup: the next level's reach
+var _ring_min: MeshInstance3D  # build popup: a mortar's dead zone
+## Empty tower spot: the tower whose range is being previewed (first tap);
+## a second tap on it builds.
+var _preview := ""
+var _preview_spot := ""
+var _xp_acc := 0.0  # XP gained since the last "+N XP" pop-up
+var _xp_t := 0.0
 var _lane_labels: Array[Label3D] = []
 var _cam_target := Vector3.ZERO
 var _shake := 0.0
@@ -281,6 +290,9 @@ func _start(save := {}) -> void:
 		var xz := String(_args.hero).split(",")
 		sim.hero_pos = Vector3(float(xz[0]), 0.0, float(xz[1]))
 		sim.hero_prev = sim.hero_pos
+	if _args.has("preview"):  # as if that tower were tapped once on this spot
+		_preview_spot = String(sim.spot_under_hero().get("id", ""))
+		_preview = String(_args.preview)
 	if _args.has("drops"):  # one of each gold tier beside the hero
 		for k in 3:
 			var q := sim.hero_pos + Vector3(-1.2 + k * 1.2, 0, 2.6)
@@ -288,6 +300,7 @@ func _start(save := {}) -> void:
 			sim.drop_val.push_back([1, 5, 20][k])
 			sim.drop_fly.push_back(-1.0)
 			sim.drop_from.push_back(q)
+			sim.drop_dur.push_back(Sim.FLY_TIME)
 	_cam_target = _cam_goal()
 	_sync_view(0.0)
 	if not _args.has("ff"):
@@ -366,6 +379,12 @@ func _build_scene() -> void:
 	_range_ring = _ring(1.0, Color(0.5, 0.85, 1.0, 0.5), 0.015)
 	_range_ring.visible = false
 	add_child(_range_ring)
+	_ring_next = _ring(1.0, Color(1.0, 0.85, 0.35, 0.45), 0.012)
+	_ring_next.visible = false
+	add_child(_ring_next)
+	_ring_min = _ring(1.0, Color(1.0, 0.35, 0.3, 0.45), 0.03)
+	_ring_min.visible = false
+	add_child(_ring_min)
 	for ln in Level.LANES.size():
 		var l := Label3D.new()
 		l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -666,18 +685,19 @@ func _sync_menu() -> void:
 		hud.show_countdown(0)
 		hud.hide_cards()
 		hud.hide_menu()
+		_hide_rings()
 		_ring_near_hero()
 		return
 	if not sim.offer.is_empty():
 		hud.hide_menu()
 		hud.show_countdown(0)
-		_range_ring.visible = false
+		_hide_rings()
 		hud.show_cards(sim.offer_view(), sim.offer_relic, sim.pending_levels + sim.pending_relics,
 			sim.reroll_cost(), sim.coins >= sim.reroll_cost())
 		return
 	hud.hide_cards()
 	if sim.at_start_spot():
-		_range_ring.visible = false
+		_hide_rings()
 		var left := ceili(Level.START_COUNTDOWN - sim.start_t)
 		if left != _count_seen:
 			_count_seen = left
@@ -691,32 +711,95 @@ func _sync_menu() -> void:
 	var spot := sim.spot_under_hero()
 	if spot.is_empty():
 		hud.hide_menu()
-		_range_ring.visible = false
+		_hide_rings()
 		return
 	var b: Dictionary = sim.buildings.get(spot.id, {})
+	if _preview_spot != spot.id:
+		_preview = ""
+		_preview_spot = spot.id
 	var opts := []
 	for o in sim.options(spot):
 		var verb := "Upgrade to Lv %d" % (o.level + 1) if o.upgrade else String(o.name)
-		opts.push_back({id = o.kind, text = "  %s   -   %d gold" % [verb, o.cost], ok = o.ok})
+		var ok: bool = o.ok
+		if spot.kind == "tower" and b.is_empty():
+			# Every tower can be previewed, affordable or not.
+			ok = o.ok or o.kind != _preview
+			if o.kind == _preview:
+				verb = "> Build %s (tap again)" % o.name if o.ok else "%s (need more gold)" % o.name
+		opts.push_back({id = o.kind, text = "  %s   -   %d gold" % [verb, o.cost], ok = ok})
 	var title := ""
 	var desc := ""
 	if b.is_empty():
 		title = {tower = "Tower spot", eco = "Economy plot", gate = "Gate spot"}[spot.kind]
-		desc = {tower = "Pick what to build.", eco = "Farm: steady gold. Bank: interest on the gold you save.",
+		desc = {tower = "Tap a tower to see its range, tap again to build.",
+			eco = "Farm: steady gold. Bank: interest on the gold you save.",
 			gate = String(Level.BUILDINGS.gate.desc)}[spot.kind]
+		if _preview != "":
+			desc = "%s: %s" % [Level.BUILDINGS[_preview].name, _stats_text(_preview, 0)]
 	else:
 		title = "%s  Lv %d" % [Level.BUILDINGS[b.kind].name, b.level + 1]
 		desc = _stats_text(b.kind, b.level)
 		if opts.is_empty():
 			desc += "\nFully upgraded."
+		elif Level.stats(b.kind, b.level).has("range"):
+			desc += "\nGold ring: Lv %d's reach" % (b.level + 2)
 	hud.show_menu(spot.id, title, desc, opts)
-	# Show the reach of what stands here.
-	var r := 0.0
-	if not b.is_empty() and Level.stats(b.kind, b.level).has("range"):
-		r = float(Level.stats(b.kind, b.level).range)
-	_range_ring.visible = r > 0.0
-	_range_ring.position = spot.pos
-	_range_ring.scale = Vector3(r, 1, r)
+	# Rings: the reach of what stands here (or is being previewed), the next
+	# level's reach in gold, a mortar's dead zone in red.
+	var kind: String = _preview if b.is_empty() else String(b.kind)
+	var lv: int = 0 if b.is_empty() else int(b.level)
+	_hide_rings()
+	if kind == "" or not Level.stats(kind, lv).has("range"):
+		return
+	var st := Level.stats(kind, lv)
+	_show_ring(_range_ring, spot.pos, float(st.range))
+	if not b.is_empty() and lv + 1 < Level.BUILDINGS[kind].levels.size():
+		_show_ring(_ring_next, spot.pos, float(Level.stats(kind, lv + 1).range))
+	if st.has("min_range"):
+		_show_ring(_ring_min, spot.pos, float(st.min_range))
+
+
+## "+N XP" rising over the hero's head: kills that show nothing were out of
+## XP range. Gains within XP_POP_GAP s are summed into one number.
+const XP_POP_GAP := 0.25
+
+
+func _xp_popups(delta: float) -> void:
+	_xp_t -= delta
+	if _xp_acc < 0.5 or _xp_t > 0.0:
+		return
+	var n := roundi(_xp_acc)
+	_xp_acc -= n
+	_xp_t = XP_POP_GAP
+	if _fast_forwarding or n <= 0:
+		return
+	var l := Label3D.new()
+	l.text = "+%d XP" % n
+	l.font_size = 52 + mini(n, 12) * 3
+	l.outline_size = 12
+	l.pixel_size = 0.006
+	l.modulate = Color(0.85, 0.65, 1.0)
+	l.outline_modulate = Color(0.15, 0.05, 0.3)
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.no_depth_test = true
+	l.position = Vector3(randf_range(-0.25, 0.25), 2.3, 0)
+	_hero.add_child(l)  # follows the hero as it rises
+	var tw := l.create_tween().set_parallel()
+	tw.tween_property(l, "position:y", 3.3, 0.9).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tw.tween_property(l, "modulate:a", 0.0, 0.5).set_delay(0.4)
+	tw.chain().tween_callback(l.queue_free)
+
+
+func _hide_rings() -> void:
+	_range_ring.visible = false
+	_ring_next.visible = false
+	_ring_min.visible = false
+
+
+func _show_ring(ring: MeshInstance3D, at: Vector3, r: float) -> void:
+	ring.visible = true
+	ring.position = at
+	ring.scale = Vector3(r, 1, r)
 
 
 func _stats_text(kind: String, level: int) -> String:
@@ -754,6 +837,12 @@ func _preview_text(w: int) -> String:
 
 func _on_menu_pick(id: String) -> void:
 	var spot := sim.spot_under_hero()
+	# Empty tower spot: the first tap previews the tower's range.
+	if not spot.is_empty() and spot.kind == "tower" and not sim.buildings.has(spot.id) and id != _preview:
+		_preview = id
+		sfx.play("ui_click", -6.0, 1.2)
+		return
+	_preview = ""
 	if not spot.is_empty() and sim.buy(spot.id, id):
 		sfx.play("ui_click")
 	else:
@@ -789,6 +878,10 @@ func _apply_events() -> void:
 					fx.lightning(e.points)
 			"volley":
 				sfx.play("arrow_shot", -2.0, 1.3)
+			"xp":
+				_xp_acc += float(e.n)
+			"vacuum":
+				sfx.play("coin_pay", 0.0, 1.3)
 			"level_up":
 				sfx.play("upgrade", 0.0, 1.2)
 				if not _fast_forwarding:
@@ -1022,6 +1115,7 @@ func _sync_view(delta: float) -> void:
 	_draw_pay(delta)
 	t0 = _t("drops/proj/pay", t0)
 	_sync_buildings(delta)
+	_xp_popups(delta)
 	_sync_phase()
 	t0 = _t("buildings/phase", t0)
 

@@ -22,7 +22,7 @@ const PLAN := [
 
 ## Card / relic preferences, best first (it never rerolls).
 const CARD_PRIORITY := ["dmg", "aspd", "multi", "ricochet", "fire", "crit", "slayer", "pierce", "blast",
-	"range", "rally", "frost", "engineer", "spotter", "bounty", "boots", "magnet"]
+	"range", "rally", "frost", "engineer", "spotter", "bounty", "boots", "scholar"]
 const RELIC_PRIORITY := ["twin", "thunder", "volley", "wisp", "laststand", "midas"]
 
 var sim: Sim

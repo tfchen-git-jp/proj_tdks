@@ -10,8 +10,10 @@ extends RefCounted
 ## in; no building). Clearing the last wave (Level.WAVES) wins.
 
 const DROP_CAP := 1400
-## Coins land at most this far outside Level.BOUNDS (< the magnet radius).
-const COIN_AREA := 1.2
+## The end-of-wave sweep: every coin left flies to the hero, longer
+## flights taking longer (VACUUM_BASE + distance / VACUUM_SPEED).
+const VACUUM_BASE := 0.35
+const VACUUM_SPEED := 24.0
 const FLY_TIME := 0.22  # coin flight to the hero, s
 ## Where shots leave from, above the ground (m).
 const MUZZLE := {hero = 0.9, archer = 2.3, ballista = 2.2, mortar = 1.7}
@@ -42,7 +44,7 @@ var _hero_cd := 0.0
 
 ## Hero upgrades (Perks). Kills near the hero give xp; each level banks a
 ## pick, offered after the wave (and a relic after Perks.RELIC_WAVES).
-var xp := 0
+var xp := 0.0
 var level := 0  # level-ups so far
 var pending_levels := 0  # level-ups not yet offered
 var pending_relics := 0
@@ -69,6 +71,7 @@ var drop_pos := PackedVector3Array()
 var drop_val := PackedInt32Array()
 var drop_fly := PackedFloat32Array()
 var drop_from := PackedVector3Array()
+var drop_dur := PackedFloat32Array()  # flight time to the hero, s
 
 ## Things that happened this step, for sound and effects:
 ## shot / hit / boom / pulse / kill / pay / built / gate_broken /
@@ -180,13 +183,18 @@ func _end_wave() -> void:
 		if b.kind == "gate":  # repaired for the next wave
 			b.broken = false
 			_raise_gate(b)
-	# Interest on what is held now, before the farms pay.
-	var interest := mini(floori(coins * Level.BANK_RATE), cap)
+	# Interest on what is held now (coins still on the ground included: they
+	# are swept to the hero just below), before the farms pay.
+	var held := coins
+	for v in drop_val:
+		held += v
+	var interest := mini(floori(held * Level.BANK_RATE), cap)
 	coins += income + interest
 	if "laststand" in relics:
 		base_hp = minf(Level.BASE_HP, base_hp + Level.BASE_HP * Perks.LASTSTAND_HEAL)
 		horde.keep_hp = base_hp
 	events.push_back({type = "wave_cleared", wave = wave, income = income, interest = interest})
+	_vacuum()
 	if (wave + 1) in Perks.RELIC_WAVES:
 		pending_relics += 1
 	wave += 1
@@ -195,6 +203,19 @@ func _end_wave() -> void:
 		state = "win"
 		return
 	_next_offer()
+
+
+## Wave over: every coin still lying around flies to the hero (no point
+## sweeping them by hand: gold can only be spent in the build phase).
+func _vacuum() -> void:
+	for i in drop_pos.size():
+		if drop_fly[i] >= 0.0:
+			continue
+		drop_fly[i] = 0.0
+		drop_from[i] = drop_pos[i]
+		drop_dur[i] = VACUUM_BASE + _flat_dist(drop_pos[i], hero_pos) / VACUUM_SPEED + _rng.randf_range(0.0, 0.3)
+	if not drop_pos.is_empty():
+		events.push_back({type = "vacuum", n = drop_pos.size()})
 
 
 # --- hero upgrades ------------------------------------------------------------
@@ -291,8 +312,16 @@ func reroll() -> bool:
 	return true
 
 
-func _gain_xp(n: int) -> void:
+## Kills within this of the hero give XP: Perks.XP_RADIUS, or a little
+## past the hero's shooting range when Long Shot takes that further.
+func xp_radius() -> float:
+	return maxf(Perks.XP_RADIUS, hero_range() + Perks.XP_PAST_RANGE)
+
+
+func _gain_xp(n: float) -> void:
+	n *= pv("scholar", 1.0)
 	xp += n
+	events.push_back({type = "xp", n = n})
 	while xp >= Perks.xp_needed(level):
 		xp -= Perks.xp_needed(level)
 		level += 1
@@ -337,11 +366,12 @@ func to_save() -> Dictionary:
 	for id in buildings:
 		var b: Dictionary = buildings[id]
 		bl.push_back([id, b.kind, b.level])
-	var dl := []
-	for i in drop_pos.size():
-		dl.push_back([drop_pos[i].x, drop_pos[i].z, drop_val[i]])
-	return {v = SAVE_VERSION, seed = seed_value, wave = wave, coins = coins, collected = collected,
-		base_hp = base_hp, time = time, hero = [hero_pos.x, hero_pos.z], buildings = bl, drops = dl,
+	# Build phase: every coin is on its way to the hero (_vacuum): bank it.
+	var held := coins
+	for v in drop_val:
+		held += v
+	return {v = SAVE_VERSION, seed = seed_value, wave = wave, coins = held, collected = collected,
+		base_hp = base_hp, time = time, hero = [hero_pos.x, hero_pos.z], buildings = bl,
 		rng = str(_rng.state), hrng = str(horde._rng.state), killed = horde.killed,
 		xp = xp, level = level, pending_levels = pending_levels, pending_relics = pending_relics,
 		perks = perks, relics = relics, offer = offer, offer_relic = offer_relic, rerolls = rerolls,
@@ -362,19 +392,33 @@ static func from_save(d: Dictionary) -> Sim:
 	s.horde.killed = int(d.killed)
 	s._rng.state = int(d.rng)
 	s.horde._rng.state = int(d.hrng)
-	s.xp = int(d.xp)
+	s.xp = float(d.xp)
 	s.level = int(d.level)
 	s.pending_levels = int(d.pending_levels)
 	s.pending_relics = int(d.pending_relics)
+	# Cards / relics retired since the save (Magnet, v0.1.17) are dropped;
+	# an offer that showed one is rolled again.
 	for id in d.perks:
-		s.perks[String(id)] = int(d.perks[id])
-	s.relics = Array(d.relics)
+		if Perks.CARDS.has(String(id)):
+			s.perks[String(id)] = int(d.perks[id])
+	for id in d.relics:
+		if Perks.RELICS.has(String(id)):
+			s.relics.push_back(String(id))
 	s.offer = Array(d.offer)
 	s.offer_relic = bool(d.offer_relic)
 	s.rerolls = int(d.rerolls)
 	s._card_rng.state = int(d.crng)
 	s._shots = int(d.shots)
 	s._near_kills = int(d.near_kills)
+	for id in s.offer:
+		if not (Perks.RELICS if s.offer_relic else Perks.CARDS).has(String(id)):
+			if s.offer_relic:
+				s.pending_relics += 1
+			else:
+				s.pending_levels += 1
+			s.offer = []
+			s._next_offer()
+			break
 	for e in d.buildings:
 		for sp in Level.SPOTS:
 			if sp.id == e[0]:
@@ -383,12 +427,6 @@ static func from_save(d: Dictionary) -> Sim:
 				s.buildings[sp.id] = b
 				if b.kind == "gate":
 					s._raise_gate(b)
-	for e in d.drops:
-		var q := Vector3(float(e[0]), 0.0, float(e[1]))
-		s.drop_pos.push_back(q)
-		s.drop_val.push_back(int(e[2]))
-		s.drop_fly.push_back(-1.0)
-		s.drop_from.push_back(q)
 	return s
 
 
@@ -811,8 +849,8 @@ func _drops_from_deaths() -> void:
 		var gold := int(Level.ENEMIES[death.kind].gold)
 		var spread := 0.35 if death.kind != Level.BRUTE else 1.1
 		var pieces := gold_pieces(gold)
-		if _flat_dist(death.pos, hero_pos) <= Perks.XP_RADIUS:
-			_gain_xp(int(Level.ENEMIES[death.kind].xp))
+		if _flat_dist(death.pos, hero_pos) <= xp_radius():
+			_gain_xp(float(Level.ENEMIES[death.kind].xp))
 			if _bounty_left > 0:
 				_bounty_left -= 1
 				pieces.push_back(1)
@@ -826,14 +864,11 @@ func _drops_from_deaths() -> void:
 			if drop_pos.size() >= DROP_CAP:
 				drop_val[_rng.randi() % drop_val.size()] += v
 				continue
-			# Out of the magnet's reach from the walkable area: nudge it in.
-			var area := Level.BOUNDS.grow(COIN_AREA)
-			p.x = clampf(p.x, area.position.x, minf(area.end.x, Level.CLIFF_X - 0.4 + COIN_AREA))
-			p.z = clampf(p.z, area.position.y, area.end.y)
 			drop_pos.push_back(p)
 			drop_val.push_back(v)
 			drop_fly.push_back(-1.0)
 			drop_from.push_back(p)
+			drop_dur.push_back(FLY_TIME)
 	horde.deaths.clear()
 
 
@@ -849,7 +884,7 @@ static func gold_pieces(gold: int) -> Array[int]:
 
 
 func _drops_step(dt: float) -> void:
-	var mg := float(Level.HERO.magnet) + pv("magnet", 0.0)
+	var mg := float(Level.HERO.magnet)
 	var r2 := mg * mg
 	var i := 0
 	while i < drop_pos.size():
@@ -861,7 +896,7 @@ func _drops_step(dt: float) -> void:
 			i += 1
 			continue
 		drop_fly[i] += dt
-		var t := drop_fly[i] / FLY_TIME
+		var t := drop_fly[i] / drop_dur[i]
 		if t >= 1.0:
 			coins += drop_val[i]
 			collected += drop_val[i]
@@ -869,7 +904,7 @@ func _drops_step(dt: float) -> void:
 			_remove_drop(i)
 			continue
 		var p := drop_from[i].lerp(hero_pos + Vector3(0, 0.8, 0), t)
-		p.y += sin(t * PI) * 0.9
+		p.y += sin(t * PI) * (0.9 + 1.5 * (drop_dur[i] - FLY_TIME))  # long flights arc higher
 		drop_pos[i] = p
 		i += 1
 
@@ -877,5 +912,5 @@ func _drops_step(dt: float) -> void:
 func _remove_drop(i: int) -> void:
 	var last := drop_pos.size() - 1
 	drop_pos[i] = drop_pos[last]; drop_val[i] = drop_val[last]
-	drop_fly[i] = drop_fly[last]; drop_from[i] = drop_from[last]
-	drop_pos.resize(last); drop_val.resize(last); drop_fly.resize(last); drop_from.resize(last)
+	drop_fly[i] = drop_fly[last]; drop_from[i] = drop_from[last]; drop_dur[i] = drop_dur[last]
+	drop_pos.resize(last); drop_val.resize(last); drop_fly.resize(last); drop_from.resize(last); drop_dur.resize(last)

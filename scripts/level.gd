@@ -30,8 +30,8 @@ const CLIFF_X := 7.6  # east gorge edge
 ## Enemies become targetable this far OUTSIDE the hero's walkable area
 ## (the "start line", marked on each road). Was 1.5 m inside it until
 ## v0.1.15: at the bottom of the centre lane enemies stood well inside the
-## hero's range circle unhittable (user, 2026-10-09). Coins that would
-## land out of the magnet's reach are nudged in (Sim.COIN_AREA).
+## hero's range circle unhittable (user, 2026-10-09). Coins left anywhere
+## fly to the hero when the wave ends (Sim._vacuum).
 const START_LINE_OUT := 2.0
 
 const HERO := {

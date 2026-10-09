@@ -17,15 +17,17 @@ packs. Not published anywhere.
 ## How to play
 
 - **Move** by dragging anywhere (a floating joystick; on PC: mouse drag or WASD).
-  The hero shoots the nearest enemy by himself, also while running. Walk over
-  dropped gold (coins, stacks, ingots) to collect it.
+  The hero shoots the nearest enemy by himself, also while running. Dropped
+  gold (coins, stacks, ingots) is yours: walk over it, and when the wave
+  ends every coin left flies to you.
 - **Build phase:** step onto a spot and its menu pops up. **Tower spots** take
-  any tower (4 levels, shown by a I-IV badge), **gate spots** wall off a lane,
+  any tower (tap one to see its range, tap again to build) (4 levels, shown by a I-IV badge), **gate spots** wall off a lane,
   **gold plots** take a farm or a bank. Stand on the red **START** pad for 5 s
   to begin the next wave; walk off to cancel.
 - **Attack phase:** three lanes march on the keep. Enemies batter gates, then
   the keep itself; lose when the keep's HP runs out, win by clearing 10 waves.
-- **Hero upgrades:** kills near the hero (his or a tower's) give XP. After each
+- **Hero upgrades:** kills near the hero (his or a tower's) give XP, shown
+  as "+N XP" over his head. After each
   wave, pick 1 of 3 cards per level (drawing one you own raises its tier;
   reroll for gold), plus a relic after waves 3, 6 and 9: lightning, a spirit
   wisp, twin crossbow...

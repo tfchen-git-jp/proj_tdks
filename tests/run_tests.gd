@@ -305,10 +305,32 @@ func _coins() -> void:
 	s.drop_val.push_back(4)
 	s.drop_fly.push_back(-1.0)
 	s.drop_from.push_back(Vector3.ZERO)
+	s.drop_dur.push_back(SimS.FLY_TIME)
 	var before: int = s.coins
 	for i in 30:
 		s.step(DT, Vector2.ZERO)
 	_ok(s.coins == before + 4, "magnet collects a nearby coin")
+	# Wave end: every coin on the map flies to the hero, however far.
+	var v = SimS.new(7)
+	for k in 5:
+		var q := Vector3(-12.0 + k * 4.0, 0, 40.0)  # beyond the map's bottom
+		v.drop_pos.push_back(q)
+		v.drop_val.push_back(3)
+		v.drop_fly.push_back(-1.0)
+		v.drop_from.push_back(q)
+		v.drop_dur.push_back(SimS.FLY_TIME)
+	var c0: int = v.coins
+	var saved: int = v.to_save().coins
+	v.phase = "attack"
+	v.wave = 0
+	v._spawned.clear()
+	for g in Level.WAVES[0]:
+		v._spawned.push_back(int(g.count))
+	for k in 60 * 4:
+		v.step(DT, Vector2.ZERO)
+	_ok(v.phase == "build" and v.drop_pos.is_empty() and v.coins == c0 + 15,
+		"after the wave every coin is swept to the hero (+%d)" % (v.coins - c0))
+	_ok(saved == c0 + 15, "a save banks the coins still lying around")
 
 
 ## A run survives to_save() -> JSON -> from_save(), and the score order is
@@ -388,6 +410,23 @@ func _perks() -> void:
 	s.pending_levels = 1
 	s._next_offer()
 	_ok(not card in s.offer, "a maxed card leaves the pool")
+	# XP range: 8 m, or 2 m past a Long Shot range; Scholar adds XP.
+	var x = SimS.new(24)
+	_ok(x.xp_radius() == Perks.XP_RADIUS, "XP radius is %.0f m" % x.xp_radius())
+	x.perks.range = 3
+	_ok(x.xp_radius() == float(Level.HERO.range) + 3.0 + Perks.XP_PAST_RANGE,
+		"Long Shot III pushes it to %.0f m" % x.xp_radius())
+	x.perks.scholar = 2
+	x._gain_xp(5.0)
+	_ok(is_equal_approx(x.xp, 7.0), "Scholar II: 5 XP -> %.1f" % x.xp)
+	# A save from before Magnet was retired still loads.
+	var old_save: Dictionary = JSON.parse_string(JSON.stringify(x.to_save()))
+	old_save.perks["magnet"] = 2
+	old_save.offer = ["magnet", "dmg", "aspd"]
+	old_save.offer_relic = false
+	var y = SimS.from_save(old_save)
+	_ok(not y.perks.has("magnet") and y.offer.size() == 3 and not "magnet" in y.offer,
+		"an old save's retired Magnet card is dropped and its offer re-rolled")
 	# Fire Bolts: burning keeps hurting, and a burn kill drops gold.
 	var f = SimS.new(22)
 	var g: int = _place(f, Level.GRUNT, 1, 30.0)

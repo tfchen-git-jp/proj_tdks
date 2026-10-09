@@ -10,14 +10,16 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.1.16)
+## The game today (v0.1.17)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
   also while moving (legs run/strafe/backpedal, upper body keeps aiming);
   with no enemy in reach it runs relaxed, crossbow carried (Running_A on
   the whole body, crossbow turned Models.HERO_CARRY_PITCH in the hand).
-  Walks over dropped gold to collect it (magnet radius).
+  Walks over dropped gold to collect it (magnet radius); when a wave ends
+  every coin left flies to the hero (Sim._vacuum; user + tester: gold is
+  only spent in the build phase, so sweeping by hand was pointless).
 - **Phases:** BUILD (no enemies; walk onto a spot and its popup appears;
   stand on the red START pad by the keep: it shows the next wave per lane
   and counts down Level.START_COUNTDOWN (5 s, full-screen digit); walking
@@ -25,12 +27,15 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   Enemies that reach the keep stand at it and hit it with their dps
   (queueing like at a gate) until killed; keep HP Level.BASE_HP (600).
 - **Hero upgrades (rogue-like, scripts/perks.gd):** kills within
-  Perks.XP_RADIUS (8 m) of the hero give xp (ENEMIES `xp`), whoever kills.
+  Sim.xp_radius() of the hero give xp (ENEMIES `xp`), whoever kills: 8 m,
+  or hero range + 2 m with Long Shot (up to 11 m). Each gain floats as
+  "+N XP" over the hero (no pop-up = out of range).
   Level-ups are banked during a wave; after it the picker (hud.show_cards,
   modal) offers 3 cards per level, a relic first after waves 3/6/9; queued
   picks follow one another and the start countdown waits for them. 17
   cards x 3 tiers (drawing an owned one = next tier, maxed ones leave the
-  pool), 6 relics. Reroll 10, 20, 30... gold. Cards have their own dice
+  pool; Scholar +XP replaced Magnet in v0.1.17), 6 relics. Reroll 10,
+  20, 30... gold. Cards have their own dice
   (Sim._card_rng, saved). Visuals in scripts/fx.gd (+ shaders/flame,
   glow). Enemies attack only walls (user). No permanent unlocks until
   there are 50+ waves or several maps (user).
@@ -58,16 +63,19 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   attack faster), Farm (fixed gold after each wave), Bank (10% interest on
   held gold after each wave; the rate never stacks, each bank adds
   10/18/28 to the cap), Gate (blocks its lane, has HP, repaired after
-  each wave). Range ring: in the build popup; during an attack for the
-  tower the hero stands next to (main.RING_NEAR).
+  each wave). Range rings: on an empty tower spot the first tap on a
+  tower previews its reach (blue; a mortar's dead zone red), the second
+  builds; a built tower shows its reach and the next level's (gold).
+  During an attack: the tower the hero stands next to (main.RING_NEAR).
+  Level-1 reach: archer 6, ballista 8, mortar 2.5-7, frost 3.8, banner
+  4.5 m.
 - **Enemies:** grunt (red), armored (grey), runner (yellow, fast), brute
   (giant, KayKit Barbarian, red HP bar). HP x Level.wave_hp(w) = 1 +
   0.25 w + 0.05 w^2 (Horde.max_hp keeps it for the bars); gold per kill
   doesn't grow. Drops: coins (1), coin stacks (5), ingots (20)
   (Sim.gold_pieces). They walk in from beyond the map and are untargetable
   until their lane's start line (red dashes on the road,
-  Level.START_LINE_OUT = 2 m outside the hero's walkable area); coins that
-  would land beyond magnet reach are nudged in (Sim.COIN_AREA). At a
+  Level.START_LINE_OUT = 2 m outside the hero's walkable area). At a
   standing gate they queue: the front rank attacks, the rest wait and
   step up; giants shove small ones aside and a second giant hits over the
   first one's shoulder.
@@ -190,6 +198,7 @@ Game args (after `--`): `--auto --ff=SEC --speed=X (0 = freeze) --seed=N
 --shot=PATH --shot-delay=S --bench=S --zoom=X --cam=X,Z|gate --hero=X,Z
 --noshadow --mute --notree --drops --ff-idle --build=S:K[:N],... --load
 --page=scores|credits --play --newgame --perks=ID[:T],... --offer[=cards]
+--preview=KIND
 --lightning --ask --demo=anim|hero|clips --clips=A,B
 --bowrot=X,Y,Z` (main.gd header explains each). `--demo=clips` (raw
 hero clips side by side) is how the carry pitch was picked; render it
@@ -285,6 +294,10 @@ Windows build, never in WSL.
   to 2 m outside the walkable area and marked (user: enemies "in range"
   at the bottom of the centre lane weren't shot); score = keep % x 10 +
   gold for ties on waves.
+- v0.1.17 (tester feedback): end-of-wave coin sweep (bank interest counts
+  coins still on the ground; saves bank them), Magnet -> Scholar, XP
+  radius follows Long Shot, "+N XP" pop-ups, two-tap tower range preview,
+  next-level ring.
 - MultiMesh bounds go stale when the buffer is written directly: a close
   camera culled the whole crowd; `custom_aabb` = whole map.
 - Kenney/KayKit building meshes shadow-acne at any bias: they don't

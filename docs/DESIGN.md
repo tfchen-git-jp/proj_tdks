@@ -14,9 +14,10 @@ keeps the decisions, the original analysis and what is left to build.
   attack. A level = 10 waves.
 - **Build popup appears when the hero stands on a spot** (no tapping the
   map); tap a button in it to build or upgrade.
-- **Keep walking over dropped gold.** Enemies become targetable at a start
-  line just outside the hero's walkable area (marked on the road); coins
-  that would land out of reach are nudged in.
+- **Gold:** walk over dropped gold during a wave, and when the wave ends
+  every coin left flies to the hero (gold is only spent in the build
+  phase). Enemies become targetable at a start line just outside the
+  hero's walkable area (marked on the road).
 - Each gate gets its own tower spot beside its queue; unbuilt gate pads
   show a see-through gate across their lane.
 - Upgrades are linear (towers 4 levels, farm / bank / gate 3), not 2-way
