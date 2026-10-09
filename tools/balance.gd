@@ -1,0 +1,48 @@
+extends SceneTree
+## Headless balance run: the bot plays level 1 at a fixed 60 Hz step.
+##   godot --headless --path . --script res://tools/balance.gd -- [--seed=N] [--idle]
+## --idle: the hero never moves or builds: how far does nothing get?
+
+const SimS := preload("res://scripts/sim.gd")
+const BotS := preload("res://scripts/bot.gd")
+
+
+func _init() -> void:
+	var seed_value := 1
+	var idle := false
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--seed="):
+			seed_value = int(a.get_slice("=", 1))
+		elif a == "--idle":
+			idle = true
+	var sim = SimS.new(seed_value)
+	var bot = BotS.new(sim)
+	var dt := 1.0 / 60.0
+	var peak := 0
+	var t0 := Time.get_ticks_msec()
+	var wave_peak := 0
+	while sim.state == "play" and sim.time < 1500.0:
+		if idle:
+			sim.step(dt, Vector2.ZERO)
+			if sim.phase == "build":
+				sim.start_wave()
+		else:
+			sim.step(dt, bot.move())
+		peak = maxi(peak, sim.horde.count())
+		wave_peak = maxi(wave_peak, sim.horde.count())
+		for e in sim.events:
+			match String(e.type):
+				"built":
+					print("  %6.1fs  built %s L%d at %s (-%d, %d left)" % [sim.time, e.kind, e.level + 1, e.spot.id, e.cost, sim.coins])
+				"wave_start":
+					print("%6.1fs WAVE %d starts  coins=%d keep=%d" % [sim.time, e.wave + 1, sim.coins, sim.base_hp])
+					wave_peak = 0
+				"wave_cleared":
+					print("%6.1fs wave %d cleared  income=%d coins=%d keep=%d/%d peak=%d leaked_total=%d" % [
+						sim.time, e.wave + 1, e.income, sim.coins, sim.base_hp, Level.BASE_HP, wave_peak, sim.horde.escaped])
+				"gate_broken":
+					print("  %6.1fs  gate broken on %s" % [sim.time, Level.LANE_NAMES[e.lane]])
+	print("RESULT %s at %.1fs wave=%d/%d keep=%d/%d killed=%d escaped=%d peak=%d (%d ms)" % [
+		sim.state, sim.time, sim.wave + (1 if sim.state != "win" else 0), Level.WAVES.size(), sim.base_hp, Level.BASE_HP,
+		sim.horde.killed, sim.horde.escaped, peak, Time.get_ticks_msec() - t0])
+	quit()

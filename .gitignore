@@ -1,0 +1,24 @@
+# Godot editor/import cache
+.godot/
+*.import.bak
+
+# Builds (deployed to D:\wsl_scratch\proj_tdks, not committed)
+dist/
+*.apk
+*.apk.idsig
+*.exe
+*.keystore
+
+# Dev screenshots and build logs
+renders/
+.logs/
+
+# Third-party reference footage and the BGM source: local only
+ref/*
+!ref/.gdignore
+
+# Raw downloaded asset packs (755 MB); what the game uses is in assets/
+assets_in/
+
+__pycache__/
+*.blend1

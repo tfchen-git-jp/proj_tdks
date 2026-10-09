@@ -1,0 +1,60 @@
+Sound credits -- every file in assets/sfx, its source and licence.
+Built by tools/sfx_build.py from the downloads in assets_in/sfx_src/<pack>/
+(trimmed, pitched, layered, mono 44.1 kHz Ogg Vorbis, peak-normalised).
+Everything is CC0 except wave_start.ogg (CC-BY 4.0: credit "Kat" in the game's credits).
+
+Kenney packs -- author Kenney (www.kenney.nl), licence CC0 1.0
+  RPG Audio        https://kenney.nl/assets/rpg-audio
+  Impact Sounds    https://kenney.nl/assets/impact-sounds
+  Interface Sounds https://kenney.nl/assets/interface-sounds
+  Casino Audio     https://kenney.nl/assets/casino-audio
+  Sci-fi Sounds    https://kenney.nl/assets/sci-fi-sounds
+  Music Jingles    https://kenney.nl/assets/music-jingles
+  (Digital Audio and UI Audio were downloaded too, unused so far.)
+
+OpenGameArt sources
+  [bow]      "Battle Sound Effects" (Bow.wav), artisticdude, CC0 (multi-licensed CC0/CC-BY/CC-BY-SA)
+             https://opengameart.org/content/battle-sound-effects
+  [tiny]     "Fantasy Sound Effects (Tinysized SFX)", Vehicle (Jan Schupke), CC0
+             https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx
+  [freeze]   "Freeze Spell" (freeze.wav), artisticdude, CC0
+             https://opengameart.org/content/freeze-spell-0
+  [ice]      "Ice spells" (ice.wav), bart, CC0
+             https://opengameart.org/content/ice-spells
+  [creature] "80 CC0 creature SFX", rubberduck, CC0
+             https://opengameart.org/content/80-cc0-creature-sfx
+  [chunky]   "Chunky Explosion", Joth, CC0
+             https://opengameart.org/content/chunky-explosion
+  [dull]     "Dull explosion" (explosion_dull.flac), qubodup, CC0
+             https://opengameart.org/content/dull-explosion
+  [horn]     "Scary Echoey Horn Esque Sound" (Massive Horn.wav), Kat, CC-BY 4.0  <- attribution required
+             https://opengameart.org/content/scary-echoey-horn-esque-sound
+  [fanfare]  "Classic fanfare lick" (fanfare_3.ogg), fvcalderan, CC0
+             https://opengameart.org/content/classic-fanfare-lick
+  [lose]     "Game Over Trumpet SFX" (losetrumpet.wav), 0new4y, CC0
+             https://opengameart.org/content/game-over-trumpet-sfx
+
+Per file
+  hero_shot_1..3   [bow] Bow.wav pitched up 15-38 % + Kenney RPG Audio metalClick / metalLatch
+  arrow_shot_1..2  [bow] Bow.wav (0.95x / 0.85x) + [tiny] arrow-feathers-01
+  ballista_shot    [bow] Bow.wav at 0.55x + Kenney Impact impactWood_heavy_002 + RPG Audio creak3
+  mortar_shot      [dull] explosion_dull pitched down + Kenney Sci-fi lowFrequency_explosion_001
+  mortar_boom      [chunky] first 1.3 s + Kenney Sci-fi lowFrequency_explosion_001
+  frost_pulse      [freeze] freeze.wav (from 0.95 s) + [ice] ice.wav
+  hit_flesh_1..3   Kenney Impact impactPunch_medium_000/001/003
+  enemy_die_1..3   [creature] grunt_02 / grunt_03 / troll_03 + Kenney Impact impactSoft_medium_000-002
+  brute_die        [creature] monster_07 (0.85x) + Kenney Impact impactSoft_heavy_001, impactWood_heavy_001
+  coin_pickup_1..3 [tiny] coinflip-01 (pitched) + Kenney Interface glass_005/006/002 (pitched up)
+  coin_pay         Kenney Casino chip-lay-1
+  build            Kenney Impact impactPlank_medium_000-002 + Kenney Interface glass_004
+  upgrade          Kenney Interface confirmation_004
+  gate_hit_1..2    Kenney Impact impactWood_heavy_000/003 + impactPlank_medium_001/002
+  gate_break       Kenney Impact impactWood_heavy_001/004, impactPlank_medium_000/002
+                   + [tiny] wood-twigs-break-01 + Kenney Sci-fi explosionCrunch_002 (low-passed)
+  wave_start       [horn] Massive Horn.wav, 0.3-3.5 s                      (CC-BY 4.0, Kat)
+  wave_clear       Kenney Music Jingles jingles_STEEL10
+  victory          [fanfare] fanfare_3
+  defeat           [lose] losetrumpet
+  ui_click         Kenney Interface click_001
+  ui_open          Kenney Interface open_002
+  base_hit         Kenney Impact impactSoft_heavy_002 + impactWood_heavy_002
