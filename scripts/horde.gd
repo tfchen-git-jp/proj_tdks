@@ -41,6 +41,11 @@ var _index := {}  # uid -> index, rebuilt every step
 const GATE_HALF_DEPTH := 0.55
 ## The queue at a gate only sorts out enemies this close to it, m.
 const QUEUE_ZONE := 8.0
+## Shoved light enemies sidestep this fast (m/s), at most this far off the
+## lane's centre (m); a heavy one drifts to the centre this fast near a gate.
+const SHOVE_SPEED := 3.0
+const SHOVE_EDGE := Level.ROAD_HALF_WIDTH + 0.1
+const HEAVY_CENTRING := 0.5
 
 
 func _init(lane_tracks: Array[Track], seed_value := 1) -> void:
@@ -147,18 +152,19 @@ func step(dt: float) -> void:
 	# in their lane, so the back ranks wait and step up as the front dies.
 	for ln in tracks.size():
 		if gate_d[ln] >= 0.0 and gate_hp[ln] > 0.0:
-			_queue(ln, prev)
+			_queue(ln, prev, dt)
 	# 3. Gate damage, animation phase, leaks, positions.
 	for i in n:
 		if hp[i] <= 0.0:
 			continue
 		var e: Dictionary = Level.ENEMIES[kind[i]]
+		# Frost slows attacks as much as walking (swing and gate damage).
 		if blocked[i] == 1:
-			gate_hp[lane[i]] -= float(e.dps) * dt
+			gate_hp[lane[i]] -= float(e.dps) * (1.0 - slow[i]) * dt
 		if blocked[i] == 0:
 			phase[i] += spd[i] * (1.0 - slow[i]) * dt * 7.0
 		else:
-			phase[i] += dt * TAU / Level.ATTACK_CYCLE
+			phase[i] += (1.0 - slow[i]) * dt * TAU / Level.ATTACK_CYCLE
 		if d[i] >= tracks[lane[i]].length:
 			leaked += int(e.leak)
 			escaped += 1
@@ -171,7 +177,11 @@ func step(dt: float) -> void:
 ## Front-to-back over the enemies close behind lane `ln`'s gate: each may
 ## come no closer than its spacing to any enemy ahead that overlaps its
 ## lane position. Never pushes anyone backwards (from `prev`).
-func _queue(ln: int, prev: PackedFloat32Array) -> void:
+## Heavy enemies (giants) don't wait for light ones: the light ones just
+## ahead of or beside a giant sidestep out of its path, and it walks
+## through to the gate. Giants queue behind each other as usual, and one
+## held within its reach of the gate hits it anyway.
+func _queue(ln: int, prev: PackedFloat32Array, dt: float) -> void:
 	var gd := gate_d[ln]
 	var near: Array = []
 	for i in count():
@@ -179,13 +189,38 @@ func _queue(ln: int, prev: PackedFloat32Array) -> void:
 			near.push_back(Vector2(d[i], i))
 	near.sort()
 	near.reverse()  # front (largest d) first
+	# Shove: light ones in a giant's path step aside.
+	for v in near:
+		var i := int(v.y)
+		if not Level.ENEMIES[kind[i]].get("heavy", false):
+			continue
+		off[i] = move_toward(off[i], 0.0, HEAVY_CENTRING * dt)
+		var ri := float(Level.ENEMIES[kind[i]].radius)
+		for w in near:
+			var j := int(w.y)
+			if Level.ENEMIES[kind[j]].get("heavy", false):
+				continue
+			var clear := (ri + float(Level.ENEMIES[kind[j]].radius)) * 0.8
+			var ahead := d[j] - d[i]
+			if ahead < -clear or ahead > clear * 1.5 or absf(off[j] - off[i]) >= clear:
+				continue
+			var side := signf(off[j] - off[i]) if absf(off[j] - off[i]) > 0.01 else (-1.0 if off[i] > 0.0 else 1.0)
+			if absf(off[i] + side * clear) > SHOVE_EDGE:
+				side = -side  # no room on that side of the road
+			var goal := clampf(off[i] + side * clear, -SHOVE_EDGE, SHOVE_EDGE)
+			off[j] = move_toward(off[j], goal, SHOVE_SPEED * dt)
+	# Queue.
 	var placed: Array[int] = []
 	for v in near:
 		var i := int(v.y)
-		var ri := float(Level.ENEMIES[kind[i]].radius)
+		var ei: Dictionary = Level.ENEMIES[kind[i]]
+		var heavy: bool = ei.get("heavy", false)
+		var ri := float(ei.radius)
 		var limit := d[i]
 		var held := false
 		for j in placed:
+			if heavy and not Level.ENEMIES[kind[j]].get("heavy", false):
+				continue  # it's being shoved aside
 			var rj := float(Level.ENEMIES[kind[j]].radius)
 			if absf(off[i] - off[j]) >= (ri + rj) * 0.8:
 				continue
@@ -195,7 +230,8 @@ func _queue(ln: int, prev: PackedFloat32Array) -> void:
 				held = true
 		if held:
 			d[i] = maxf(limit, minf(prev[i], d[i]))
-			blocked[i] = 2
+			var reach := float(ei.get("reach", 0.0))
+			blocked[i] = 1 if reach > 0.0 and gd - d[i] <= gap[i] + reach else 2
 		placed.push_back(i)
 
 

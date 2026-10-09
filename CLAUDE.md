@@ -1,5 +1,8 @@
 # proj_tdks — project notes
 
+**RogueShot Tower Defense** (RogueShot TD / RSTD; renamed from "Kingshot
+TD" on 2026-10-09 -- the hero is a rogue, not a king).
+
 A 3D low-poly **tower defense for Android (and PC)**, made with Godot 4.7 by
 directing Claude. It started as a recreation of the TD level in Kingshot's
 ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
@@ -7,11 +10,13 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.1.7, 2026-10-10)
+## The game today (v0.1.10)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
-  also while moving (legs run/strafe/backpedal, upper body keeps aiming).
+  also while moving (legs run/strafe/backpedal, upper body keeps aiming);
+  with no enemy in reach it runs relaxed, crossbow carried (Running_A on
+  the whole body, crossbow turned Models.HERO_CARRY_PITCH in the hand).
   Walks over dropped gold to collect it (magnet radius).
 - **Phases:** BUILD (no enemies; walk onto a spot and its popup appears;
   stand on the red START pad by the keep to see the next wave per lane and
@@ -23,20 +28,23 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   lane they block. Lane labels at each entrance preview the next wave.
 - **Buildings** (each 3 levels; Level.BUILDINGS): Archer (cheap, single
   target), Ballista (slow bolt piercing a line), Mortar (lobbed splash, has
-  a minimum range), Frost Crystal (pulse slows + chips), War Banner (towers
+  a minimum range), Frost Crystal (pulse every 2.5 s, 3.5-4.5 s chill slows walking AND
+  attacks, chips), War Banner (towers
   AND hero in its ring attack faster), Farm (gold after each wave), Gate
   (blocks its lane, has HP, repaired after each wave).
 - **Enemies:** grunt (red), armored (grey), runner (yellow, fast), brute
   (giant, red HP bar). They walk in from beyond the map and are untargetable
   until past their lane's start line (inside the hero's reach), so every
   coin lands where it can be picked up. At a standing gate they queue: the
-  front rank attacks, the rest wait and step up.
+  front rank attacks, the rest wait and step up; giants shove small ones
+  aside and a second giant hits over the first one's shoulder.
 - **HUD:** keep HP (top left), coins (top right), FPS (top centre), wave /
   phase line under them, minimap (bottom right; hidden while a popup is up),
   build version (bottom left), gate HP bars (blue), giant HP bars (red).
 - **Sound:** 32 SFX (assets/sfx) + looping BGM (assets/music, -16 dB).
 - Balance: user beat it on v0.1.6 after losing wave 4-5 on v0.1.5; felt
-  waves 1-2 a bit easy, 5-6 a bit hard. Bot wins all 6 (keep 22-30/30).
+  waves 1-2 a bit easy, 5-6 a bit hard. Bot wins all 6 (keep 16-26/30
+  since v0.1.10; only wave 6 leaks).
 
 ## Next (docs/DESIGN.md "Build order")
 
@@ -103,13 +111,16 @@ written in one buffer per frame (main.gd `_put`); corpses share it.
 ## Releasing a build to the phone
 
 `./build.sh apk` bumps build_number.txt -> Android versionCode and the
-"v0.1.N" shown bottom-left, writes `D:\wsl_scratch\proj_tdks\kingshot_td.apk`
+"v0.1.N" shown bottom-left, writes `D:\wsl_scratch\proj_tdks\rogueshot_td.apk`
 and deletes the .idsig side file. The same debug key signs every build, so
 a new APK installs over the old one. The user copies it to the phone and
 taps it, or after pairing Wireless debugging (`./build.sh adb pair
 IP:PORT CODE`, `./build.sh adb connect IP:PORT`) `./build.sh install`.
-Never change package/unique_name or the keystore (Android would refuse the
-update).
+Never change package/unique_name (`com.tfc.rogueshottd`) or the keystore
+(Android would refuse the update). History: v0.1.0-0.1.7 shipped as
+`com.tfc.kingshottd` signed on the other PC; from v0.1.8 the package and
+key are new (key made on this PC, 2026-10-09), so the old "Kingshot TD" app
+is a separate install the user can delete.
 
 ## Build / test (`./build.sh`, see its header)
 
@@ -122,7 +133,9 @@ after changing Level.LANES; a test checks the stored hash). Probes:
 `tools/inspect.gd`, `tools/hero_probe.gd`.
 Game args (after `--`): `--auto --ff=SEC --speed=X (0 = freeze) --seed=N
 --shot=PATH --shot-delay=S --bench=S --zoom=X --cam=X,Z|gate --hero=X,Z
---noshadow --mute --notree --demo=anim|hero`. `--bench` prints [prof]
+--noshadow --mute --notree --demo=anim|hero|clips --clips=A,B
+--bowrot=X,Y,Z`. `--demo=clips` (raw hero clips side by side) is how
+the carry pitch was picked; render it with `--resolution 1500x600`. `--bench` prints [prof]
 per-section ms and [render] counters.
 
 ## Target device
@@ -142,7 +155,9 @@ Windows build, never in WSL.
   0.36, linear tonemap -> grass ~(53,174,119) vs the ad's ~(47,170,110).
 - Android toolchain (no sudo): JDK 17 Temurin ~/opt/jdk-17, SDK
   ~/opt/android-sdk (build-tools 35.0.1, android-35), debug keystore
-  ~/opt/android-debug.keystore (pass "android"), paths in
+  ~/opt/android-debug.keystore (pass "android"; the v0.1.8+ key lives on
+  the main PC -- copy it to the other PC before building there, or
+  its APKs won't update the phone's install), paths in
   ~/.config/godot/editor_settings-4.7.tres. Non-Gradle export, arm64 only.
   Harmless export warnings: build-tools vs target SDK 36, "cannot connect to
   daemon at tcp:5037".
@@ -174,10 +189,25 @@ Windows build, never in WSL.
 - v0.1.4: shoot-while-moving AnimationTree. Upper-body filter includes the
   ROOT bone (KayKit strafe clips turn the root 60 deg). Plain Idle/Run hold
   the crossbow 25-33 cm below the feet (tools/hero_probe.gd), so they are
-  never used for the arms; the hero stands on pads at PAD_TOP.
+  never used for the arms with the crossbow at its own angle; the relaxed
+  run turns the crossbow -45 deg instead (v0.1.9). The hero stands on pads
+  at PAD_TOP.
 - v0.1.5: design v2 (3 lanes, phases, 7 buildings, projectiles, SFX).
 - v0.1.6: waves 1-2 bigger for more early gold. v0.1.7: gate tower spots,
   ghost gates, minimap, BGM, HUD overlap fix.
+- v0.1.8: renamed RogueShot TD, new package + key (see Releasing).
+- v0.1.9: camera follows the hero 1:1 sideways (was x*0.75, clamped at
+  -8, so the westmost spots sat at the screen edge) and looks
+  CAM_POPUP_LIFT lower while a build popup is open. Minimap clips lanes
+  and the view outline to its frame. Frost: slower
+  pulse, longer chill, chill also slows attacks. Relaxed hero run.
+- v0.1.10: giants (ENEMIES `heavy`) no longer wait behind small enemies
+  at a gate: Horde._queue shoves light ones in a giant's path sideways
+  (SHOVE_SPEED, at most SHOVE_EDGE off-centre) and they never hold it.
+  Giants still queue behind giants; `reach` lets a held one within reach
+  of the gate hit it (2 giants hit together, a 3rd waits). User picked
+  this (push + reach) over no-collision / spreading. Bot keep after wave
+  6 fell from 30 to 16-26 (gates break faster).
 - MultiMesh bounds go stale when the buffer is written directly: a close
   camera culled the whole crowd; `custom_aabb` = whole map.
 - Kenney/KayKit building meshes shadow-acne at any bias: they don't

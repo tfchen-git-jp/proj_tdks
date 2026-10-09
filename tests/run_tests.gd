@@ -21,6 +21,7 @@ func _init() -> void:
 	_tracks()
 	_horde()
 	_gate_queue()
+	_giant_shove()
 	_phases_and_building()
 	_towers()
 	_coins()
@@ -117,6 +118,60 @@ func _gate_queue() -> void:
 	_ok(hitting >= 1 and idle_far == 0, "after the front giant dies the next steps up (%d hitting)" % hitting)
 
 
+## Giants don't wait behind small ones: the crowd parts and the giant walks
+## up to the gate. Two giants both hit (the second over the first one's
+## shoulder); a third waits (user, 2026-10-09).
+func _giant_shove() -> void:
+	var h = HordeS.new(_lane_tracks(), 4)
+	h.gate_d[1] = 25.0
+	h.gate_hp[1] = 1e4  # float32: keep it small enough to lose HP
+	for i in 30:
+		h.spawn(Level.GRUNT, 1)
+		for k in 15:
+			h.step(DT)
+	for k in 60 * 20:  # the grunts reach the gate and pack the queue
+		h.step(DT)
+	var packed := 0
+	for i in h.count():
+		if h.blocked[i] == 2:
+			packed += 1
+	_ok(packed >= 10, "grunts queue at the gate (%d held)" % packed)
+	h.spawn(Level.BRUTE, 1)
+	var giant: int = h.uid[h.count() - 1]
+	var t := 0.0
+	var walk: float = (25.0 - h.gap[h.count() - 1]) / float(Level.ENEMIES[Level.BRUTE].speed)
+	while t < walk * 1.6:
+		h.step(DT)
+		t += DT
+		if h.blocked[h.index_of(giant)] == 1:
+			break
+	var g: int = h.index_of(giant)
+	_ok(h.blocked[g] == 1, "a giant walks through the grunt queue to the gate (%.0f s, %.0f s unhindered)" % [t, walk])
+	var wide := 0
+	for i in h.count():
+		if absf(h.off[i]) > Level.ROAD_HALF_WIDTH + 0.15:
+			wide += 1
+	_ok(wide == 0, "shoved grunts stay on the road")
+	# Two giants hit together, a third waits.
+	var b = HordeS.new(_lane_tracks(), 5)
+	b.gate_d[1] = 25.0
+	b.gate_hp[1] = 1e4
+	for i in 3:
+		b.spawn(Level.BRUTE, 1)
+		for k in 90:
+			b.step(DT)
+	for k in 60 * 45:
+		b.step(DT)
+	var hitting := 0
+	var held := 0
+	for i in b.count():
+		if b.blocked[i] == 1:
+			hitting += 1
+		elif b.blocked[i] == 2:
+			held += 1
+	_ok(hitting == 2 and held == 1, "two giants hit the gate, the third waits (%d hitting, %d held)" % [hitting, held])
+
+
 func _phases_and_building() -> void:
 	var s = SimS.new(5)
 	_ok(s.phase == "build" and s.coins == Level.START_GOLD, "starts in the build phase with start gold")
@@ -179,6 +234,23 @@ func _towers() -> void:
 		if f.phase == "build":
 			break
 	_ok(slowed, "frost slows enemies")
+	# Chill slows attacks too: a chilled giant breaks a gate slower.
+	var lost := []
+	for chilled in [false, true]:
+		var h = HordeS.new(_lane_tracks(), 9)
+		h.gate_d[1] = 25.0
+		h.gate_hp[1] = 1e4  # float32: 1e9 would swallow each frame's damage
+		h.spawn(Level.BRUTE, 1)
+		while h.blocked[0] != 1:
+			h.step(DT)
+		var before: float = h.gate_hp[1]
+		for k in 60 * 5:
+			if chilled:
+				h.chill(0, 0.5, 1.0)
+			h.step(DT)
+		lost.push_back(before - h.gate_hp[1])
+	_ok(lost[0] > 0.0 and absf(lost[1] - lost[0] * 0.5) < lost[0] * 0.02,
+		"a chilled enemy hits the gate slower (%.0f vs %.0f hp)" % [lost[1], lost[0]])
 	var coins_after: int = f.coins
 	_ok(coins_after >= 999 - 25 - 30 - 20 + 6, "the farm paid after the wave (%d)" % coins_after)
 

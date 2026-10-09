@@ -17,11 +17,13 @@ extends Node3D
 ##   --noshadow        sun casts no shadows (performance / artefact tests)
 ##   --mute            no sound (screenshots, benchmarks)
 ##   --demo=anim|hero  enemy clip lineup / hero animation lineup
+##   --demo=clips --clips=A,B  raw hero clips side by side
 
 const DT := 1.0 / 60.0
 const CAM_PITCH := 56.0
 const CAM_FOV := 38.0  # horizontal (KEEP_WIDTH): same map width on every phone
 const CAM_DIST := 19.0
+const CAM_POPUP_LIFT := 3.5  # m the view moves down while a build popup is open
 const ENEMY_CAP := 900
 const CORPSE_CAP := 300
 const CORPSE_HOLD := 0.6  # s lying still after the death clip
@@ -50,6 +52,9 @@ var _hero: Node3D
 var _hero_model: Node3D
 var _hero_tree: AnimationTree
 var _hero_shoot := 0.0  # upper-body blend, 0 aim .. 1 shoot
+var _hero_relax := 0.0  # 0 combat stance .. 1 relaxed run (no enemy in range)
+var _hero_bow: Node3D
+var _hero_bow_x := 0.0  # the crossbow's own pitch in the aim pose
 var _enemy: Array[Dictionary] = []  # per kind: {mm, buf, clips, scale}
 var _corpses: Array[Dictionary] = []  # {pos, basis, kind, t}
 var _drop_mm: MultiMesh
@@ -172,6 +177,8 @@ func _build_scene() -> void:
 	var h := Models.hero()
 	_hero_model = h[1]
 	_hero_tree = h[2]
+	_hero_bow = h[3]
+	_hero_bow_x = _hero_bow.rotation_degrees.x
 	if _args.has("notree"):
 		_hero_tree.active = false
 	_hero.add_child(h[0])
@@ -311,8 +318,8 @@ func _demo_anim(delta: float) -> void:
 	cam.position = Vector3(0, 3.5, 22.5)
 
 
-## --demo=hero: five heroes side by side: aim idle, and shooting while
-## running forward / strafing left / strafing right / backing up.
+## --demo=hero: six heroes side by side: aim idle, shooting while running
+## forward / strafing left / strafing right / backing up, relaxed run.
 var _demo_heroes: Array = []
 
 
@@ -320,11 +327,15 @@ func _demo_hero() -> void:
 	if not _demo_heroes.is_empty():
 		return
 	_hero.visible = false
-	var poses := [[Vector2.ZERO, 0.0], [Vector2(0, 1), 1.0], [Vector2(-1, 0), 1.0], [Vector2(1, 0), 1.0], [Vector2(0, -1), 1.0]]
+	var poses := [[Vector2.ZERO, 0.0], [Vector2(0, 1), 1.0], [Vector2(-1, 0), 1.0], [Vector2(1, 0), 1.0], [Vector2(0, -1), 1.0],
+		[Vector2(0, 1), 0.0, 1.0]]
 	for i in poses.size():
 		var h := Models.hero()
 		var root: Node3D = h[0]
-		root.position = Vector3((i - 2) * 1.5, 0, 9.0)
+		root.position = Vector3((i - 2.5) * 1.2, 0, 9.0)
+		if poses[i].size() > 2:  # relaxed run (no enemy in range)
+			(h[2] as AnimationTree).set("parameters/mix/blend_amount", 0.0)
+			(h[3] as Node3D).rotation_degrees.x += Models.HERO_CARRY_PITCH
 		(h[1] as Node3D).rotation.y = -PI * 0.5  # face screen right
 		add_child(root)
 		var tree: AnimationTree = h[2]
@@ -332,10 +343,38 @@ func _demo_hero() -> void:
 		tree.set("parameters/upper/blend_amount", poses[i][1])
 		_demo_heroes.push_back(root)
 	cam.rotation_degrees = Vector3(-12, 0, 0)
-	cam.position = Vector3(0, 1.6, 15.5)
+	cam.position = Vector3(0, 1.8, 19.0)
+
+
+## --demo=clips --clips=A,B,..: raw clips side by side (no AnimationTree).
+func _demo_clips() -> void:
+	if not _demo_heroes.is_empty():
+		return
+	_hero.visible = false
+	var clips := String(_args.get("clips", "Idle,Running_A")).split(",")
+	for i in clips.size():
+		var h := Models.hero()
+		var root: Node3D = h[0]
+		root.position = Vector3((i - (clips.size() - 1) * 0.5) * 1.0, 0, -2.0)
+		(h[1] as Node3D).rotation.y = -PI * 0.5
+		add_child(root)
+		(h[2] as AnimationTree).active = false
+		var ap: AnimationPlayer = root.find_children("*", "AnimationPlayer", true, false)[0]
+		ap.play(clips[i])
+		if _args.has("bowrot"):
+			var r := String(_args.bowrot).split(",")
+			for mi in root.find_children(Models.HERO_WEAPON, "MeshInstance3D", true, false):
+				mi.rotation_degrees += Vector3(float(r[0]), float(r[1]), float(r[2]))
+		_demo_heroes.push_back(root)
+	cam.rotation_degrees = Vector3(-4, 0, 0)
+	cam.position = Vector3(0, 1.0, 7.0)
 
 
 func _process(delta: float) -> void:
+	if _args.get("demo") == "clips":
+		_demo_clips()
+		_tick_tools(delta)
+		return
 	if _args.get("demo") == "hero":
 		_demo_hero()
 		_tick_tools(delta)
@@ -427,7 +466,7 @@ func _stats_text(kind: String, level: int) -> String:
 		"mortar":
 			return "Damage %s in %.1fm, every %.1fs, range %s-%s" % [st.damage, st.splash, st.interval, st.min_range, st.range]
 		"frost":
-			return "Slows %d%% for %.1fs, range %s" % [roundi(st.slow * 100), st.slow_time, st.range]
+			return "Slows walking and attacks %d%% for %.1fs, pulse every %.1fs, range %s" % [roundi(st.slow * 100), st.slow_time, st.interval, st.range]
 		"banner":
 			return "+%d%% attack speed for towers and the hero within %sm" % [roundi(st.buff * 100), st.range]
 		"farm":
@@ -706,8 +745,14 @@ func _cam_goal() -> Vector3:
 	if _args.has("cam") and _args.cam != "gate":
 		var xz := String(_args.cam).split(",")
 		return Vector3(float(xz[0]), 0.0, float(xz[1]))
+	# Follow the hero 1:1 sideways, stopping a few metres inside the map's
+	# edges (the westmost spots used to sit at the screen edge). A build
+	# popup covers the bottom third: look further down so the hero stands
+	# above it.
 	var p := sim.hero_pos
-	return Vector3(clampf(p.x * 0.75, -8.0, 3.2), 0.0, clampf(p.z + 1.0, -9.0, 27.0))
+	var lift := CAM_POPUP_LIFT if hud.menu_open() else 0.0
+	return Vector3(clampf(p.x, Level.BOUNDS.position.x + 4.0, Level.BOUNDS.end.x - 4.0), 0.0,
+		clampf(p.z + 1.0 + lift, -9.0, 27.0 + lift))
 
 
 ## Phase line, lane previews and pads that only show while building.
@@ -772,6 +817,13 @@ func _sync_hero(delta: float) -> void:
 	_hero_tree.set("parameters/legs/blend_position", cur.lerp(legs, k))
 	_hero_shoot = move_toward(_hero_shoot, 1.0 if shooting else 0.0, delta * 6.0 if delta > 0 else 1.0)
 	_hero_tree.set("parameters/upper/blend_amount", _hero_shoot)
+	# No enemy in reach (no shot for a while): run with the crossbow carried,
+	# not aimed. Standing still keeps the ready pose either way.
+	var combat := sim.hero_aim_t < 0.8 and sim.hero_aim != Vector3.ZERO
+	var relax := 0.0 if combat else clampf(speed / float(Level.HERO.speed), 0.0, 1.0)
+	_hero_relax = move_toward(_hero_relax, relax, delta * 5.0 if delta > 0 else 1.0)
+	_hero_tree.set("parameters/mix/blend_amount", 1.0 - _hero_relax)
+	_hero_bow.rotation_degrees.x = _hero_bow_x + Models.HERO_CARRY_PITCH * _hero_relax
 
 
 func _draw_enemies() -> void:

@@ -49,6 +49,11 @@ static func mesh_of(path: String) -> Mesh:
 	return m
 
 
+## Relaxed run (no enemy in range): the upper body follows Running_A, whose
+## hand would point the crossbow at the ground; turning it this much about
+## its own x carries it forward at chest height (renders, --demo=clips).
+const HERO_CARRY_PITCH := -45.0
+
 ## Upper-body bones: they take the crossbow pose (aim / shoot) while the
 ## legs play locomotion, so the hero can shoot on the move. "root" is here
 ## too: KayKit's strafe clips turn the root +-60 deg, which would swing the
@@ -63,10 +68,15 @@ const HERO_UPPER := ["root", "spine", "chest", "upperarm.l", "lowerarm.l", "wris
 ##   parameters/legs/blend_position  Vector2(right, forward) in the hero's
 ##                                   own frame, length = speed fraction
 ##   parameters/upper/blend_amount   0 = aiming (ready), 1 = shooting
-## Returns [root, model (turn this), AnimationTree].
+##   parameters/mix/blend_amount     1 = upper body takes the aim/shoot pose,
+##                                   0 = it follows the legs (relaxed run)
+## Returns [root, model (turn this), AnimationTree, crossbow mesh].
 static func hero() -> Array:
 	var inst: Node3D = (load(HERO) as PackedScene).instantiate()
+	var bow: MeshInstance3D = null
 	for mi in inst.find_children("*", "MeshInstance3D", true, false):
+		if mi.name == HERO_WEAPON:
+			bow = mi
 		var bone_parent := mi.get_parent() is BoneAttachment3D
 		if bone_parent and mi.name != HERO_WEAPON and mi.name != "Rogue_Cape":
 			mi.free()
@@ -115,7 +125,7 @@ static func hero() -> Array:
 	tree.anim_player = tree.get_path_to(ap)
 	tree.set("parameters/mix/blend_amount", 1.0)
 	tree.active = true
-	return [root, model, tree]
+	return [root, model, tree, bow]
 
 
 ## Ballista tower: stone round tower with the ballista on top.

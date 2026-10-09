@@ -29,13 +29,17 @@ func set_sim(s: Sim, c: Camera3D) -> void:
 	sim = s
 	cam = c
 	_lanes.clear()
+	# Lanes start beyond the shown area (enemies walk in from off the map):
+	# keep only the part inside the frame.
+	var frame := PackedVector2Array([Vector2(2, 2), Vector2(size.x - 2, 2), size - Vector2(2, 2), Vector2(2, size.y - 2)])
 	for t in sim.tracks:
 		var line := PackedVector2Array()
 		var pts: PackedVector3Array = t.points()
 		for i in range(0, pts.size(), 10):
 			line.push_back(_to(pts[i]))
 		line.push_back(_to(pts[pts.size() - 1]))
-		_lanes.push_back(line)
+		for part in Geometry2D.intersect_polyline_with_polygon(line, frame):
+			_lanes.push_back(part)
 
 
 func _to(p: Vector3) -> Vector2:
@@ -86,12 +90,15 @@ func _draw() -> void:
 	if cam:
 		var vp := cam.get_viewport().get_visible_rect().size
 		var corners := PackedVector2Array()
-		for c in [Vector2.ZERO, Vector2(vp.x, 0), vp, Vector2(0, vp.y), Vector2.ZERO]:
+		for c in [Vector2.ZERO, Vector2(vp.x, 0), vp, Vector2(0, vp.y)]:
 			var o := cam.project_ray_origin(c)
 			var d := cam.project_ray_normal(c)
 			var t := -o.y / d.y if d.y < -0.001 else 60.0
-			corners.push_back(_to(o + d * t).clamp(Vector2.ZERO, size))
-		draw_polyline(corners, Color(1, 1, 1, 0.55), 1.5)
+			corners.push_back(_to(o + d * t))
+		var frame := PackedVector2Array([Vector2.ZERO, Vector2(size.x, 0), size, Vector2(0, size.y)])
+		for poly in Geometry2D.intersect_polygons(corners, frame):
+			poly.push_back(poly[0])
+			draw_polyline(poly, Color(1, 1, 1, 0.55), 1.5)
 	# Hero
 	var hp := _to(sim.hero_pos)
 	draw_circle(hp, 4.5, Color(0, 0, 0, 0.6))

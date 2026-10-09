@@ -1,4 +1,4 @@
-# Kingshot TD
+# RogueShot TD (RogueShot Tower Defense, RSTD)
 
 A 3D low-poly **tower defense for Android phones (and Windows PC)**, built
 with [Godot 4.7](https://godotengine.org). It started as a recreation of the

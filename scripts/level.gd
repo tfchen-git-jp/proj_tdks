@@ -50,10 +50,12 @@ const BUILDINGS := {
 		levels = [{cost = 35, range = 7.0, min_range = 2.5, interval = 2.4, damage = 6.0, splash = 1.3},
 			{cost = 45, range = 7.5, min_range = 2.5, interval = 2.1, damage = 9.0, splash = 1.5},
 			{cost = 65, range = 8.0, min_range = 2.5, interval = 1.8, damage = 13.0, splash = 1.7}]},
-	frost = {name = "Frost Crystal", spot = "tower", desc = "Chills everything near it: slow, light damage.",
-		levels = [{cost = 25, range = 3.8, interval = 1.0, damage = 0.5, slow = 0.35, slow_time = 1.4},
-			{cost = 35, range = 4.2, interval = 1.0, damage = 1.0, slow = 0.45, slow_time = 1.6},
-			{cost = 50, range = 4.6, interval = 1.0, damage = 1.6, slow = 0.55, slow_time = 1.8}]},
+	# Slow pulses, long chill (user, 2026-10-09: was a 1 s pulse). Chilled
+	# enemies walk AND attack slower.
+	frost = {name = "Frost Crystal", spot = "tower", desc = "Chills everything near it: slower walking and attacks, light damage.",
+		levels = [{cost = 25, range = 3.8, interval = 2.5, damage = 1.0, slow = 0.35, slow_time = 3.5},
+			{cost = 35, range = 4.2, interval = 2.5, damage = 1.8, slow = 0.45, slow_time = 4.0},
+			{cost = 50, range = 4.6, interval = 2.5, damage = 2.8, slow = 0.55, slow_time = 4.5}]},
 	banner = {name = "War Banner", spot = "tower", desc = "No attack. Towers AND the hero inside its ring attack faster.",
 		levels = [{cost = 30, range = 4.5, buff = 0.25},
 			{cost = 45, range = 5.0, buff = 0.4},
@@ -94,10 +96,14 @@ const SPOT_REACH := 1.45
 const ATTACK_CYCLE := 0.55
 
 ## Enemy types. dps hits gates; leak = keep damage when one gets through.
+## heavy: shoves light enemies out of its way in a gate queue (they never
+## hold it up). reach: m behind the front rank it can still hit the gate
+## from (a second giant swings over the first one's shoulder).
 const ENEMIES := [
 	{name = "grunt", hp = 3.0, speed = 1.7, radius = 0.28, gold = 1, dps = 2.0, leak = 1},
 	{name = "armored", hp = 12.0, speed = 1.35, radius = 0.32, gold = 3, dps = 4.0, leak = 2},
-	{name = "brute", hp = 90.0, speed = 0.95, radius = 0.7, gold = 15, dps = 18.0, leak = 6},
+	{name = "brute", hp = 90.0, speed = 0.95, radius = 0.7, gold = 15, dps = 18.0, leak = 6,
+		heavy = true, reach = 1.3},
 	{name = "runner", hp = 2.0, speed = 3.1, radius = 0.25, gold = 1, dps = 1.5, leak = 1},
 ]
 enum { GRUNT, ARMORED, BRUTE, RUNNER }

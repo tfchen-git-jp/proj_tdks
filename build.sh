@@ -8,7 +8,7 @@
 #   ./build.sh shot NAME [ARGS]  windowed WSL run (Compatibility, D3D12 GPU) -> renders/NAME.png
 #   ./build.sh export            Windows .exe -> /mnt/d/wsl_scratch/proj_tdks/
 #   ./build.sh native [ARGS]     run the exported .exe natively on Windows
-#   ./build.sh apk               Android debug APK -> /mnt/d/wsl_scratch/proj_tdks/kingshot_td.apk
+#   ./build.sh apk               Android debug APK -> /mnt/d/wsl_scratch/proj_tdks/rogueshot_td.apk
 #   ./build.sh install           apk + install on the phone with Windows adb.exe
 #                                (pair once: phone Developer options > Wireless debugging,
 #                                 then  ./build.sh adb pair IP:PORT CODE  and  ./build.sh adb connect IP:PORT)
@@ -19,10 +19,10 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOGS="$ROOT/.logs"
 DIST="/mnt/d/wsl_scratch/proj_tdks"
-EXE="$DIST/kingshot_td.exe"
-APK="$DIST/kingshot_td.apk"
+EXE="$DIST/rogueshot_td.exe"
+APK="$DIST/rogueshot_td.apk"
 ADB="/mnt/d/wsl_scratch/android-platform-tools/platform-tools/adb.exe"
-PKG="com.tfc.kingshottd"
+PKG="com.tfc.rogueshottd"
 mkdir -p "$LOGS" "$ROOT/renders" "$DIST"
 touch "$LOGS/.gdignore" "$ROOT/renders/.gdignore"
 
@@ -114,10 +114,10 @@ t_export() {
 t_native() {
   [[ -f "$EXE" ]] || { red "no exe; run export first"; return 1; }
   info "running natively on Windows"
-  (cd "$DIST" && timeout 120 ./kingshot_td.exe -- "$@" > "$LOGS/native.log" 2>&1)
-  if tasklist.exe 2>/dev/null | grep -qi kingshot_td.exe; then
+  (cd "$DIST" && timeout 120 ./rogueshot_td.exe -- "$@" > "$LOGS/native.log" 2>&1)
+  if tasklist.exe 2>/dev/null | grep -qi rogueshot_td.exe; then
     red "game still running after 120 s -- killing it"
-    taskkill.exe /IM kingshot_td.exe /F > /dev/null 2>&1
+    taskkill.exe /IM rogueshot_td.exe /F > /dev/null 2>&1
   fi
   grep -E "^\[|ERROR" "$LOGS/native.log" | head -40
 }

@@ -368,6 +368,10 @@ func show_menu(key: String, title: String, desc: String, options: Array) -> void
 		menu_opened.emit()
 
 
+func menu_open() -> bool:
+	return _menu.visible
+
+
 func hide_menu() -> void:
 	_menu.visible = false
 	minimap.visible = not _end.visible

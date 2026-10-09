@@ -1,7 +1,7 @@
 extends SceneTree
 ## Hero model probe: bone list, and per clip the lowest point of the body
 ## (skinned) and of the crossbow, at the game's scale (Models.HERO_HEIGHT).
-##   godot --headless --path . --script res://tools/hero_probe.gd
+##   godot --headless --path . --script res://tools/hero_probe.gd [-- --clips=A,B] [-- --list]
 
 func _init() -> void:
 	process_frame.connect(_run, CONNECT_ONE_SHOT)
@@ -25,8 +25,14 @@ func _run() -> void:
 			bodies.push_back(mi)
 		elif mi.name == Models.HERO_WEAPON:
 			bow = mi
-	for clip in ["Idle", "2H_Ranged_Aiming", "2H_Ranged_Shooting", "Running_A", "Running_Strafe_Left",
-			"Running_Strafe_Right", "Walking_Backwards", "Walking_A"]:
+	var clips := ["Idle", "2H_Ranged_Aiming", "2H_Ranged_Shooting", "Running_A", "Running_Strafe_Left",
+			"Running_Strafe_Right", "Walking_Backwards", "Walking_A"]
+	for a in OS.get_cmdline_user_args():
+		if a == "--list":
+			print("[clips] ", ", ".join(ap.get_animation_list()))
+		elif a.begins_with("--clips="):
+			clips = Array(a.substr(8).split(","))
+	for clip in clips:
 		var anim := ap.get_animation(clip)
 		var body_min := INF
 		var bow_min := INF
