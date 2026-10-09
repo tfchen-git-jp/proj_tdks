@@ -15,6 +15,7 @@ extends Node3D
 ##   --cam=gate        camera looks at the first standing gate
 ##   --hero=X,Z        put the hero there (after any --ff)
 ##   --build=S:K[:N],… build kind K on spot S (N levels) for free
+##   --ask             press Esc in the game (the leave question)
 ##   --newgame         open the menu, then press New game (restart path)
 ##   --load            start from the saved run (as Continue does)
 ##   --perks=ID[:T],…  start with these cards (tier T) / relics
@@ -92,6 +93,7 @@ var _cam_target := Vector3.ZERO
 var _shake := 0.0
 var _phase_seen := ""
 var menu: MainMenu
+var confirm: Confirm
 var fx: Fx
 var _in_menu := false
 ## Real play (no debug args): show the title menu, keep saves and scores.
@@ -110,12 +112,17 @@ func _ready() -> void:
 	if _args.has("bench"):
 		_bench_t = float(_args.bench)
 	_fit_pc_window()
+	confirm = Confirm.new()
+	add_child(confirm)
 	_persist = true
 	for k in DEBUG_ARGS:
 		if _args.has(k):
 			_persist = false
 	_start(Save.load_run() if _args.has("load") else {})
-	if (_persist and not _args.has("load")) or _args.has("newgame"):
+	if _args.has("ask"):  # --ask: as if Esc were pressed in a game
+		_persist = true
+		_back.call_deferred()
+	if (_persist and not _args.has("load") and not _args.has("ask")) or _args.has("newgame"):
 		_open_menu()
 	if _args.has("newgame"):  # as if New game were pressed (the menu -> game path)
 		menu.new_game.emit()
@@ -130,6 +137,7 @@ func _open_menu() -> void:
 			Save.clear_run()
 			_start()
 			_close_menu())
+		menu.exit_game.connect(_ask_quit)
 		menu.continue_game.connect(func() -> void:
 			var run := Save.load_run()
 			if not run.is_empty():
@@ -160,16 +168,38 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## Back / Esc: in a game, to the menu; in the menu, up a page, then quit.
+## Esc / back: in a game, pause and ask before leaving (only wave starts
+## are saved); in the menu, up a page, then ask before quitting. While
+## the question is up, Esc / back again means No.
 func _back() -> void:
 	if not _persist:
 		return
-	if not _in_menu:
-		_start(Save.load_run())
-		_open_menu()
+	if confirm.is_open():
+		confirm.answer(false)
+	elif not _in_menu:
+		if sim.state != "play":  # game over: nothing to lose
+			_leave_to_menu()
+			return
+		var saved := "the start of wave %d" % (sim.checkpoint.wave + 1) if sim.phase == "attack" \
+			else "this build phase (wave %d)" % (sim.wave + 1)
+		confirm.ask("Back to the main menu?\n\nContinue will resume from %s. Anything after that is lost." % saved,
+			_leave_to_menu, Callable(), "Leave", "Keep playing")
 	elif menu.get("_pages").main.visible:
-		get_tree().quit()
+		_ask_quit()
 	else:
 		menu.show_page("main")
+
+
+func _ask_quit() -> void:
+	confirm.ask("Quit RogueShot TD?", func() -> void: get_tree().quit(), Callable(), "Quit", "Cancel")
+
+
+func _leave_to_menu() -> void:
+	# The build phase is saved as it stands now; mid-wave, the last start.
+	if _persist and sim.state == "play" and sim.phase == "build":
+		Save.save_run(sim.to_save())
+	_start(Save.load_run())
+	_open_menu()
 
 
 ## Exported PC build: the 450x1000 window was too small on a 2K monitor.
@@ -189,7 +219,7 @@ func _fit_pc_window() -> void:
 ## A new game, or the saved run `save` (Sim.to_save()) when given.
 func _start(save := {}) -> void:
 	for c in get_children():
-		if c != menu:
+		if c != menu and c != confirm:
 			c.queue_free()
 	_corpses.clear()
 	_pads.clear()
@@ -349,6 +379,7 @@ func _build_scene() -> void:
 		l.position = t.point(sim.horde.entry[ln] + 1.0) + Vector3(0, 1.6, 0)
 		add_child(l)
 		_lane_labels.push_back(l)
+		add_child(_start_line_mark(t, sim.horde.entry[ln]))
 
 	sfx = Sfx.new()
 	sfx.muted = _args.has("mute") or _args.has("shot") or _args.has("bench")
@@ -544,6 +575,9 @@ func _process(delta: float) -> void:
 		_menu_camera(delta)
 		_tick_tools(delta)
 		return
+	if confirm and confirm.is_open():  # paused while asking
+		_tick_tools(delta)
+		return
 	_acc += minf(delta, 0.1) * _speed
 	var steps := 0
 	while _acc >= DT and steps < 30:
@@ -574,9 +608,11 @@ func _game_over() -> void:
 	var rank := 0
 	if _persist:
 		Save.clear_run()
-		rank = Save.add_score(cleared, sim.coins, won)
-	hud.show_end(won, "Waves cleared: %d / %d\nGold: %d%s" % [cleared, Level.WAVES.size(), sim.coins,
-		"\nNew top-10 score: #%d" % rank if rank > 0 else ""])
+		rank = Save.add_score(cleared, sim.base_hp / Level.BASE_HP, sim.coins, won)
+	var keep := roundi(100.0 * sim.base_hp / Level.BASE_HP)
+	hud.show_end(won, "Waves cleared: %d / %d\nKeep %d%%  +  gold %d\nScore %d%s" % [cleared, Level.WAVES.size(), keep,
+		sim.coins, Save.score_of(sim.base_hp / Level.BASE_HP, sim.coins),
+		"\nNew top-10 entry: #%d" % rank if rank > 0 else ""])
 	sfx.play("victory" if won else "defeat")
 
 
@@ -1398,6 +1434,37 @@ func _ghost_gate(spot: Dictionary) -> Node3D:
 
 
 ## The start spot by the keep: a flag on a pad, shown while building.
+## Faint red dashes across a road where its enemies become hittable.
+func _start_line_mark(t: Track, d: float) -> MeshInstance3D:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var c := t.point(d)
+	var r := t.right(d)
+	var f := t.forward(d)
+	var half := Level.ROAD_HALF_WIDTH + 0.2
+	var n := 7
+	for k in n:
+		var a := -half + (k + 0.15) * (2.0 * half / n)
+		var b := -half + (k + 0.85) * (2.0 * half / n)
+		var p0 := c + r * a - f * 0.06
+		var p1 := c + r * b - f * 0.06
+		var p2 := c + r * b + f * 0.06
+		var p3 := c + r * a + f * 0.06
+		for q in [p0, p1, p2, p0, p2, p3]:
+			st.set_normal(Vector3.UP)
+			st.add_vertex(q + Vector3(0, 0.03, 0))
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.albedo_color = Color(0.85, 0.2, 0.15, 0.55)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+
 func _make_start_pad() -> Node3D:
 	var node := Node3D.new()
 	node.position = Level.START_SPOT + Vector3(0, 0.04, 0)

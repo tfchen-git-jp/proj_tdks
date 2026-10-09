@@ -10,6 +10,8 @@ extends RefCounted
 ## in; no building). Clearing the last wave (Level.WAVES) wins.
 
 const DROP_CAP := 1400
+## Coins land at most this far outside Level.BOUNDS (< the magnet radius).
+const COIN_AREA := 1.2
 const FLY_TIME := 0.22  # coin flight to the hero, s
 ## Where shots leave from, above the ground (m).
 const MUZZLE := {hero = 0.9, archer = 2.3, ballista = 2.2, mortar = 1.7}
@@ -824,6 +826,10 @@ func _drops_from_deaths() -> void:
 			if drop_pos.size() >= DROP_CAP:
 				drop_val[_rng.randi() % drop_val.size()] += v
 				continue
+			# Out of the magnet's reach from the walkable area: nudge it in.
+			var area := Level.BOUNDS.grow(COIN_AREA)
+			p.x = clampf(p.x, area.position.x, minf(area.end.x, Level.CLIFF_X - 0.4 + COIN_AREA))
+			p.z = clampf(p.z, area.position.y, area.end.y)
 			drop_pos.push_back(p)
 			drop_val.push_back(v)
 			drop_fly.push_back(-1.0)

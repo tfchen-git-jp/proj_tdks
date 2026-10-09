@@ -27,9 +27,12 @@ const START_COUNTDOWN := 5.0
 ## Playable rectangle for the hero (x, z, width, depth).
 const BOUNDS := Rect2(-14.5, -13.2, 21.7, 44.0)
 const CLIFF_X := 7.6  # east gorge edge
-## Enemies become targetable this far inside the hero's reach (the "start
-## line"), so every coin they drop can be picked up.
-const START_LINE_MARGIN := 1.5
+## Enemies become targetable this far OUTSIDE the hero's walkable area
+## (the "start line", marked on each road). Was 1.5 m inside it until
+## v0.1.15: at the bottom of the centre lane enemies stood well inside the
+## hero's range circle unhittable (user, 2026-10-09). Coins that would
+## land out of the magnet's reach are nudged in (Sim.COIN_AREA).
+const START_LINE_OUT := 2.0
 
 const HERO := {
 	speed = 5.2, range = 6.0, interval = 0.4, damage = 2.0,

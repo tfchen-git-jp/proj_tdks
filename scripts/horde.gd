@@ -68,10 +68,10 @@ func _init(lane_tracks: Array[Track], seed_value := 1) -> void:
 		entry.push_back(start_line(t))
 
 
-## Road distance where a lane enters the hero's reach (+ margin): enemies
-## before it can't be hit, so nobody dies where coins can't be collected.
+## Road distance where a lane comes within START_LINE_OUT of the hero's
+## walkable area: enemies before it can't be hit yet.
 static func start_line(t: Track) -> float:
-	var reach := Level.BOUNDS.grow(-Level.START_LINE_MARGIN)
+	var reach := Level.BOUNDS.grow(Level.START_LINE_OUT)
 	var dd := 0.0
 	while dd < t.length:
 		var p := t.point(dd)

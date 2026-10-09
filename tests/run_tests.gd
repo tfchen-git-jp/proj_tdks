@@ -69,7 +69,9 @@ func _horde() -> void:
 	_ok(h.index_of(dead_uid) == -1 and h.index_of(h.uid[3]) == 3, "uid lookup survives compaction")
 	for ln in 3:
 		var p: Vector3 = h.tracks[ln].point(h.entry[ln])
-		_ok(Level.BOUNDS.has_point(Vector2(p.x, p.z)), "lane %d start line is inside the hero's reach" % ln)
+		_ok(Level.BOUNDS.grow(Level.START_LINE_OUT + 0.3).has_point(Vector2(p.x, p.z))
+			and not Level.BOUNDS.grow(Level.START_LINE_OUT - 0.3).has_point(Vector2(p.x, p.z)),
+			"lane %d start line is %.1f m outside the walkable area" % [ln, Level.START_LINE_OUT])
 	h.keep_hp = 1e4
 	for k in 4000:
 		h.step(0.05)
@@ -327,9 +329,11 @@ func _save() -> void:
 	_ok(b.buildings.size() == 3 and b.buildings.k_east.level == 1 and b.buildings.f_1.kind == "bank"
 		and b.horde.gate_d[1] > 0.0 and b.horde.gate_hp[1] > 0.0, "with its buildings and a standing gate")
 	_ok(b._rng.state == a._rng.state and b.horde._rng.state == a.horde._rng.state, "and its dice")
-	var list := [{waves = 6, gold = 50}, {waves = 8, gold = 10}, {waves = 6, gold = 300}]
+	var list := [{waves = 10, score = Save.score_of(0.2, 400)}, {waves = 8, score = Save.score_of(1.0, 900)},
+		{waves = 10, score = Save.score_of(0.9, 100)}]
 	list.sort_custom(Save.better)
-	_ok(list[0].waves == 8 and list[1].gold == 300 and list[2].gold == 50, "scores: waves first, then gold")
+	_ok(list[0].waves == 10 and list[0].score == 1000 and list[1].score == 600 and list[2].waves == 8,
+		"scores: waves first, then keep % x 10 + gold")
 
 
 ## Put a fresh enemy `d` m along lane `ln` (past the start line).

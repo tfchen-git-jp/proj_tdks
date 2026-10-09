@@ -10,7 +10,7 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.1.15)
+## The game today (v0.1.16)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
@@ -40,8 +40,10 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 - **Menu:** title screen over the drifting map (scripts/menu.gd): New game,
   Continue (user://run.json, written at every wave start and clear by
   scripts/save.gd; Sim.to_save / from_save), Scores (top 10 in
-  user://scores.json: waves cleared, then gold), Credits, Exit. Esc /
-  Android back returns to it (the run resumes from the last wave start).
+  user://scores.json: waves cleared, then Save.score_of = keep HP % x 10
+  + gold), Credits, Exit. Esc / Android back pauses and asks
+  (scripts/confirm.gd) before leaving a game (mid-wave: resumes from the
+  wave's start; build phase: saved as it stands) or quitting.
   End screen: Play again / Main menu. Debug args (main.DEBUG_ARGS) skip
   the menu and never save; real play uses a random seed.
 - **Map:** three lanes (west, centre, east) converging on the keep at the
@@ -63,8 +65,10 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   (Level.wave_hp: 1 + 0.05 w + 0.022 w^2), gold per kill doesn't. They
   drop gold as coins (1), coin stacks (5) and ingots (20) (Sim.gold_pieces).
   They walk in from beyond the map and are untargetable
-  until past their lane's start line (inside the hero's reach), so every
-  coin lands where it can be picked up. At a standing gate they queue: the
+  until past their lane's start line (red dashes on the road,
+  Level.START_LINE_OUT = 2 m outside the hero's walkable area; was 1.5 m
+  inside until v0.1.16). Coins that would land beyond magnet reach are
+  nudged in (Sim.COIN_AREA). At a standing gate they queue: the
   front rank attacks, the rest wait and step up; giants shove small ones
   aside and a second giant hits over the first one's shoulder.
 - **Range ring:** in the build popup for the spot's building; during an
@@ -181,7 +185,7 @@ Game args (after `--`): `--auto --ff=SEC --speed=X (0 = freeze) --seed=N
 --shot=PATH --shot-delay=S --bench=S --zoom=X --cam=X,Z|gate --hero=X,Z
 --noshadow --mute --notree --drops --ff-idle --build=S:K[:N],... --load
 --page=scores|credits --play --newgame --perks=ID[:T],... --offer
---lightning --demo=anim|hero|clips --clips=A,B
+--lightning --ask --demo=anim|hero|clips --clips=A,B
 --bowrot=X,Y,Z`. `--demo=clips` (raw hero clips side by side) is how
 the carry pitch was picked; render it with `--resolution 1500x600`. `--bench` prints [prof]
 per-section ms and [render] counters.
@@ -268,6 +272,8 @@ Windows build, never in WSL.
 - v0.1.14: gold invisible after New game (drop MultiMesh list not
   cleared on restart). v0.1.15: hero upgrades (XP, cards, relics, FX).
   Save format v2 (older run.json files are ignored).
+- v0.1.16: Esc/back confirmations, start line moved out + marked, score
+  = keep % x 10 + gold for ties on waves.
 - MultiMesh bounds go stale when the buffer is written directly: a close
   camera culled the whole crowd; `custom_aabb` = whole map.
 - Kenney/KayKit building meshes shadow-acne at any bias: they don't

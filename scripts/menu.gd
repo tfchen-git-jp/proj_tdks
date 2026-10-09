@@ -5,6 +5,7 @@ extends CanvasLayer
 
 signal new_game
 signal continue_game
+signal exit_game
 
 const TITLE_GOLD := Color(1.0, 0.82, 0.3)
 
@@ -62,7 +63,7 @@ func _main_page() -> Control:
 	box.add_child(_continue)
 	box.add_child(_button("Scores", Color(0.45, 0.38, 0.2), func() -> void: show_page("scores")))
 	box.add_child(_button("Credits", Color(0.35, 0.35, 0.4), func() -> void: show_page("credits")))
-	box.add_child(_button("Exit", Color(0.5, 0.2, 0.2), func() -> void: get_tree().quit()))
+	box.add_child(_button("Exit", Color(0.5, 0.2, 0.2), func() -> void: exit_game.emit()))
 	return _centered(box)
 
 
@@ -71,7 +72,7 @@ func _scores_page() -> Control:
 	var title := _label("Top 10", 72)
 	title.add_theme_color_override("font_color", TITLE_GOLD)
 	box.add_child(title)
-	var hint := _label("Most waves cleared, then most gold", 24)
+	var hint := _label("Most waves cleared, then score:\nkeep HP % x 10 + gold left", 24)
 	hint.modulate = Color(1, 1, 1, 0.7)
 	box.add_child(hint)
 	_scores_box = GridContainer.new()
@@ -94,8 +95,8 @@ func _fill_scores() -> void:
 		return
 	for i in list.size():
 		var e: Dictionary = list[i]
-		var cells := ["%d." % (i + 1), "WIN" if e.won else "", "wave %d" % int(e.waves), "%d gold" % int(e.gold),
-			String(e.date)]
+		var cells := ["%d." % (i + 1), "WIN" if e.won else "", "wave %d" % int(e.waves),
+			"%d pts" % int(e.get("score", e.get("gold", 0))), String(e.date)]
 		for c in cells.size():
 			var cell := _label(cells[c], 28)
 			cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if c in [0, 3] else HORIZONTAL_ALIGNMENT_LEFT
