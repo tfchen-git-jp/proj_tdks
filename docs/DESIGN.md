@@ -1,21 +1,36 @@
-# Design v2 — from the Kingshot ad toward Thronefall
+# Design — from the Kingshot ad toward Thronefall
 
-Proposal 2026-10-09; steps 1-2 built in v0.1.5-0.1.7 (2026-10-10).
+Proposal 2026-10-09 (design v2); built step by step in v0.1.5-0.1.16. The
+game as it stands is described in CLAUDE.md "The game today"; this file
+keeps the decisions, the original analysis and what is left to build.
 
 ## Decisions taken (user, 2026-10-09/10) — these override the proposal below
 
 - **No day/night.** Two phases, both daylight: BUILD (walk around, build,
   upgrade) and ATTACK (the wave). The wave starts from a START pad by the
-  keep (its popup lists the coming enemies per lane).
+  keep (stand on it for a 5 s countdown; its popup lists the coming
+  enemies per lane).
 - **Build between every wave** (Thronefall style); no building during an
-  attack. A level = 10 waves (6 until v0.1.10).
+  attack. A level = 10 waves.
 - **Build popup appears when the hero stands on a spot** (no tapping the
   map); tap a button in it to build or upgrade.
-- **Keep walking over dropped gold.** Enemies are untargetable until past a
-  start line inside the hero's reach, so no coin is ever out of reach.
+- **Keep walking over dropped gold.** Enemies become targetable at a start
+  line just outside the hero's walkable area (marked on the road); coins
+  that would land out of reach are nudged in.
 - Each gate gets its own tower spot beside its queue; unbuilt gate pads
   show a see-through gate across their lane.
-- Upgrades are linear (3 levels per building) for now, not 2-way choices.
+- Upgrades are linear (towers 4 levels, farm / bank / gate 3), not 2-way
+  choices.
+- **Enemies attack only walls** (gates, then the keep), never the hero or
+  towers: no building HP, no hero death.
+- Economy plots take a farm (fixed income) or a bank (interest on held
+  gold, capped).
+- **Hero upgrades** (rogue-like): XP from kills near the hero, whoever
+  kills; level-ups banked during a wave and picked after it (3 cards,
+  tiers I-III, reroll for gold); a relic after waves 3/6/9. No permanent
+  unlocks until there are many more waves / maps.
+- Main menu with Continue (saved at every wave), top-10 scores (waves,
+  then keep HP % x 10 + gold), credits; Esc / back always asks first.
 
 Reference: `ref/yt_bHMSu6iMIYI.mp4` (Thronefall announce trailer, Xbox,
 "coming November 11 2026"). The user wants Thronefall's defense system,
@@ -45,14 +60,16 @@ summoning / commanding.
 
 ## Adopt, in priority order
 
-1. **Day / night loop** (replaced by build/attack phases, see above). Build phase (no enemies, unlimited time, a "Start
-   night" button) then a wave. A level = N nights (5-8), last one a boss.
+1. **Day / night loop** (replaced by build/attack phases, see above).
+   Build phase (no enemies, unlimited time, a "Start night" button) then
+   a wave. A level = N nights (5-8), last one a boss.
    Next night's enemies shown per lane at the lane mouths during the day.
 2. **Three lanes** converging on the keep. Portrait camera follows the
    hero, who cannot cover all three: where you stand and build matters.
 3. **Tower spots with roles and limited reach.** Spots are fixed and few;
    no spot covers more than one or two lanes. Tower types (all buildable
-   on any tower spot, each with 2 upgrade tiers, tier 2 a choice of 2):
+   on any tower spot; proposed 2 upgrade tiers with a choice, built as 4
+   linear levels):
    - Archer: cheap, long range, single target.
    - Ballista: very long range, pierces a line, slow (today's tower).
    - Mortar: splash damage, minimum range, slow.
@@ -63,15 +80,19 @@ summoning / commanding.
 4. **Economy decision.** Gold from kills (picked up, as now) plus dawn
    income from Farm spots: a farm built early pays off over the level
    but leaves a lane weaker tonight.
-5. **Enemies fight back.** Towers, walls and the hero have HP. Destroyed
+5. **Enemies fight back.** (Superseded: enemies attack only walls and the
+   keep; runner built, siege / ranged / boss still to come.) Towers,
+   walls and the hero have HP. Destroyed
    buildings come back at dawn (Thronefall rule) so a bad night hurts but
    doesn't snowball. Hero down = respawn at the keep after a few seconds.
    New roles: runner (fast, fragile), siege (targets buildings, high HP),
    ranged (shoots towers / hero from range), boss.
-6. **Roguelike hero upgrades.** After each night, pick 1 of 3 random
+6. **Roguelike hero upgrades.** (Built v0.1.15, see Decisions.) After
+   each night, pick 1 of 3 random
    cards: multishot, piercing / explosive bolts, attack speed, range,
    crit, move speed, magnet, regen, "towers near you +X%"... Rarities.
-7. **Score + victory screen;** later difficulty mutators and a level select.
+7. **Score + victory screen** (built: top 10, keep % x 10 + gold); later
+   difficulty mutators and a level select.
 
 ## Leave out
 
@@ -85,16 +106,12 @@ summoning / commanding.
 1. DONE (v0.1.5): three lanes, build/attack phases, wave preview, build
    popup at spots.
 2. DONE (v0.1.5): tower roles (archer, ballista, mortar, frost, banner) +
-   farm + gate, 3 levels each; real projectiles; SFX.
-3. DONE (v0.1.11): enemies that reach the keep stand and attack it (keep
-   HP, like a gate) instead of a fixed loss per leak. Enemies attack ONLY
-   walls (gates, keep), never the hero or towers (user, 2026-10-09: not a
-   good idea).
-4. New enemy roles; boss wave.
-5. DONE (v0.1.15): hero upgrades. XP from kills near the hero (towers'
-   kills count), level-ups banked and picked after the wave (3 cards,
-   tiers I-III, reroll for gold), relics after waves 3/6/9. Pool and
-   numbers: scripts/perks.gd. No permanent unlocks yet.
-6. DONE in part (v0.1.11): 10 waves, tower level IV, per-wave enemy HP
-   growth, bot loses sometimes (about 1 run in 6). Still to do: score
-   screen.
+   farm + gate; real projectiles; SFX.
+3. DONE (v0.1.11), changed: enemies that reach the keep stand and attack
+   it (keep HP, like a gate). Enemies attack only walls (user: hero /
+   tower HP not a good idea).
+4. TODO: new enemy roles (siege, ranged) and a boss wave.
+5. DONE (v0.1.15): hero upgrade cards and relics (scripts/perks.gd).
+6. DONE (v0.1.11-0.1.16): 10 waves, bot balance (loses ~1 run in 6),
+   score + top 10. TODO: more levels / maps, then permanent unlocks and
+   difficulty mutators.

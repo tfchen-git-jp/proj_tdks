@@ -20,10 +20,10 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   Walks over dropped gold to collect it (magnet radius).
 - **Phases:** BUILD (no enemies; walk onto a spot and its popup appears;
   stand on the red START pad by the keep: it shows the next wave per lane
-  and counts down Level.START_COUNTDOWN (5 s); walking off cancels) and
-  ATTACK (no building). 10 waves; clear them all to win. Enemies that reach
-  the keep stand at it and hit it with their dps (queue like at a gate)
-  until killed; keep HP Level.BASE_HP (600), lose at 0.
+  and counts down Level.START_COUNTDOWN (5 s, full-screen digit); walking
+  off cancels) and ATTACK (no building). 10 waves; clear them all to win.
+  Enemies that reach the keep stand at it and hit it with their dps
+  (queueing like at a gate) until killed; keep HP Level.BASE_HP (600).
 - **Hero upgrades (rogue-like, scripts/perks.gd):** kills within
   Perks.XP_RADIUS (8 m) of the hero give xp (ENEMIES `xp`), whoever kills.
   Level-ups are banked during a wave; after it the picker (hud.show_cards,
@@ -32,95 +32,98 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   cards x 3 tiers (drawing an owned one = next tier, maxed ones leave the
   pool), 6 relics. Reroll 10, 20, 30... gold. Cards have their own dice
   (Sim._card_rng, saved). Visuals in scripts/fx.gd (+ shaders/flame,
-  glow): element-coloured bolt glows, flame billboards on burning enemies,
-  jagged flickering lightning with a flash, blasts, crit sparks, wisp,
-  Rally/Spotter aura, Engineer rings on gates, level-up burst. Enemies
-  still attack only walls. No permanent unlocks (user: once 50+ waves or
-  several maps exist).
-- **Menu:** title screen over the drifting map (scripts/menu.gd): New game,
-  Continue (user://run.json, written at every wave start and clear by
-  scripts/save.gd; Sim.to_save / from_save), Scores (top 10 in
-  user://scores.json: waves cleared, then Save.score_of = keep HP % x 10
-  + gold), Credits, Exit. Esc / Android back pauses and asks
-  (scripts/confirm.gd) before leaving a game (mid-wave: resumes from the
-  wave's start; build phase: saved as it stands) or quitting.
+  glow). Enemies attack only walls (user). No permanent unlocks until
+  there are 50+ waves or several maps (user).
+- **Menu / saves (scripts/menu.gd, save.gd, confirm.gd):** title screen
+  over the drifting map: New game, Continue (user://run.json, written at
+  every wave start and clear; Sim.to_save / from_save, SAVE_VERSION 2),
+  Scores (top 10 in user://scores.json: waves cleared, then
+  Save.score_of = keep HP % x 10 + gold), Credits, Exit. Esc / Android
+  back pauses and asks before leaving a game (mid-wave: Continue resumes
+  from the wave's start; build phase: saved as it stands) or quitting.
   End screen: Play again / Main menu. Debug args (main.DEBUG_ARGS) skip
-  the menu and never save; real play uses a random seed.
+  the menu and never save; real play uses a random seed. Save paths: PC
+  %APPDATA%/Godot/app_userdata/RogueShot TD/, phone
+  /data/user/0/com.tfc.rogueshottd/files/.
 - **Map:** three lanes (west, centre, east) converging on the keep at the
-  top. 28 spots: 22 tower (11 x_* added v0.1.13 by a grid search), 3 gate
-  (one per lane, each with a tower spot beside it), 3 economy ("GOLD":
-  farm or bank). Unbuilt gate pads show a see-through gate across the
-  lane they block. Lane labels at each entrance preview the next wave.
-- **Buildings** (towers 4 levels, farm and gate 3; Level.BUILDINGS; a
-  bronze/silver/gold/ruby badge with I-IV faces the camera on each): Archer (cheap, single
-  target), Ballista (slow bolt piercing a line), Mortar (lobbed splash, has
-  a minimum range), Frost Crystal (pulse every 2.5 s, 3.5-4.5 s chill slows walking AND
-  attacks, chips), War Banner (towers
-  AND hero in its ring attack faster), Farm (gold after each wave), Bank
-  (10% interest on held gold after each wave; the rate never stacks, each
-  bank adds 10/18/28 to the cap), Gate
-  (blocks its lane, has HP, repaired after each wave).
+  top. 28 spots: 22 tower, 3 gate (one per lane, each with a tower spot
+  beside it), 3 economy ("GOLD": farm or bank). Unbuilt gate pads show a
+  see-through gate across the lane they block. Lane labels at each
+  entrance preview the next wave.
+- **Buildings** (Level.BUILDINGS; towers 4 levels, farm / bank / gate 3;
+  a bronze/silver/gold/ruby I-IV badge faces the camera on each): Archer
+  (cheap, single target), Ballista (bolt piercing a line), Mortar (lobbed
+  splash, minimum range), Frost Crystal (pulse every 2.5 s; 3.5-5 s chill
+  slows walking AND attacks), War Banner (towers and hero in its ring
+  attack faster), Farm (fixed gold after each wave), Bank (10% interest on
+  held gold after each wave; the rate never stacks, each bank adds
+  10/18/28 to the cap), Gate (blocks its lane, has HP, repaired after
+  each wave). Range ring: in the build popup; during an attack for the
+  tower the hero stands next to (main.RING_NEAR).
 - **Enemies:** grunt (red), armored (grey), runner (yellow, fast), brute
-  (giant, KayKit Barbarian, red HP bar). HP grows each wave
-  (Level.wave_hp: 1 + 0.05 w + 0.022 w^2), gold per kill doesn't. They
-  drop gold as coins (1), coin stacks (5) and ingots (20) (Sim.gold_pieces).
-  They walk in from beyond the map and are untargetable
-  until past their lane's start line (red dashes on the road,
-  Level.START_LINE_OUT = 2 m outside the hero's walkable area; was 1.5 m
-  inside until v0.1.16). Coins that would land beyond magnet reach are
-  nudged in (Sim.COIN_AREA). At a standing gate they queue: the
-  front rank attacks, the rest wait and step up; giants shove small ones
-  aside and a second giant hits over the first one's shoulder.
-- **Range ring:** in the build popup for the spot's building; during an
-  attack for the tower the hero stands next to (main.RING_NEAR).
-- **HUD:** keep HP (top left), coins (top right), FPS (top centre), wave /
-  phase line under them, minimap (bottom right; hidden while a popup is up),
-  build version (bottom left), gate HP bars (blue), giant HP bars (red).
+  (giant, KayKit Barbarian, red HP bar). HP x Level.wave_hp(w) = 1 +
+  0.25 w + 0.05 w^2 (Horde.max_hp keeps it for the bars); gold per kill
+  doesn't grow. Drops: coins (1), coin stacks (5), ingots (20)
+  (Sim.gold_pieces). They walk in from beyond the map and are untargetable
+  until their lane's start line (red dashes on the road,
+  Level.START_LINE_OUT = 2 m outside the hero's walkable area); coins that
+  would land beyond magnet reach are nudged in (Sim.COIN_AREA). At a
+  standing gate they queue: the front rank attacks, the rest wait and
+  step up; giants shove small ones aside and a second giant hits over the
+  first one's shoulder.
+- **HUD:** keep HP + hero level / XP bar (top left), coins (top right), FPS
+  (top centre), wave / phase line under them, minimap (bottom right;
+  hidden while a popup is up), build version (bottom left), gate HP bars
+  (blue), giant HP bars (red).
 - **Sound:** 32 SFX (assets/sfx) + looping BGM (assets/music, -16 dB).
-- Balance v0.1.15 (with upgrades; bot picks by Bot.CARD_PRIORITY, never
-  rerolls): enemy HP x(1 + 0.25w + 0.05w^2), wins 5 of 6 seeds, keep
-  60-85%, ~14 levels a run, hero ~35-50% of all damage; without picks
-  (balance.gd --nopicks) it loses in wave 5; idle loses in wave 3.
-- Balance before upgrades: user beat 6 waves on v0.1.6 (felt waves 1-2 a bit easy, 5-6 a
-  bit hard) and finished v0.1.10 with 300+ gold. v0.1.11 (10 waves): bot
-  wins ~5 of 6 seeds with the keep at 15-70%, damage mostly in waves 7 and
-  10, idle loses in wave 3. Gold left after wave 10 is that wave's loot.
 - **PC build:** the exported exe sizes its window to 90% of the screen
   height (main._fit_pc_window); editor/WSL runs keep 450x1000.
-- Motion is drawn between sim steps (main._alpha; Horde.prev_pos /
-  prev_phase, Sim.hero_prev) and Track.point blends its 0.1 m table: both
-  were behind "jumpy" walkers.
+- **Balance (v0.1.16, `./build.sh sim`):** the bot (Bot.PLAN builds,
+  Bot.CARD_PRIORITY picks, never rerolls) wins 5 of 6 seeds with the keep
+  at ~40-85%, reaches ~level 14, hero ~35-50% of all damage; without picks
+  (balance.gd --nopicks) it loses in wave 5, idle in wave 3. The user
+  found v0.1.15 "feels good". Gold left after wave 10 is that wave's loot.
 
 ## Next (docs/DESIGN.md "Build order")
 
-Enemies attack only walls (gates, keep), never the hero or towers (user).
-4. New enemy roles (siege, ranged) and a boss wave.
-5. More levels / maps; then permanent unlocks.
+- New enemy roles (siege, ranged) and a boss wave.
+- More levels / maps (the user designs them); then permanent unlocks and
+  difficulty mutators.
 
 ## Architecture
 
-- `scripts/sim.gd` (Sim) -- ALL rules, no nodes: phases, waves, hero,
-  buildings (buy / upgrade), towers, projectiles, gates, coins, win/lose.
+- `scripts/sim.gd` (Sim) -- ALL rules, no nodes: phases, waves, hero
+  (upgrades applied here), buildings (buy / upgrade), towers,
+  projectiles, gates, coins, xp / offers / picks, save data, win/lose.
   `step(dt, move)` at fixed 60 Hz. `events` (shot / hit / boom / pulse /
-  kill / coin / built / gate_broken / wave_start / wave_cleared / base_hit)
-  drive effects and sound; buy() / start_wave() events are queued in
+  blast / lightning / volley / kill / coin / midas / built / perk /
+  level_up / gate_broken / wave_start / wave_cleared / base_hit) drive
+  effects and sound; buy() / start_wave() / pick() events are queued in
   `_pending` and come out on the next step.
 - `scripts/horde.gd` -- every enemy as parallel packed arrays per lane
-  (no nodes); stable `uid` per enemy (projectiles home by it); swap-remove
-  at the end of each step. `_queue` = the gate queue (see history).
-- `scripts/track.gd` -- a lane as a 0.1 m lookup table: point(d, off),
-  forward, right, closest_d. `off` > 0 = right of the walking direction.
+  (no nodes); stable `uid` per enemy (projectiles home by it); burning,
+  chill; swap-remove at the end of each step. `_queue` = the gate / keep
+  queue (see history).
+- `scripts/track.gd` -- a lane as a 0.1 m lookup table, blended between
+  entries: point(d, off), forward, right, closest_d. `off` > 0 = right of
+  the walking direction.
 - `scripts/level.gd` -- ALL level data and tuning: lanes, spots,
-  buildings, enemies, waves. Balance changes go here only.
-- `scripts/bot.gd` -- scripted player (PLAN build order) for --auto, --ff,
-  tests and balance runs.
+  buildings, enemies, waves. `scripts/perks.gd` -- cards, relics, XP
+  curve. Balance changes go in these two only.
+- `scripts/bot.gd` -- scripted player (PLAN build order, card priority)
+  for --auto, --ff, tests and balance runs (`tools/balance.gd`).
 - `scripts/main.gd` -- view: camera, light, MultiMesh crowds/coins/
-  projectiles, buildings, popups, effects, sound, music, debug args.
-- `scripts/hud.gd` (+ `minimap.gd`) -- 2D overlay and joystick.
+  projectiles, buildings, popups, effects, sound, music, menu flow, debug
+  args. Draws between sim steps (`_alpha`).
+- `scripts/fx.gd` -- hero-upgrade effects (bolt glows, flames, lightning,
+  wisp, auras, blasts, level-up).
+- `scripts/hud.gd` (+ `minimap.gd`) -- 2D overlay, joystick, build popup,
+  card picker, countdown, end screen. `menu.gd` title menu, `confirm.gd`
+  yes/no dialog, `save.gd` run + scores on disk.
 - `scripts/world.gd` -- ground (shader + baked road distance field),
   procedural cliff slabs, pines/rocks, keep.
 - `scripts/models.gd` -- every asset-pack model at its game size; hero
-  AnimationTree; building(kind, level); enemy VAT materials.
+  AnimationTree; building(kind, level); level badges; enemy VAT materials.
 - `scripts/sfx.gd` -- pooled SFX player, random variants, rate limits.
 - World axes: x = screen right, z = screen down; enemies walk toward -z.
   Camera: no yaw, pitch 56, KEEP_WIDTH (same map width on every phone).
@@ -141,8 +144,9 @@ assets_in/INVENTORY.md lists 16 CC0 packs (previews in assets_in/_previews).
   procedural (Models.ingot_mesh).
 - Towers: Kenney Tower Defense Kit (round/square stacks, ballista,
   catapult, crystals, arrow/boulder ammo); KayKit Hexagon (archer tower,
-  windmill farm, lumbermill keep, flag, stone gate). Pines: Kenney Nature
-  (recoloured). Rocks: KayKit Forest. Coin: KayKit Dungeon.
+  windmill farm, market bank, lumbermill keep, flag, stone gate). Pines:
+  Kenney Nature (recoloured). Rocks: KayKit Forest. Coin and coin stacks:
+  KayKit Dungeon.
 - SFX: tools/sfx_build.py rebuilds assets/sfx from assets_in/sfx_src;
   credits in assets/sfx/CREDITS.txt (`wave_start` is CC-BY 4.0, "Kat").
 - BGM: assets/music/bgm_city.mp3 = Pixabay "RPG City" (phantasticbeats),
@@ -175,7 +179,8 @@ is a separate install the user can delete.
 ## Build / test (`./build.sh`, see its header)
 
 `check` (import + parse every script), `test` (headless rule tests incl. a
-full bot win), `sim [--seed=N] [--idle]` (balance timeline, ~3 s), `shot
+full bot win), `sim [--seed=N] [--idle] [--nopicks]` (balance timeline,
+~5 s), `shot
 NAME ARGS` (WSL screenshot; refuses to launch unless all scripts parse),
 `export` + `native ARGS` (Windows exe), `apk`, `install`, `adb ARGS`,
 `logcat`. Bakers: `tools/bake_vat.gd`, `tools/bake_terrain.gd` (re-run
@@ -184,11 +189,13 @@ after changing Level.LANES; a test checks the stored hash). Probes:
 Game args (after `--`): `--auto --ff=SEC --speed=X (0 = freeze) --seed=N
 --shot=PATH --shot-delay=S --bench=S --zoom=X --cam=X,Z|gate --hero=X,Z
 --noshadow --mute --notree --drops --ff-idle --build=S:K[:N],... --load
---page=scores|credits --play --newgame --perks=ID[:T],... --offer
+--page=scores|credits --play --newgame --perks=ID[:T],... --offer[=cards]
 --lightning --ask --demo=anim|hero|clips --clips=A,B
---bowrot=X,Y,Z`. `--demo=clips` (raw hero clips side by side) is how
-the carry pitch was picked; render it with `--resolution 1500x600`. `--bench` prints [prof]
-per-section ms and [render] counters.
+--bowrot=X,Y,Z` (main.gd header explains each). `--demo=clips` (raw
+hero clips side by side) is how the carry pitch was picked; render it
+with `--resolution 1500x600`. `--bench` prints [prof] per-section ms and
+[render] counters. README screenshots (docs/screens) were taken with
+`shot` + `--build`, `--offer=cards`, `--lightning`.
 
 ## Target device
 
@@ -200,7 +207,7 @@ Windows build, never in WSL.
 ## Environment
 
 - Same two WSL2 PCs as ~/proj_3dim (see its CLAUDE.md "Environment" and
-  ~/proj_trts/proto-rts/GODOT-BLENDER-WSL-PLAYBOOK.md). Godot 4.7.2,
+  ~/proj_trts/GODOT-BLENDER-WSL-PLAYBOOK.md). Godot 4.7.2,
   Blender 4.5, yt-dlp in ~/.local/bin. Builds go to `D:\wsl_scratch\proj_tdks\`.
 - Renderer: **Compatibility (GLES3) everywhere**, so WSL shots show what
   the phone renders. Lighting set by measuring pixels: sun 0.45, ambient
@@ -270,10 +277,14 @@ Windows build, never in WSL.
   giant HP bars (were divided by the base HP, not the wave-scaled one, so
   the first 2/3 of a late giant's HP never showed: Horde.max_hp).
 - v0.1.14: gold invisible after New game (drop MultiMesh list not
-  cleared on restart). v0.1.15: hero upgrades (XP, cards, relics, FX).
-  Save format v2 (older run.json files are ignored).
-- v0.1.16: Esc/back confirmations, start line moved out + marked, score
-  = keep % x 10 + gold for ties on waves.
+  cleared on restart: anything built per game must be cleared in
+  main._start). v0.1.15: hero upgrades (XP, cards, relics, FX); save
+  format v2 (older run.json files are ignored). Flames: billboards inside
+  a body are hidden by it; Fx offsets them toward the camera.
+- v0.1.16: Esc/back confirmations; start line moved from 1.5 m inside
+  to 2 m outside the walkable area and marked (user: enemies "in range"
+  at the bottom of the centre lane weren't shot); score = keep % x 10 +
+  gold for ties on waves.
 - MultiMesh bounds go stale when the buffer is written directly: a close
   camera culled the whole crowd; `custom_aabb` = whole map.
 - Kenney/KayKit building meshes shadow-acne at any bias: they don't

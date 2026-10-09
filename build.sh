@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # proj_tdks build/verify driver. Lessons behind each guard are in
-# ~/proj_trts/proto-rts/GODOT-BLENDER-WSL-PLAYBOOK.md.
+# ~/proj_trts/GODOT-BLENDER-WSL-PLAYBOOK.md.
 #   ./build.sh import            headless import (reimports assets)
 #   ./build.sh check             import + parse-check every script
 #   ./build.sh test              check + headless unit tests (tests/run_tests.gd)

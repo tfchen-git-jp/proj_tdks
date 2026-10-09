@@ -20,7 +20,7 @@ extends Node3D
 ##   --load            start from the saved run (as Continue does)
 ##   --perks=ID[:T],…  start with these cards (tier T) / relics
 ##   --lightning       strike + set the crowd ablaze every 0.35 s (FX shots)
-##   --offer           open the picker: a relic, then two level-ups
+##   --offer[=cards]   open the picker: a relic (unless =cards), then two level-ups
 ##   --drops           a coin, a coin stack and an ingot beside the hero
 ##   --ff-idle         during --ff the hero starts the wave, then stands aside
 ##   --noshadow        sun casts no shadows (performance / artefact tests)
@@ -256,8 +256,8 @@ func _start(save := {}) -> void:
 				sim.relics.push_back(f[0])
 			else:
 				sim.perks[f[0]] = int(f[1]) if f.size() > 1 else 1
-	if _args.has("offer"):  # a relic and two level-ups waiting
-		sim.pending_relics = 1
+	if _args.has("offer"):  # a relic (not with --offer=cards) and two level-ups waiting
+		sim.pending_relics = 0 if _args.offer == "cards" else 1
 		sim.pending_levels = 2
 		sim._next_offer()
 	if _args.has("ff"):
