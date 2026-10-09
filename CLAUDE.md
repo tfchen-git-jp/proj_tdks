@@ -10,7 +10,7 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.1.10)
+## The game today (v0.1.13)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
@@ -19,39 +19,63 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   the whole body, crossbow turned Models.HERO_CARRY_PITCH in the hand).
   Walks over dropped gold to collect it (magnet radius).
 - **Phases:** BUILD (no enemies; walk onto a spot and its popup appears;
-  stand on the red START pad by the keep to see the next wave per lane and
-  start it) and ATTACK (no building). 6 waves; clear them all to win; the
-  keep has 30 HP, each leaked enemy costs 1-6.
+  stand on the red START pad by the keep: it shows the next wave per lane
+  and counts down Level.START_COUNTDOWN (5 s); walking off cancels) and
+  ATTACK (no building). 10 waves; clear them all to win. Enemies that reach
+  the keep stand at it and hit it with their dps (queue like at a gate)
+  until killed; keep HP Level.BASE_HP (600), lose at 0.
+- **Menu:** title screen over the drifting map (scripts/menu.gd): New game,
+  Continue (user://run.json, written at every wave start and clear by
+  scripts/save.gd; Sim.to_save / from_save), Scores (top 10 in
+  user://scores.json: waves cleared, then gold), Credits, Exit. Esc /
+  Android back returns to it (the run resumes from the last wave start).
+  End screen: Play again / Main menu. Debug args (main.DEBUG_ARGS) skip
+  the menu and never save; real play uses a random seed.
 - **Map:** three lanes (west, centre, east) converging on the keep at the
-  top. 17 spots: 11 tower, 3 gate (one per lane, each with a tower spot
-  beside it), 3 farm. Unbuilt gate pads show a see-through gate across the
+  top. 28 spots: 22 tower (11 x_* added v0.1.13 by a grid search), 3 gate
+  (one per lane, each with a tower spot beside it), 3 economy ("GOLD":
+  farm or bank). Unbuilt gate pads show a see-through gate across the
   lane they block. Lane labels at each entrance preview the next wave.
-- **Buildings** (each 3 levels; Level.BUILDINGS): Archer (cheap, single
+- **Buildings** (towers 4 levels, farm and gate 3; Level.BUILDINGS; a
+  bronze/silver/gold/ruby badge with I-IV faces the camera on each): Archer (cheap, single
   target), Ballista (slow bolt piercing a line), Mortar (lobbed splash, has
   a minimum range), Frost Crystal (pulse every 2.5 s, 3.5-4.5 s chill slows walking AND
   attacks, chips), War Banner (towers
-  AND hero in its ring attack faster), Farm (gold after each wave), Gate
+  AND hero in its ring attack faster), Farm (gold after each wave), Bank
+  (10% interest on held gold after each wave; the rate never stacks, each
+  bank adds 10/18/28 to the cap), Gate
   (blocks its lane, has HP, repaired after each wave).
 - **Enemies:** grunt (red), armored (grey), runner (yellow, fast), brute
-  (giant, red HP bar). They walk in from beyond the map and are untargetable
+  (giant, KayKit Barbarian, red HP bar). HP grows each wave
+  (Level.wave_hp: 1 + 0.05 w + 0.022 w^2), gold per kill doesn't. They
+  drop gold as coins (1), coin stacks (5) and ingots (20) (Sim.gold_pieces).
+  They walk in from beyond the map and are untargetable
   until past their lane's start line (inside the hero's reach), so every
   coin lands where it can be picked up. At a standing gate they queue: the
   front rank attacks, the rest wait and step up; giants shove small ones
   aside and a second giant hits over the first one's shoulder.
+- **Range ring:** in the build popup for the spot's building; during an
+  attack for the tower the hero stands next to (main.RING_NEAR).
 - **HUD:** keep HP (top left), coins (top right), FPS (top centre), wave /
   phase line under them, minimap (bottom right; hidden while a popup is up),
   build version (bottom left), gate HP bars (blue), giant HP bars (red).
 - **Sound:** 32 SFX (assets/sfx) + looping BGM (assets/music, -16 dB).
-- Balance: user beat it on v0.1.6 after losing wave 4-5 on v0.1.5; felt
-  waves 1-2 a bit easy, 5-6 a bit hard. Bot wins all 6 (keep 16-26/30
-  since v0.1.10; only wave 6 leaks).
+- Balance: user beat 6 waves on v0.1.6 (felt waves 1-2 a bit easy, 5-6 a
+  bit hard) and finished v0.1.10 with 300+ gold. v0.1.11 (10 waves): bot
+  wins ~5 of 6 seeds with the keep at 15-70%, damage mostly in waves 7 and
+  10, idle loses in wave 3. Gold left after wave 10 is that wave's loot.
+- **PC build:** the exported exe sizes its window to 90% of the screen
+  height (main._fit_pc_window); editor/WSL runs keep 450x1000.
+- Motion is drawn between sim steps (main._alpha; Horde.prev_pos /
+  prev_phase, Sim.hero_prev) and Track.point blends its 0.1 m table: both
+  were behind "jumpy" walkers.
 
 ## Next (docs/DESIGN.md "Build order")
 
-3. Enemies attack buildings and the hero (HP, dawn repair, hero respawn).
+Enemies attack only walls (gates, keep), never the hero or towers (user).
 4. New enemy roles (siege, ranged) and a boss wave.
 5. Roguelike hero upgrade cards after each wave.
-6. Balance (bot must lose sometimes), score screen; then more levels.
+6. Score screen; then more levels.
 
 ## Architecture
 
@@ -88,7 +112,13 @@ assets_in/INVENTORY.md lists 16 CC0 packs (previews in assets_in/_previews).
   weapon meshes freed, only `2H_Crossbow` + cape kept).
 - Enemies: Kenney Mini Dungeon `character-human` (grunt; runner = same,
   yellow tint, 0.85 scale), Mini Arena `character-soldier` (armored),
-  Quaternius Giant (brute). All baked to VAT (below).
+  KayKit Adventurers `Barbarian` (brute, with 2H axe / hat / cape baked as
+  rigid bone parts; was Quaternius Giant until v0.1.10). All baked to VAT.
+- Downloaded on the main PC from github.com/KayKit-Game-Assets
+  (CC0): Barbarian.glb, Dungeon Remastered coin_stack_*.glb, Hexagon
+  building_market_blue (bank). Not yet in
+  assets_in/INVENTORY.md (that lives on the other PC). Gold ingot is
+  procedural (Models.ingot_mesh).
 - Towers: Kenney Tower Defense Kit (round/square stacks, ballista,
   catapult, crystals, arrow/boulder ammo); KayKit Hexagon (archer tower,
   windmill farm, lumbermill keep, flag, stone gate). Pines: Kenney Nature
@@ -133,7 +163,8 @@ after changing Level.LANES; a test checks the stored hash). Probes:
 `tools/inspect.gd`, `tools/hero_probe.gd`.
 Game args (after `--`): `--auto --ff=SEC --speed=X (0 = freeze) --seed=N
 --shot=PATH --shot-delay=S --bench=S --zoom=X --cam=X,Z|gate --hero=X,Z
---noshadow --mute --notree --demo=anim|hero|clips --clips=A,B
+--noshadow --mute --notree --drops --ff-idle --build=S:K[:N],... --load
+--page=scores|credits --play --demo=anim|hero|clips --clips=A,B
 --bowrot=X,Y,Z`. `--demo=clips` (raw hero clips side by side) is how
 the carry pitch was picked; render it with `--resolution 1500x600`. `--bench` prints [prof]
 per-section ms and [render] counters.
@@ -208,6 +239,15 @@ Windows build, never in WSL.
   of the gate hit it (2 giants hit together, a 3rd waits). User picked
   this (push + reach) over no-collision / spreading. Bot keep after wave
   6 fell from 30 to 16-26 (gates break faster).
+- v0.1.11: 10 waves + tower level IV + per-wave HP growth; enemies attack
+  the keep (no more leak/escaped); start pad countdown; tiered gold drops;
+  level badges; Barbarian brute; PC window fit; smooth motion. Bot bug:
+  it never got within SPOT_REACH*0.8 of a built farm (solid), so it never
+  upgraded farms; it now buys when spot_under_hero() is the spot.
+- v0.1.12: full-screen start countdown digit. v0.1.13: main menu, saves,
+  scores, credits; bank; 11 more tower spots; attack-phase range ring;
+  giant HP bars (were divided by the base HP, not the wave-scaled one, so
+  the first 2/3 of a late giant's HP never showed: Horde.max_hp).
 - MultiMesh bounds go stale when the buffer is written directly: a close
   camera culled the whole crowd; `custom_aabb` = whole map.
 - Kenney/KayKit building meshes shadow-acne at any bias: they don't

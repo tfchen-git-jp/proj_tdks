@@ -11,17 +11,18 @@ extends SceneTree
 const ROW_W := 1024
 
 ## name, source, height in metres (feet to top of head, frame 0 of walk),
-## fps, clips: [name, source clip, loops].
+## fps, clips: [name, source clip, loops], attach: rigid meshes on bones
+## (BoneAttachment3D children: weapons, hats) to bake along.
 const JOBS := [
 	{name = "grunt", src = "res://assets/chars/mini_dungeon/character-human.glb", height = 0.95, fps = 30.0,
 		clips = [["walk", "walk", true], ["attack", "attack-melee-right", true], ["die", "die", false], ["idle", "idle", true]]},
 	{name = "armored", src = "res://assets/chars/mini_arena/character-soldier.glb", height = 1.05, fps = 30.0,
 		clips = [["walk", "walk", true], ["attack", "attack-melee-right", true], ["die", "die", false], ["idle", "idle", true]]},
-	{name = "brute", src = "res://assets/chars/giant/Quaternius_Giant.glb", height = 2.3, fps = 20.0,
-		clips = [["walk", "EnemyArmature|EnemyArmature|EnemyArmature|Walk", true],
-			["attack", "EnemyArmature|EnemyArmature|EnemyArmature|Attack", true],
-			["die", "EnemyArmature|EnemyArmature|EnemyArmature|Death", false],
-			["idle", "EnemyArmature|EnemyArmature|EnemyArmature|Idle", true]]},
+	# KayKit Barbarian (the hero's pack and style; was Quaternius' Giant).
+	{name = "brute", src = "res://assets/chars/barbarian/Barbarian.glb", height = 2.3, fps = 24.0,
+		attach = ["2H_Axe", "Barbarian_Hat", "Barbarian_Cape"],
+		clips = [["walk", "Walking_A", true], ["attack", "2H_Melee_Attack_Chop", true],
+			["die", "Death_A", false], ["idle", "2H_Melee_Idle", true]]},
 ]
 
 
@@ -73,6 +74,24 @@ func _bake(job: Dictionary) -> void:
 			idx.push_back(base + i)
 		if material == null:
 			material = mis[m].get_active_material(0)
+	# Rigid parts on bones: each its own "owner" following one bone.
+	var rigid: Array = []  # [MeshInstance3D, BoneAttachment3D]
+	for nm in job.get("attach", []):
+		var mi := inst.find_child(nm, true, false) as MeshInstance3D
+		var att := mi.get_parent() as BoneAttachment3D
+		var arr := mi.mesh.surface_get_arrays(0)
+		var base := src_v.size()
+		var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		src_v.append_array(v)
+		src_n.append_array(arr[Mesh.ARRAY_NORMAL])
+		uv.append_array(arr[Mesh.ARRAY_TEX_UV])
+		for i in v.size():
+			owner.push_back(mis.size() + rigid.size())
+			bones.append_array([0, 0, 0, 0])
+			weights.append_array([1.0, 0.0, 0.0, 0.0])
+		for i in (arr[Mesh.ARRAY_INDEX] as PackedInt32Array):
+			idx.push_back(base + i)
+		rigid.push_back([mi, att])
 	var nv := src_v.size()
 	var rows := int(ceil(float(nv) / ROW_W))
 
@@ -91,7 +110,7 @@ func _bake(job: Dictionary) -> void:
 			var t := minf(f / fps, anim.length)
 			ap.play(c[1])
 			ap.seek(t, true)
-			var out := _skin(mis, src_v, src_n, owner, bones, weights)
+			var out := _skin(mis, rigid, src_v, src_n, owner, bones, weights)
 			frames_pos.push_back(out[0])
 			frames_nrm.push_back(out[1])
 
@@ -149,7 +168,7 @@ func _bake(job: Dictionary) -> void:
 
 ## CPU skinning of every vertex at the current animation pose, in the
 ## model's root space. Returns [positions, normals].
-func _skin(mis: Array[MeshInstance3D], v: PackedVector3Array, nrm: PackedVector3Array,
+func _skin(mis: Array[MeshInstance3D], rigid: Array, v: PackedVector3Array, nrm: PackedVector3Array,
 		owner: Array[int], bones: PackedInt32Array, weights: PackedFloat32Array) -> Array:
 	var mats: Array = []
 	for mi in mis:
@@ -162,6 +181,10 @@ func _skin(mis: Array[MeshInstance3D], v: PackedVector3Array, nrm: PackedVector3
 				bone = skel.find_bone(mi.skin.get_bind_name(k))
 			list.push_back(to_root * skel.get_bone_global_pose(bone) * mi.skin.get_bind_pose(k))
 		mats.push_back(list)
+	for r in rigid:
+		var att: BoneAttachment3D = r[1]
+		var skel := att.get_parent() as Skeleton3D
+		mats.push_back([skel.global_transform * skel.get_bone_global_pose(att.bone_idx) * (r[0] as MeshInstance3D).transform])
 	var out_v := PackedVector3Array()
 	var out_n := PackedVector3Array()
 	out_v.resize(v.size())

@@ -14,6 +14,10 @@ extends Node3D
 ##   --cam=X,Z         camera looks at world (X, Z) instead of following the hero
 ##   --cam=gate        camera looks at the first standing gate
 ##   --hero=X,Z        put the hero there (after any --ff)
+##   --build=S:K[:N],… build kind K on spot S (N levels) for free
+##   --load            start from the saved run (as Continue does)
+##   --drops           a coin, a coin stack and an ingot beside the hero
+##   --ff-idle         during --ff the hero starts the wave, then stands aside
 ##   --noshadow        sun casts no shadows (performance / artefact tests)
 ##   --mute            no sound (screenshots, benchmarks)
 ##   --demo=anim|hero  enemy clip lineup / hero animation lineup
@@ -40,6 +44,11 @@ var cam: Camera3D
 
 var _args := {}
 var _acc := 0.0
+## How far the screen is between the last sim step and the next (0..1):
+## enemies and the hero are drawn that far from their previous position,
+## so motion is smooth whatever the frame rate (was: jumpy walkers).
+var _alpha := 1.0
+var _count_seen := -1  # start-pad countdown second last shown (tick sound)
 var _speed := 1.0
 var _shot_t := -1.0
 var _bench_t := -1.0
@@ -57,8 +66,11 @@ var _hero_bow: Node3D
 var _hero_bow_x := 0.0  # the crossbow's own pitch in the aim pose
 var _enemy: Array[Dictionary] = []  # per kind: {mm, buf, clips, scale}
 var _corpses: Array[Dictionary] = []  # {pos, basis, kind, t}
-var _drop_mm: MultiMesh
-var _drop_buf := PackedFloat32Array()
+## Dropped gold, one batch per tier: coin (1-4), coin stack (5-19),
+## ingot (20+), by the piece's value.
+const DROP_TIERS := [0, 5, 20]
+var _drop_mm: Array[MultiMesh] = []
+var _drop_buf: Array[PackedFloat32Array] = []
 var _pay_mm: MultiMesh
 var _pay_buf := PackedFloat32Array()
 var _flying_pay: Array[Dictionary] = []  # coin visuals hero -> spot
@@ -75,6 +87,11 @@ var _lane_labels: Array[Label3D] = []
 var _cam_target := Vector3.ZERO
 var _shake := 0.0
 var _phase_seen := ""
+var menu: MainMenu
+var _in_menu := false
+## Real play (no debug args): show the title menu, keep saves and scores.
+var _persist := false
+const DEBUG_ARGS := ["auto", "ff", "hero", "demo", "bench", "drops", "build", "cam", "play"]
 
 
 func _ready() -> void:
@@ -87,12 +104,86 @@ func _ready() -> void:
 		_shot_t = float(_args.get("shot-delay", "1.5"))
 	if _args.has("bench"):
 		_bench_t = float(_args.bench)
-	_start()
+	_fit_pc_window()
+	_persist = true
+	for k in DEBUG_ARGS:
+		if _args.has(k):
+			_persist = false
+	_start(Save.load_run() if _args.has("load") else {})
+	if _persist and not _args.has("load"):
+		_open_menu()
 
 
-func _start() -> void:
+## Title menu over the idle map (also: Esc / Android back during a game;
+## Continue then resumes from the last wave start).
+func _open_menu() -> void:
+	if menu == null:
+		menu = MainMenu.new()
+		menu.new_game.connect(func() -> void:
+			Save.clear_run()
+			_start()
+			_close_menu())
+		menu.continue_game.connect(func() -> void:
+			var run := Save.load_run()
+			if not run.is_empty():
+				_start(run)
+				_close_menu())
+		add_child(menu)
+	menu.visible = true
+	menu.show_page(String(_args.get("page", "main")))  # --page=scores|credits (screenshots)
+	hud.visible = false
+	hud.hide_menu()
+	_in_menu = true
+
+
+func _close_menu() -> void:
+	menu.visible = false
+	hud.visible = true
+	_in_menu = false
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_back()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
+		_back()
+
+
+## Back / Esc: in a game, to the menu; in the menu, up a page, then quit.
+func _back() -> void:
+	if not _persist:
+		return
+	if not _in_menu:
+		_start(Save.load_run())
+		_open_menu()
+	elif menu.get("_pages").main.visible:
+		get_tree().quit()
+	else:
+		menu.show_page("main")
+
+
+## Exported PC build: the 450x1000 window was too small on a 2K monitor.
+## Use 90% of the screen's height at the phone's shape (the HUD scales with
+## it). Phones and editor / WSL runs (screenshots) keep the project size.
+func _fit_pc_window() -> void:
+	if not OS.has_feature("template") or OS.has_feature("mobile") or _args.has("shot"):
+		return
+	var area := DisplayServer.screen_get_usable_rect()
+	var h := int(area.size.y * 0.9)
+	var w := int(h * 0.45)
+	DisplayServer.window_set_size(Vector2i(w, h))
+	DisplayServer.window_set_position(area.position + (area.size - Vector2i(w, h)) / 2)
+	print("[window] %dx%d on a %dx%d screen area" % [w, h, area.size.x, area.size.y])
+
+
+## A new game, or the saved run `save` (Sim.to_save()) when given.
+func _start(save := {}) -> void:
 	for c in get_children():
-		c.queue_free()
+		if c != menu:
+			c.queue_free()
 	_corpses.clear()
 	_pads.clear()
 	_built.clear()
@@ -101,27 +192,56 @@ func _start() -> void:
 	_enemy.clear()
 	_lane_labels.clear()
 	_phase_seen = ""
-	sim = Sim.new(int(_args.get("seed", "1")))
+	sim = Sim.from_save(save) if not save.is_empty() else Sim.new(int(_args.get("seed", str(randi() % 100000 if _persist else 1))))
 	bot = Bot.new(sim) if _args.has("auto") else null
 	_build_scene()
+	if not save.is_empty():
+		_fast_forwarding = true
+		for b in sim.buildings.values():
+			_on_built({spot = b.spot, kind = b.kind, level = b.level})
+		_fast_forwarding = false
+	if _args.has("build"):  # spot:kind[:levels],... built for free
+		var keep_coins := sim.coins
+		for item in String(_args.build).split(","):
+			var f := item.split(":")
+			for k in (int(f[2]) if f.size() > 2 else 1):
+				sim.coins = 9999
+				sim.buy(f[0], f[1])
+		sim.coins = keep_coins
+		sim.step(DT, Vector2.ZERO)
+		_apply_events()
 	if _args.has("ff"):
 		var ff_bot := bot if bot else Bot.new(sim)
 		var steps := int(float(_args.ff) / DT)
 		_fast_forwarding = true
+		if _args.has("ff-idle"):
+			sim.hero_pos = Level.START_SPOT
 		for i in steps:
-			sim.step(DT, ff_bot.move())
+			if _args.has("ff-idle") and sim.phase == "attack":
+				sim.hero_pos = Vector3(-13.0, 0, 28.0)  # out of the way
+			sim.step(DT, Vector2.ZERO if _args.has("ff-idle") else ff_bot.move())
 			_apply_events()
 			_age_corpses(DT)
 			if sim.state != "play":
 				break
 		_fast_forwarding = false
+		if sim.state != "play":
+			_game_over.call_deferred()
 	if _args.has("hero"):
 		var xz := String(_args.hero).split(",")
 		sim.hero_pos = Vector3(float(xz[0]), 0.0, float(xz[1]))
+		sim.hero_prev = sim.hero_pos
+	if _args.has("drops"):  # one of each gold tier beside the hero
+		for k in 3:
+			var q := sim.hero_pos + Vector3(-1.2 + k * 1.2, 0, 2.6)
+			sim.drop_pos.push_back(q)
+			sim.drop_val.push_back([1, 5, 20][k])
+			sim.drop_fly.push_back(-1.0)
+			sim.drop_from.push_back(q)
 	_cam_target = _cam_goal()
 	_sync_view(0.0)
 	if not _args.has("ff"):
-		hud.message("Build your defences,\nthen start the wave at the flag", 4.0)
+		hud.message("Build your defences,\nthen stand on START to begin", 4.0)
 
 
 func _build_scene() -> void:
@@ -168,7 +288,9 @@ func _build_scene() -> void:
 		_enemy.push_back({mm = mm, buf = buf, clips = got[2].clips, scale = float(Models.ENEMY_VAT[k].scale)})
 
 	var coin := Models.mesh_of(Models.COIN)
-	_drop_mm = _multimesh(coin, Sim.DROP_CAP, null, false)
+	for m in [coin, Models.mesh_of(Models.COIN_STACK), Models.ingot_mesh()]:
+		_drop_mm.push_back(_multimesh(m, Sim.DROP_CAP if m == coin else 128, null, false))
+		_drop_buf.push_back(PackedFloat32Array())
 	_pay_mm = _multimesh(coin, 64, null, false)
 	_arrow_mm = _multimesh(Models.arrow_mesh(), PROJ_CAP, null, false)
 	_rock_mm = _multimesh(Models.boulder_mesh(), 64, null, false)
@@ -210,7 +332,13 @@ func _build_scene() -> void:
 	add_child(sfx)
 
 	hud = Hud.new()
-	hud.restart.connect(_start)
+	hud.restart.connect(func() -> void:
+		if _persist:
+			Save.clear_run()
+		_start())
+	hud.to_menu.connect(func() -> void:
+		_start()
+		_open_menu())
 	hud.menu_pick.connect(_on_menu_pick)
 	hud.menu_opened.connect(func() -> void: sfx.play("ui_open", -6.0))
 	add_child(hud)
@@ -383,6 +511,10 @@ func _process(delta: float) -> void:
 		_demo_anim(delta)
 		_tick_tools(delta)
 		return
+	if _in_menu:
+		_menu_camera(delta)
+		_tick_tools(delta)
+		return
 	_acc += minf(delta, 0.1) * _speed
 	var steps := 0
 	while _acc >= DT and steps < 30:
@@ -399,11 +531,35 @@ func _process(delta: float) -> void:
 		_age_corpses(DT)
 		_t("events", t0)
 		if was == "play" and sim.state != "play":
-			hud.hide_menu()
-			hud.show_end(sim.state == "win")
-			sfx.play("victory" if sim.state == "win" else "defeat")
+			_game_over()
+	_alpha = clampf(_acc / DT, 0.0, 1.0)
 	_sync_view(delta)
 	_tick_tools(delta)
+
+
+## Won or lost: record the score, drop the saved run, show the end screen.
+func _game_over() -> void:
+	hud.hide_menu()
+	var won := sim.state == "win"
+	var cleared := Level.WAVES.size() if won else sim.wave
+	var rank := 0
+	if _persist:
+		Save.clear_run()
+		rank = Save.add_score(cleared, sim.coins, won)
+	hud.show_end(won, "Waves cleared: %d / %d\nGold: %d%s" % [cleared, Level.WAVES.size(), sim.coins,
+		"\nNew top-10 score: #%d" % rank if rank > 0 else ""])
+	sfx.play("victory" if won else "defeat")
+
+
+## Behind the title menu: a slow drift over the map.
+var _menu_t := 0.0
+
+
+func _menu_camera(delta: float) -> void:
+	_menu_t += delta
+	var target := Vector3(-3.0 + 4.0 * sin(_menu_t * 0.11), 0.0, 9.0 + 13.0 * sin(_menu_t * 0.07))
+	var back := Vector3(0, sin(deg_to_rad(CAM_PITCH)), cos(deg_to_rad(CAM_PITCH))) * CAM_DIST * 1.25
+	cam.position = target + back
 
 
 func _keys() -> Vector2:
@@ -417,17 +573,47 @@ func _keys() -> Vector2:
 
 # --- build popup ------------------------------------------------------------------
 
+## During an attack: the reach of the one tower the hero stands next to
+## (nearest within RING_NEAR m), e.g. to see who a banner covers.
+const RING_NEAR := 2.3
+
+
+func _ring_near_hero() -> void:
+	var best := RING_NEAR
+	var r := 0.0
+	var at := Vector3.ZERO
+	if sim.state == "play":
+		for b in sim.buildings.values():
+			var st := Level.stats(b.kind, b.level)
+			var dd := Vector2(b.pos.x - sim.hero_pos.x, b.pos.z - sim.hero_pos.z).length()
+			if st.has("range") and dd < best:
+				best = dd
+				r = float(st.range)
+				at = b.pos
+	_range_ring.visible = r > 0.0
+	_range_ring.position = at
+	_range_ring.scale = Vector3(r, 1, r)
+
+
 ## Show the right popup for where the hero stands (build phase only).
 func _sync_menu() -> void:
 	if sim.state != "play" or sim.phase != "build":
+		hud.show_countdown(0)
 		hud.hide_menu()
-		_range_ring.visible = false
+		_ring_near_hero()
 		return
 	if sim.at_start_spot():
 		_range_ring.visible = false
-		hud.show_menu("start", "Wave %d of %d" % [sim.wave + 1, Level.WAVES.size()],
-			_preview_text(sim.wave), [{id = "start", text = "  Start the wave!", ok = true}])
+		var left := ceili(Level.START_COUNTDOWN - sim.start_t)
+		if left != _count_seen:
+			_count_seen = left
+			sfx.play("ui_click", -4.0)
+		hud.show_countdown(left)
+		hud.show_menu("start%d" % left, "Wave %d of %d starts in %d" % [sim.wave + 1, Level.WAVES.size(), left],
+			_preview_text(sim.wave) + "\nWalk off the pad to wait.", [])
 		return
+	_count_seen = -1
+	hud.show_countdown(0)
 	var spot := sim.spot_under_hero()
 	if spot.is_empty():
 		hud.hide_menu()
@@ -441,8 +627,9 @@ func _sync_menu() -> void:
 	var title := ""
 	var desc := ""
 	if b.is_empty():
-		title = {tower = "Tower spot", farm = "Farm plot", gate = "Gate spot"}[spot.kind]
-		desc = "Pick what to build." if spot.kind == "tower" else String(Level.BUILDINGS[spot.kind].desc)
+		title = {tower = "Tower spot", eco = "Economy plot", gate = "Gate spot"}[spot.kind]
+		desc = {tower = "Pick what to build.", eco = "Farm: steady gold. Bank: interest on the gold you save.",
+			gate = String(Level.BUILDINGS.gate.desc)}[spot.kind]
 	else:
 		title = "%s  Lv %d" % [Level.BUILDINGS[b.kind].name, b.level + 1]
 		desc = _stats_text(b.kind, b.level)
@@ -471,6 +658,9 @@ func _stats_text(kind: String, level: int) -> String:
 			return "+%d%% attack speed for towers and the hero within %sm" % [roundi(st.buff * 100), st.range]
 		"farm":
 			return "+%d gold after every wave" % st.income
+		"bank":
+			return "+%d%% of your gold after every wave, up to %d (banks add up their caps)" % [
+				roundi(Level.BANK_RATE * 100), st.cap]
 		"gate":
 			return "%d HP, repaired after each wave" % roundi(st.hp)
 	return ""
@@ -489,10 +679,6 @@ func _preview_text(w: int) -> String:
 
 
 func _on_menu_pick(id: String) -> void:
-	if id == "start":
-		if sim.start_wave():
-			hud.hide_menu()
-		return
 	var spot := sim.spot_under_hero()
 	if not spot.is_empty() and sim.buy(spot.id, id):
 		sfx.play("ui_click")
@@ -544,12 +730,18 @@ func _apply_events() -> void:
 				sfx.play("gate_break")
 				hud.message("The %s gate fell!" % Level.LANE_NAMES[e.lane].to_lower(), 2.0)
 			"wave_start":
+				if _persist:
+					Save.save_run(sim.checkpoint)
 				sfx.play("wave_start", -4.0)
 				hud.message("Wave %d!" % (e.wave + 1), 2.0)
 			"wave_cleared":
+				if sim.state == "play" and _persist:
+					Save.save_run(sim.to_save())
 				if sim.state == "play":
 					sfx.play("wave_clear")
 					var extra := "\n+%d gold from farms" % e.income if e.income > 0 else ""
+					if int(e.get("interest", 0)) > 0:
+						extra += "\n+%d gold interest" % e.interest
 					hud.message("Wave %d cleared!%s" % [e.wave + 1, extra], 3.0)
 			"base_hit":
 				sfx.play("base_hit", -3.0)
@@ -590,6 +782,14 @@ func _on_built(e: Dictionary) -> void:
 	else:
 		root.position = spot.pos
 	add_child(root)
+	# Level badge on the side facing the camera (at the gate: above its middle).
+	var badge := Models.badge(e.level)
+	root.add_child(badge)
+	var box := Models.bounds(got[0])
+	if e.kind == "gate":
+		badge.global_position = root.global_position + Vector3(0, box.end.y + 0.35, 0)
+	else:
+		badge.global_position = root.global_position + Vector3(0, box.size.y * 0.42, box.end.z + 0.1)
 	_built[spot.id] = {root = root, head = got[1], extra = got[2], kind = e.kind, level = e.level,
 		reload = 0.0, broken = false, wall = got[0]}
 	if e.kind != "gate":
@@ -749,7 +949,7 @@ func _cam_goal() -> Vector3:
 	# edges (the westmost spots used to sit at the screen edge). A build
 	# popup covers the bottom third: look further down so the hero stands
 	# above it.
-	var p := sim.hero_pos
+	var p := sim.hero_prev.lerp(sim.hero_pos, _alpha)
 	var lift := CAM_POPUP_LIFT if hud.menu_open() else 0.0
 	return Vector3(clampf(p.x, Level.BOUNDS.position.x + 4.0, Level.BOUNDS.end.x - 4.0), 0.0,
 		clampf(p.z + 1.0 + lift, -9.0, 27.0 + lift))
@@ -793,7 +993,7 @@ func _sync_hero(delta: float) -> void:
 		if _pads[s.id].node.visible and absf(sim.hero_pos.x - q.x) < Level.PAD_SIZE * 0.5 \
 				and absf(sim.hero_pos.z - q.z) < Level.PAD_SIZE * 0.5:
 			on_pad = PAD_TOP
-	_hero.position = sim.hero_pos + Vector3(0, on_pad, 0)
+	_hero.position = sim.hero_prev.lerp(sim.hero_pos, _alpha) + Vector3(0, on_pad, 0)
 	var vel := sim.hero_vel
 	vel.y = 0.0
 	var speed := vel.length()
@@ -836,17 +1036,22 @@ func _draw_enemies() -> void:
 		if n >= en.mm.instance_count:
 			continue
 		counts[k] = n + 1
+		var p := h.pos[i]
+		var ph := h.phase[i]
+		if i < h.prev_pos.size():
+			p = h.prev_pos[i].lerp(p, _alpha)
+			ph = lerpf(h.prev_phase[i], ph, _alpha)
 		var clip: Array = en.clips.walk
-		var cycle := fposmod(h.phase[i] / TAU, 1.0)
+		var cycle := fposmod(ph / TAU, 1.0)
 		if h.blocked[i] == 1:
 			clip = en.clips.attack
 		elif h.blocked[i] == 2:
 			clip = en.clips.idle
-			cycle = fposmod(h.phase[i] / TAU * 0.4, 1.0)
+			cycle = fposmod(ph / TAU * 0.4, 1.0)
 		var frame := cycle * float(clip[1])
 		var b := Basis.looking_at(h.forward(i), Vector3.UP).scaled(Vector3.ONE * float(en.scale))
 		var col := Color(1.7, 1.7, 1.7) if h.flash[i] > 0.0 else (Color(0.7, 0.85, 1.25) if h.slow[i] > 0.0 else Color.WHITE)
-		_put(en.buf, n, Transform3D(b, h.pos[i]), col, clip, frame)
+		_put(en.buf, n, Transform3D(b, p), col, clip, frame)
 	for c in _corpses:
 		var k: int = c.kind
 		var en: Dictionary = _enemy[k]
@@ -888,16 +1093,33 @@ func _put12(buf: PackedFloat32Array, i: int, xf: Transform3D) -> void:
 
 
 func _draw_drops() -> void:
-	var n := mini(sim.drop_pos.size(), _drop_mm.instance_count)
-	if _drop_buf.size() != _drop_mm.instance_count * 12:
-		_drop_buf.resize(_drop_mm.instance_count * 12)
-	for i in n:
-		var spin := float(i) * 2.399
-		var s := 0.55 if sim.drop_val[i] <= 1 else 0.75
-		var b := Basis(Vector3.UP, spin) * Basis(Vector3.RIGHT, 0.5 if sim.drop_fly[i] >= 0.0 else 0.0)
-		_put12(_drop_buf, i, Transform3D(b.scaled(Vector3.ONE * s), sim.drop_pos[i] + Vector3(0, 0.05, 0)))
-	_drop_mm.buffer = _drop_buf
-	_drop_mm.visible_instance_count = n
+	var n := [0, 0, 0]
+	for k in 3:
+		if _drop_buf[k].size() != _drop_mm[k].instance_count * 12:
+			_drop_buf[k].resize(_drop_mm[k].instance_count * 12)
+	var t := sim.time
+	for i in sim.drop_pos.size():
+		var v := sim.drop_val[i]
+		var k := 2 if v >= DROP_TIERS[2] else (1 if v >= DROP_TIERS[1] else 0)
+		if n[k] >= _drop_mm[k].instance_count:
+			continue
+		var flying := sim.drop_fly[i] >= 0.0
+		var spin := float(i) * 2.399 + t * 2.5
+		var bob := 0.0 if flying else 0.06 + 0.05 * sin(t * 3.0 + float(i))
+		var xf: Transform3D
+		match k:
+			0:  # a coin, face tilted up toward the camera, wobbling round
+				var b := Basis(Vector3.RIGHT, 0.45) * Basis(Vector3.UP, spin)
+				xf = Transform3D(b.scaled(Vector3.ONE * 0.95), sim.drop_pos[i] + Vector3(0, 0.12 + bob, 0))
+			1:
+				xf = Transform3D(Basis(Vector3.UP, spin * 0.4).scaled(Vector3.ONE * 0.55), sim.drop_pos[i] + Vector3(0, bob, 0))
+			2:
+				xf = Transform3D(Basis(Vector3.UP, spin * 0.4).scaled(Vector3.ONE * 1.3), sim.drop_pos[i] + Vector3(0, bob, 0))
+		_put12(_drop_buf[k], n[k], xf)
+		n[k] += 1
+	for k in 3:
+		_drop_mm[k].buffer = _drop_buf[k]
+		_drop_mm[k].visible_instance_count = n[k]
 
 
 ## Arrows, crossbow bolts and ballista bolts share the arrow mesh (scaled);
@@ -909,7 +1131,8 @@ func _draw_projectiles() -> void:
 	var na := 0
 	var nr := 0
 	for p in sim.projectiles:
-		var at := Sim.proj_pos(p, p.t)
+		var pt := float(p.t) - (1.0 - _alpha) * DT  # between sim steps, like the crowd
+		var at := Sim.proj_pos(p, pt)
 		if p.kind == "shell":
 			if nr < _rock_mm.instance_count:
 				var spin := Basis(Vector3(1, 0.3, 0).normalized(), float(p.t) * 9.0).scaled(Vector3.ONE * 1.3)
@@ -918,7 +1141,7 @@ func _draw_projectiles() -> void:
 			continue
 		if na >= _arrow_mm.instance_count:
 			continue
-		var ahead := Sim.proj_pos(p, p.t + 0.02)
+		var ahead := Sim.proj_pos(p, pt + 0.02)
 		var dir := ahead - at
 		if dir.length() < 0.0001:
 			dir = (p.to as Vector3) - (p.from as Vector3)
@@ -948,7 +1171,7 @@ func _draw_pay(delta: float) -> void:
 		var p: Vector3 = (c.a as Vector3).lerp(c.b, c.t)
 		p.y += sin(c.t * PI) * 1.2
 		var b := Basis(Vector3.UP, c.t * 9.0) * Basis(Vector3.RIGHT, 1.2)
-		_put12(_pay_buf, n, Transform3D(b.scaled(Vector3.ONE * 0.6), p))
+		_put12(_pay_buf, n, Transform3D(b.scaled(Vector3.ONE * 1.0), p))
 		n += 1
 	_flying_pay = keep
 	_pay_mm.buffer = _pay_buf
@@ -1017,13 +1240,12 @@ func _sync_gates() -> void:
 func _sync_enemy_bars() -> void:
 	var bars: Array = []
 	var h := sim.horde
-	var max_hp := float(Level.ENEMIES[Level.BRUTE].hp)
 	for i in h.count():
 		if h.kind[i] != Level.BRUTE or h.hp[i] <= 0.0:
 			continue
 		var top := h.pos[i] + Vector3(0, 2.75, 0)
 		if not cam.is_position_behind(top):
-			bars.push_back([cam.unproject_position(top), h.hp[i] / max_hp])
+			bars.push_back([cam.unproject_position(top), h.hp[i] / h.max_hp[i]])
 	hud.set_enemy_bars(bars)
 
 
@@ -1035,7 +1257,7 @@ func _make_pad(spot: Dictionary) -> Dictionary:
 	add_child(node)
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var tint: Color = {tower = Color(0.1, 0.38, 0.28), farm = Color(0.42, 0.34, 0.16), gate = Color(0.3, 0.3, 0.36)}[spot.kind]
+	var tint: Color = {tower = Color(0.1, 0.38, 0.28), eco = Color(0.42, 0.34, 0.16), gate = Color(0.3, 0.3, 0.36)}[spot.kind]
 	World.box(st, Vector3(0, 0, 0), Vector3(s * 0.5, 0.02, s * 0.5), tint)
 	# Dashed white border: 5 dashes per side.
 	var e := s * 0.5 - 0.06
@@ -1052,7 +1274,7 @@ func _make_pad(spot: Dictionary) -> Dictionary:
 	base.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	node.add_child(base)
 	var label := Label3D.new()
-	label.text = String(spot.kind).to_upper()
+	label.text = {tower = "TOWER", eco = "GOLD", gate = "GATE"}[spot.kind]
 	label.font_size = 48
 	label.outline_size = 12
 	label.pixel_size = 0.009

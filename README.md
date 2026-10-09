@@ -26,7 +26,7 @@ CC0 asset packs. Not published anywhere.
   what the next wave sends down each lane and to start it.
 - **Attack phase:** no building. Survive the wave; farms pay out and gates
   are repaired afterwards.
-- **Win** by clearing all 6 waves. **Lose** when the keep's HP runs out.
+- **Win** by clearing all 10 waves. **Lose** when the keep's HP runs out (enemies that reach it attack it).
 
 | Building | Spot | What it does |
 |---|---|---|

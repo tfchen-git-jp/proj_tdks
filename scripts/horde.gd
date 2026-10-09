@@ -11,6 +11,7 @@ var kind := PackedInt32Array()
 var lane := PackedInt32Array()
 var uid := PackedInt32Array()
 var hp := PackedFloat32Array()
+var max_hp := PackedFloat32Array()  # with the wave's toughness (HP bars)
 var d := PackedFloat32Array()  # metres along its lane
 var off := PackedFloat32Array()  # metres right of the walking direction
 var spd := PackedFloat32Array()
@@ -22,16 +23,21 @@ var slow_t := PackedFloat32Array()  # seconds the slow lasts
 var blocked := PackedByteArray()  # 1 = at the gate, hitting it; 2 = held up
                                   # behind another enemy in the queue; 0 = walking
 var pos := PackedVector3Array()
+## pos and phase at the start of the last step(): the view draws between
+## them and the current ones (the sim runs at 60 Hz, the screen doesn't).
+var prev_pos := PackedVector3Array()
+var prev_phase := PackedFloat32Array()
 
 ## Per lane, set by the game: gate road distance (-1 = none) and its HP.
 var gate_d := PackedFloat32Array([-1.0, -1.0, -1.0])
 var gate_hp := PackedFloat32Array([0.0, 0.0, 0.0])
+## The keep: every lane ends at it. Enemies that get there stop and attack
+## it like a gate (queueing the same way) until killed; one HP pool.
+var keep_hp := 1e9
 
 ## Results since the caller last drained them.
 var deaths: Array[Dictionary] = []  # {pos, kind, d, lane}
-var leaked := 0  # keep damage taken
 var killed := 0
-var escaped := 0
 
 var _rng := RandomNumberGenerator.new()
 var _next_uid := 1
@@ -41,6 +47,8 @@ var _index := {}  # uid -> index, rebuilt every step
 const GATE_HALF_DEPTH := 0.55
 ## The queue at a gate only sorts out enemies this close to it, m.
 const QUEUE_ZONE := 8.0
+## How far past its lane's end an enemy may walk to reach the keep, m.
+const KEEP_REACH := 1.0
 ## Shoved light enemies sidestep this fast (m/s), at most this far off the
 ## lane's centre (m); a heavy one drifts to the centre this fast near a gate.
 const SHOVE_SPEED := 3.0
@@ -72,7 +80,8 @@ func count() -> int:
 	return kind.size()
 
 
-func spawn(type: int, ln: int) -> void:
+## hp_mult: the wave's toughness (Level.wave_hp).
+func spawn(type: int, ln: int, hp_mult := 1.0) -> void:
 	var e: Dictionary = Level.ENEMIES[type]
 	var lim := Level.ROAD_HALF_WIDTH - float(e.radius) * 0.6
 	kind.push_back(type)
@@ -80,7 +89,8 @@ func spawn(type: int, ln: int) -> void:
 	uid.push_back(_next_uid)
 	_index[_next_uid] = kind.size() - 1
 	_next_uid += 1
-	hp.push_back(e.hp)
+	hp.push_back(float(e.hp) * hp_mult)
+	max_hp.push_back(float(e.hp) * hp_mult)
 	d.push_back(_rng.randf_range(0.0, 0.6))
 	off.push_back(_rng.randf_range(-lim, lim) if type != Level.BRUTE else _rng.randf_range(-0.3, 0.3))
 	spd.push_back(float(e.speed) * _rng.randf_range(0.9, 1.1))
@@ -129,6 +139,8 @@ func forward(i: int) -> Vector3:
 
 
 func step(dt: float) -> void:
+	prev_pos = pos.duplicate()
+	prev_phase = phase.duplicate()
 	var n := count()
 	var prev := d.duplicate()
 	# 1. Everyone walks; nobody passes a standing gate on their lane.
@@ -141,51 +153,65 @@ func step(dt: float) -> void:
 			slow[i] = 0.0
 		var nd := d[i] + spd[i] * (1.0 - slow[i]) * dt
 		blocked[i] = 0
-		var ln := lane[i]
-		if gate_d[ln] >= 0.0 and gate_hp[ln] > 0.0 and d[i] < gate_d[ln]:
-			var stop := gate_d[ln] - gap[i]
-			if nd >= stop:
-				nd = maxf(stop, d[i])
-				blocked[i] = 1
+		var stop := d[i] + 1e9
+		if _at_gate(i):
+			stop = gate_d[lane[i]] - gap[i]
+		else:
+			stop = tracks[lane[i]].length - _keep_gap(i)
+		if nd >= stop:
+			nd = maxf(stop, d[i])
+			blocked[i] = 1
 		d[i] = nd
-	# 2. Near a standing gate, queue: nobody overlaps the one ahead of them
-	# in their lane, so the back ranks wait and step up as the front dies.
+	# 2. Near a standing gate and at the keep, queue: nobody overlaps the one
+	# ahead of them in their lane, so the back ranks wait and step up.
 	for ln in tracks.size():
 		if gate_d[ln] >= 0.0 and gate_hp[ln] > 0.0:
-			_queue(ln, prev, dt)
-	# 3. Gate damage, animation phase, leaks, positions.
+			_queue(ln, gate_d[ln], false, prev, dt)
+		_queue(ln, tracks[ln].length + KEEP_REACH, true, prev, dt)
+	# 3. Gate / keep damage, animation phase, positions.
 	for i in n:
 		if hp[i] <= 0.0:
 			continue
 		var e: Dictionary = Level.ENEMIES[kind[i]]
-		# Frost slows attacks as much as walking (swing and gate damage).
+		# Frost slows attacks as much as walking (swing and damage).
 		if blocked[i] == 1:
-			gate_hp[lane[i]] -= float(e.dps) * (1.0 - slow[i]) * dt
+			var dmg := float(e.dps) * (1.0 - slow[i]) * dt
+			if _at_gate(i):
+				gate_hp[lane[i]] -= dmg
+			else:
+				keep_hp -= dmg
 		if blocked[i] == 0:
 			phase[i] += spd[i] * (1.0 - slow[i]) * dt * 7.0
 		else:
 			phase[i] += (1.0 - slow[i]) * dt * TAU / Level.ATTACK_CYCLE
-		if d[i] >= tracks[lane[i]].length:
-			leaked += int(e.leak)
-			escaped += 1
-			hp[i] = 0.0
-			continue
 		pos[i] = tracks[lane[i]].point(d[i], off[i])
 	_compact()
 
 
-## Front-to-back over the enemies close behind lane `ln`'s gate: each may
+## Is enemy i in front of (blocked by) its lane's standing gate?
+func _at_gate(i: int) -> bool:
+	var ln := lane[i]
+	return gate_d[ln] >= 0.0 and gate_hp[ln] > 0.0 and d[i] < gate_d[ln]
+
+
+## How far short of its lane's end enemy i stops (negative: past it, up to
+## the keep's steps; lanes end a little before the keep).
+func _keep_gap(i: int) -> float:
+	return float(Level.ENEMIES[kind[i]].radius) * 0.8 - KEEP_REACH
+
+
+## Front-to-back over the enemies close behind wall `wd` (lane `ln`'s gate,
+## or the keep at the lane's end when `keep`): each may
 ## come no closer than its spacing to any enemy ahead that overlaps its
 ## lane position. Never pushes anyone backwards (from `prev`).
 ## Heavy enemies (giants) don't wait for light ones: the light ones just
 ## ahead of or beside a giant sidestep out of its path, and it walks
 ## through to the gate. Giants queue behind each other as usual, and one
 ## held within its reach of the gate hits it anyway.
-func _queue(ln: int, prev: PackedFloat32Array, dt: float) -> void:
-	var gd := gate_d[ln]
+func _queue(ln: int, gd: float, keep: bool, prev: PackedFloat32Array, dt: float) -> void:
 	var near: Array = []
 	for i in count():
-		if hp[i] > 0.0 and lane[i] == ln and d[i] < gd and gd - d[i] < QUEUE_ZONE:
+		if hp[i] > 0.0 and lane[i] == ln and d[i] <= gd and gd - d[i] < QUEUE_ZONE and _at_gate(i) != keep:
 			near.push_back(Vector2(d[i], i))
 	near.sort()
 	near.reverse()  # front (largest d) first
@@ -231,7 +257,8 @@ func _queue(ln: int, prev: PackedFloat32Array, dt: float) -> void:
 		if held:
 			d[i] = maxf(limit, minf(prev[i], d[i]))
 			var reach := float(ei.get("reach", 0.0))
-			blocked[i] = 1 if reach > 0.0 and gd - d[i] <= gap[i] + reach else 2
+			var stop_gap := _keep_gap(i) + KEEP_REACH if keep else gap[i]
+			blocked[i] = 1 if reach > 0.0 and gd - d[i] <= stop_gap + reach else 2
 		placed.push_back(i)
 
 
@@ -307,14 +334,16 @@ func _compact() -> void:
 			i += 1
 			continue
 		var last := count() - 1
-		kind[i] = kind[last]; lane[i] = lane[last]; uid[i] = uid[last]; hp[i] = hp[last]
+		kind[i] = kind[last]; lane[i] = lane[last]; uid[i] = uid[last]; hp[i] = hp[last]; max_hp[i] = max_hp[last]
 		d[i] = d[last]; off[i] = off[last]; spd[i] = spd[last]; gap[i] = gap[last]
 		phase[i] = phase[last]; flash[i] = flash[last]; slow[i] = slow[last]
 		slow_t[i] = slow_t[last]; blocked[i] = blocked[last]; pos[i] = pos[last]
-		kind.resize(last); lane.resize(last); uid.resize(last); hp.resize(last)
+		prev_pos[i] = prev_pos[last]; prev_phase[i] = prev_phase[last]
+		kind.resize(last); lane.resize(last); uid.resize(last); hp.resize(last); max_hp.resize(last)
 		d.resize(last); off.resize(last); spd.resize(last); gap.resize(last)
 		phase.resize(last); flash.resize(last); slow.resize(last)
 		slow_t.resize(last); blocked.resize(last); pos.resize(last)
+		prev_pos.resize(last); prev_phase.resize(last)
 	_index.clear()
 	for k in count():
 		_index[uid[k]] = k

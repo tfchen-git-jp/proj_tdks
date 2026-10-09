@@ -6,6 +6,7 @@ extends CanvasLayer
 ## so the phone and PC run the same code path.
 
 signal restart
+signal to_menu
 ## A build-popup button was tapped (its option id).
 signal menu_pick(id: String)
 signal menu_opened
@@ -18,8 +19,12 @@ var _root: Control
 var _coin_label: Label
 var _hp_fill: ColorRect
 var _msg: Label
+var _count: Label  # the big start-pad countdown digit
+var _count_n := 0
+var _count_pop := 0.0
 var _msg_t := 0.0
 var _end: Control
+var _end_info: Label
 var _end_label: Label
 var _joy: Control
 var _touch := -1
@@ -167,6 +172,17 @@ func _ready() -> void:
 	_msg.autowrap_mode = TextServer.AUTOWRAP_WORD
 	_root.add_child(_msg)
 
+	# Start-pad countdown: one huge digit across the screen (font size set
+	# from the screen height when shown).
+	_count = _label("", 100)
+	_count.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_count.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_count.visible = false
+	_root.add_child(_count)
+	_root.move_child(_count, 0)  # behind the popup and the rest of the HUD
+
 	_joy = Control.new()
 	_joy.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_joy.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -188,6 +204,9 @@ func _ready() -> void:
 	_end_label = _label("", 72)
 	_end_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_end_label)
+	_end_info = _label("", 32)
+	_end_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_end_info)
 	var again := Button.new()
 	again.text = "  Play again  "
 	again.add_theme_font_size_override("font_size", 44)
@@ -196,6 +215,14 @@ func _ready() -> void:
 	again.add_theme_stylebox_override("pressed", _box(Color(0.15, 0.5, 0.25), 18, Color.WHITE, 4))
 	again.pressed.connect(func() -> void: restart.emit())
 	box.add_child(again)
+	var home := Button.new()
+	home.text = "  Main menu  "
+	home.add_theme_font_size_override("font_size", 36)
+	home.add_theme_stylebox_override("normal", _box(Color(0.3, 0.32, 0.38), 18, Color(1, 1, 1, 0.8), 3))
+	home.add_theme_stylebox_override("hover", _box(Color(0.38, 0.4, 0.46), 18, Color.WHITE, 3))
+	home.add_theme_stylebox_override("pressed", _box(Color(0.22, 0.24, 0.3), 18, Color.WHITE, 3))
+	home.pressed.connect(func() -> void: to_menu.emit())
+	box.add_child(home)
 
 
 ## Top inset for the status bar / camera notch on phones (0 on PC).
@@ -378,15 +405,38 @@ func hide_menu() -> void:
 	_menu_key = ""
 
 
+## The big countdown digit; 0 hides it.
+func show_countdown(n: int) -> void:
+	if n == _count_n:
+		return
+	_count_n = n
+	_count.visible = n > 0
+	if n <= 0:
+		return
+	# A digit's glyph is ~0.72 of the font size: this makes it ~60% of the
+	# screen height.
+	var h := get_viewport().get_visible_rect().size.y
+	var fs := int(h * 0.6 / 0.72)
+	_count.add_theme_font_size_override("font_size", fs)
+	_count.add_theme_constant_override("outline_size", fs / 14)
+	# Centre the digit itself, not the line box (it sits above the descent).
+	_count.offset_top = -fs * 0.08
+	_count.offset_bottom = -fs * 0.08
+	_count.text = str(n)
+	_count.pivot_offset = _count.size * 0.5
+	_count_pop = 1.0
+
+
 func message(text: String, seconds := 3.0) -> void:
 	_msg.text = text
 	_msg_t = seconds
 
 
-func show_end(won: bool) -> void:
+func show_end(won: bool, info := "") -> void:
 	_touch = -1
 	_update_move()
 	_end_label.text = "VICTORY!" if won else "DEFEAT"
+	_end_info.text = info
 	_end.visible = true
 	minimap.visible = false
 
@@ -396,6 +446,13 @@ func hide_end() -> void:
 
 
 func _process(delta: float) -> void:
+	if _count.visible:
+		# Each new digit pops in big and settles, then fades a little.
+		_count_pop = maxf(_count_pop - delta * 1.6, 0.0)
+		var k := _count_pop * _count_pop
+		_count.pivot_offset = _count.size * 0.5
+		_count.scale = Vector2.ONE * (1.0 + 0.3 * k)
+		_count.modulate = Color(1.0, 0.92, 0.55, 0.45 + 0.4 * k)
 	if _msg_t > 0.0:
 		_msg_t -= delta
 		_msg.modulate.a = clampf(_msg_t / 0.4, 0.0, 1.0)

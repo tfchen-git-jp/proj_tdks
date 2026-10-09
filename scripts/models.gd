@@ -12,6 +12,8 @@ const GATE := "res://assets/props/hexagon/wall_straight_gate.gltf"
 const LODGE := "res://assets/props/hexagon/building_lumbermill_blue.gltf"
 const LODGE_SCALE := 3.0
 const COIN := "res://assets/props/coin/coin.glb"
+const COIN_STACK := "res://assets/props/coin/coin_stack_small.glb"
+const COIN_STACK_LARGE := "res://assets/props/coin/coin_stack_large.glb"
 const VAT_SHADER := preload("res://shaders/vat.gdshader")
 ## Per enemy type: baked VAT name and recolour (a = strength).
 const ENEMY_VAT := [
@@ -179,6 +181,14 @@ static func building(kind: String, level: int) -> Array:
 		"farm":
 			var t := _stack([HEX + "building_windmill_blue.gltf"], 1.8)
 			out = [t, null, t.find_child("building_windmill_top_fan_blue", true, false)]
+		"bank":
+			# KayKit's market hall with a heap of gold beside it.
+			var t := _stack([HEX + "building_market_blue.gltf"], 1.7)
+			var gold: Node3D = scene(COIN_STACK_LARGE).instantiate()
+			gold.scale = Vector3.ONE * 0.55 / 1.7
+			gold.position = Vector3(-0.42, 0.0, 0.2)
+			t.add_child(gold)
+			out = [t, null, null]
 		"gate":
 			out = [gate((Level.ROAD_HALF_WIDTH + 0.7) * 2.0), null, null]
 	var root: Node3D = out[0]
@@ -254,3 +264,105 @@ static func enemy(k: int) -> Array:
 	m.set_shader_parameter("row_width", int(meta.row_w))
 	m.set_shader_parameter("tint", cfg.tint)
 	return [mesh, m, meta]
+
+
+## Gold ingot (the top drop tier): a trapezoid bar, origin at its base.
+static func ingot_mesh() -> Mesh:
+	var lo := [Vector3(-0.23, 0, -0.11), Vector3(0.23, 0, -0.11), Vector3(0.23, 0, 0.11), Vector3(-0.23, 0, 0.11)]
+	var hi := [Vector3(-0.17, 0.15, -0.07), Vector3(0.17, 0.15, -0.07), Vector3(0.17, 0.15, 0.07), Vector3(-0.17, 0.15, 0.07)]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var quads := [[hi[0], hi[1], hi[2], hi[3]]]
+	for k in 4:
+		quads.push_back([lo[k], lo[(k + 1) % 4], hi[(k + 1) % 4], hi[k]])
+	for q in quads:
+		for t in [[0, 1, 2], [0, 2, 3]]:
+			# Clockwise seen from outside (Godot's front face).
+			st.add_vertex(q[t[0]])
+			st.add_vertex(q[t[1]])
+			st.add_vertex(q[t[2]])
+	st.generate_normals()
+	var m := st.commit()
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.78, 0.22)
+	mat.metallic = 0.3
+	mat.roughness = 0.35
+	mat.emission_enabled = true
+	mat.emission = Color(0.3, 0.2, 0.02)
+	m.surface_set_material(0, mat)
+	return m
+
+
+## Level badges: bronze I, silver II, gold III, ruby IV.
+const BADGE_COLORS := [Color(0.78, 0.48, 0.24), Color(0.8, 0.84, 0.9), Color(1.0, 0.8, 0.2), Color(0.85, 0.2, 0.35)]
+const ROMAN := ["I", "II", "III", "IV", "V"]
+## Direction toward the camera (pitch 56, no yaw): badges face it.
+const TO_CAMERA := Vector3(0, 0.829, 0.559)
+
+
+## A round metal plate with the building's level in Roman numerals, facing
+## the camera. Place it with a world position (it is top_level).
+static func badge(level: int) -> Node3D:
+	var root := Node3D.new()
+	root.top_level = true
+	var col: Color = BADGE_COLORS[mini(level, BADGE_COLORS.size() - 1)]
+	var disc := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.27
+	cyl.bottom_radius = 0.27
+	cyl.height = 0.05
+	cyl.radial_segments = 20
+	cyl.rings = 1
+	disc.mesh = cyl
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = col
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	disc.material_override = mat
+	disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Cylinder axis (y) toward the camera.
+	disc.basis = Basis(Vector3.RIGHT, acos(TO_CAMERA.y))
+	root.add_child(disc)
+	var rim := MeshInstance3D.new()
+	var cyl2 := cyl.duplicate() as CylinderMesh
+	cyl2.top_radius = 0.31
+	cyl2.bottom_radius = 0.31
+	cyl2.height = 0.03
+	rim.mesh = cyl2
+	var rm := StandardMaterial3D.new()
+	rm.albedo_color = Color(0.12, 0.1, 0.08)
+	rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	rim.material_override = rm
+	rim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	rim.basis = disc.basis
+	rim.position = -TO_CAMERA * 0.02
+	root.add_child(rim)
+	var label := Label3D.new()
+	label.text = ROMAN[mini(level, ROMAN.size() - 1)]
+	label.font_size = 72
+	label.outline_size = 10
+	label.pixel_size = 0.0045
+	label.modulate = Color(0.16, 0.1, 0.05)
+	label.outline_modulate = col.lightened(0.35)
+	label.shaded = false
+	label.double_sided = false
+	# Label3D faces +z; tilt it to face the camera, just in front of the disc.
+	label.basis = Basis(Vector3.RIGHT, -acos(TO_CAMERA.z))
+	label.position = TO_CAMERA * 0.04
+	root.add_child(label)
+	return root
+
+
+## Bounds of every mesh under `node`, in node's parent space.
+static func bounds(node: Node3D) -> AABB:
+	var box := AABB()
+	var first := true
+	for mi in node.find_children("*", "MeshInstance3D", true, false):
+		var xf := Transform3D.IDENTITY
+		var n: Node = mi
+		while n != node.get_parent() and n is Node3D:
+			xf = (n as Node3D).transform * xf
+			n = n.get_parent()
+		var b: AABB = xf * (mi as MeshInstance3D).get_aabb()
+		box = b if first else box.merge(b)
+		first = false
+	return box

@@ -13,6 +13,11 @@ const PLAN := [
 	["g_east", "gate"], ["g_west", "gate"], ["w_out", "archer"],
 	["e_in", "archer"], ["w_in", "archer"], ["w_mid", "mortar"], ["f_1", "farm"],
 	["e_mid", "frost"], ["c_far", "ballista"], ["k_east", "archer"], ["k_west", "archer"],
+	["f_2", "farm"], ["gc_t", "mortar"], ["g_centre", "gate"], ["ge_t", "archer"], ["gw_t", "archer"],
+	["g_east", "gate"], ["g_west", "gate"], ["w_mid", "mortar"], ["c_far", "ballista"],
+	["gc_t", "mortar"], ["ge_t", "archer"], ["gw_t", "archer"], ["e_in", "archer"], ["w_in", "archer"],
+	["e_mid", "frost"], ["w_out", "archer"], ["e_in", "archer"], ["w_in", "archer"],
+	["c_far", "ballista"], ["w_mid", "mortar"], ["gc_t", "mortar"],
 ]
 
 var sim: Sim
@@ -38,15 +43,15 @@ func _target() -> Vector3:
 			_step += 1
 		if _step < PLAN.size() and sim.coins >= _cost(PLAN[_step]):
 			var spot := _spot(PLAN[_step][0])
-			if sim.hero_pos.distance_to(spot.pos) < Level.SPOT_REACH * 0.8:
+			# Built farms are solid: the hero can't reach the middle, only
+			# the popup range (what a player sees).
+			if sim.spot_under_hero().get("id", "") == spot.id:
 				sim.buy(spot.id, PLAN[_step][1])
 			return spot.pos
 		var coin := _nearest_coin()
 		if coin != Vector3.INF:
 			return coin
-		if sim.at_start_spot():
-			sim.start_wave()
-		return Level.START_SPOT
+		return Level.START_SPOT  # standing there starts the countdown
 	var coin := _nearest_coin()
 	if coin != Vector3.INF:
 		return coin

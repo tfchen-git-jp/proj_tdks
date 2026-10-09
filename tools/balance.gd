@@ -21,7 +21,9 @@ func _init() -> void:
 	var peak := 0
 	var t0 := Time.get_ticks_msec()
 	var wave_peak := 0
-	while sim.state == "play" and sim.time < 1500.0:
+	var keep_at_start := 0.0
+	var spent := 0
+	while sim.state == "play" and sim.time < 3000.0:
 		if idle:
 			sim.step(dt, Vector2.ZERO)
 			if sim.phase == "build":
@@ -33,16 +35,19 @@ func _init() -> void:
 		for e in sim.events:
 			match String(e.type):
 				"built":
+					spent += int(e.cost)
 					print("  %6.1fs  built %s L%d at %s (-%d, %d left)" % [sim.time, e.kind, e.level + 1, e.spot.id, e.cost, sim.coins])
 				"wave_start":
 					print("%6.1fs WAVE %d starts  coins=%d keep=%d" % [sim.time, e.wave + 1, sim.coins, sim.base_hp])
 					wave_peak = 0
+					keep_at_start = sim.base_hp
 				"wave_cleared":
-					print("%6.1fs wave %d cleared  income=%d coins=%d keep=%d/%d peak=%d leaked_total=%d" % [
-						sim.time, e.wave + 1, e.income, sim.coins, sim.base_hp, Level.BASE_HP, wave_peak, sim.horde.escaped])
+					print("%6.1fs wave %d cleared  income=%d coins=%d keep=%d/%d (-%d) peak=%d spent_total=%d" % [
+						sim.time, e.wave + 1, e.income, sim.coins, sim.base_hp, Level.BASE_HP,
+						keep_at_start - sim.base_hp, wave_peak, spent])
 				"gate_broken":
 					print("  %6.1fs  gate broken on %s" % [sim.time, Level.LANE_NAMES[e.lane]])
-	print("RESULT %s at %.1fs wave=%d/%d keep=%d/%d killed=%d escaped=%d peak=%d (%d ms)" % [
+	print("RESULT %s at %.1fs wave=%d/%d keep=%d/%d killed=%d coins=%d spent=%d peak=%d (%d ms)" % [
 		sim.state, sim.time, sim.wave + (1 if sim.state != "win" else 0), Level.WAVES.size(), sim.base_hp, Level.BASE_HP,
-		sim.horde.killed, sim.horde.escaped, peak, Time.get_ticks_msec() - t0])
+		sim.horde.killed, sim.coins, spent, peak, Time.get_ticks_msec() - t0])
 	quit()

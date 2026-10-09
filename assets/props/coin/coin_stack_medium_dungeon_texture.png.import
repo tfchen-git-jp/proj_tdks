@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dtyosxhd2ce74"
-path="res://.godot/imported/Quaternius_Giant_Atlas.png-f95beb2fb8778859146f52606d0a706f.ctex"
+uid="uid://dsoewas2ols05"
+path="res://.godot/imported/coin_stack_medium_dungeon_texture.png-d790c3f8492f14f070f67e17d3169e88.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "3795851c85c1d7fbaf0b3b63054ec153"
+"md5": "9a714bc33f4314ea4520009f20b048a8"
 }
 
 [deps]
 
-source_file="res://assets/chars/giant/Quaternius_Giant_Atlas.png"
-dest_files=["res://.godot/imported/Quaternius_Giant_Atlas.png-f95beb2fb8778859146f52606d0a706f.ctex"]
+source_file="res://assets/props/coin/coin_stack_medium_dungeon_texture.png"
+dest_files=["res://.godot/imported/coin_stack_medium_dungeon_texture.png-d790c3f8492f14f070f67e17d3169e88.ctex"]
 
 [params]
 

@@ -8,7 +8,7 @@ Proposal 2026-10-09; steps 1-2 built in v0.1.5-0.1.7 (2026-10-10).
   upgrade) and ATTACK (the wave). The wave starts from a START pad by the
   keep (its popup lists the coming enemies per lane).
 - **Build between every wave** (Thronefall style); no building during an
-  attack. A level = 6 waves.
+  attack. A level = 10 waves (6 until v0.1.10).
 - **Build popup appears when the hero stands on a spot** (no tapping the
   map); tap a button in it to build or upgrade.
 - **Keep walking over dropped gold.** Enemies are untargetable until past a
@@ -86,7 +86,12 @@ summoning / commanding.
    popup at spots.
 2. DONE (v0.1.5): tower roles (archer, ballista, mortar, frost, banner) +
    farm + gate, 3 levels each; real projectiles; SFX.
-3. Buildings and hero with HP; enemies attack them; dawn repair.
-4. New enemy roles; boss night.
-5. Hero upgrade cards after each night.
-6. Balance with headless bot runs (bot must lose sometimes), score screen.
+3. DONE (v0.1.11): enemies that reach the keep stand and attack it (keep
+   HP, like a gate) instead of a fixed loss per leak. Enemies attack ONLY
+   walls (gates, keep), never the hero or towers (user, 2026-10-09: not a
+   good idea).
+4. New enemy roles; boss wave.
+5. Hero upgrade cards after each wave.
+6. DONE in part (v0.1.11): 10 waves, tower level IV, per-wave enemy HP
+   growth, bot loses sometimes (about 1 run in 6). Still to do: score
+   screen.

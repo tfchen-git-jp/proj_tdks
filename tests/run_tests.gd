@@ -25,6 +25,7 @@ func _init() -> void:
 	_phases_and_building()
 	_towers()
 	_coins()
+	_save()
 	_layout()
 	_full_run()
 	print("ALL PASSED" if _fails == 0 else "%d FAILED" % _fails)
@@ -57,6 +58,10 @@ func _horde() -> void:
 	_ok(h.count() == 10, "spawned 10 over three lanes")
 	_ok(not h.targetable(0), "fresh spawns are behind the start line (untargetable)")
 	_ok(h.damage(0, 100.0) and not h.damage(0, 100.0), "kill counts once")
+	var hb = HordeS.new(_lane_tracks(), 2)
+	hb.spawn(Level.BRUTE, 1, 2.5)
+	_ok(hb.max_hp[0] == hb.hp[0] and hb.hp[0] > float(Level.ENEMIES[Level.BRUTE].hp) * 2.4,
+		"a tougher wave's giant has its full HP as the bar's max (%.0f)" % hb.max_hp[0])
 	var dead_uid: int = h.uid[0]
 	h.step(0.1)
 	_ok(h.count() == 9 and h.killed == 1 and h.deaths.size() == 1, "dead removed, death reported")
@@ -64,10 +69,15 @@ func _horde() -> void:
 	for ln in 3:
 		var p: Vector3 = h.tracks[ln].point(h.entry[ln])
 		_ok(Level.BOUNDS.has_point(Vector2(p.x, p.z)), "lane %d start line is inside the hero's reach" % ln)
+	h.keep_hp = 1e4
 	for k in 4000:
 		h.step(0.05)
-	_ok(h.count() == 0 and h.escaped == 9, "survivors walk the whole road")
-	_ok(h.leaked == 9 * int(Level.ENEMIES[Level.GRUNT].leak), "leak damage = 9 grunts")
+	var at_keep := 0
+	for i in h.count():
+		if h.blocked[i] != 0 and h.d[i] > h.tracks[h.lane[i]].length - 2.0:
+			at_keep += 1
+	_ok(h.count() == 9 and at_keep == 9, "survivors stop at the keep (%d of %d)" % [at_keep, h.count()])
+	_ok(h.keep_hp < 1e4, "and attack it (%.0f hp left)" % h.keep_hp)
 	var h2 = HordeS.new(_lane_tracks(), 4)
 	for i in 3:
 		h2.spawn(Level.GRUNT, 1)
@@ -184,18 +194,32 @@ func _phases_and_building() -> void:
 	_ok(not s.buy(spot.id, "mortar"), "can't build a second thing on a spot")
 	s.coins = 100
 	_ok(s.buy(spot.id, "archer") and s.buildings[spot.id].level == 1, "buying again upgrades to level 2")
-	_ok(not s.buy("f_1", "archer"), "farm plots take farms only")
+	_ok(not s.buy("f_1", "archer"), "economy plots take no towers")
 	_ok(not s.start_wave() or true, "start_wave callable")
+	# Start pad: a countdown while the hero stands on it, cancelled by leaving.
+	var c = SimS.new(3)
+	c.hero_pos = Level.START_SPOT
+	for i in int(60 * (Level.START_COUNTDOWN - 1.0)):
+		c.step(DT, Vector2.ZERO)
+	_ok(c.phase == "build" and c.start_t > 3.0, "standing on the start pad counts down (%.1f s)" % c.start_t)
+	c.hero_pos = Level.START_SPOT + Vector3(-4, 0, 3)
+	c.step(DT, Vector2.ZERO)
+	_ok(c.start_t == 0.0, "walking off the pad cancels the countdown")
+	c.hero_pos = Level.START_SPOT
+	for i in int(60 * (Level.START_COUNTDOWN + 0.2)):
+		c.step(DT, Vector2.ZERO)
+	_ok(c.phase == "attack", "after the full countdown the wave starts")
+	_ok(SimS.gold_pieces(37) == [20, 5, 5, 5, 1, 1] and SimS.gold_pieces(3) == [1, 1, 1],
+		"gold drops as ingots / coin stacks / coins (%s)" % [SimS.gold_pieces(37)])
 	var s2 = SimS.new(6)
 	s2.hero_pos = Vector3(-14.0, 0, 30.0)  # far from the centre lane: undefended
 	_ok(s2.start_wave() and s2.phase == "attack", "start_wave begins the attack")
 	_ok(not s2.buy(Level.SPOTS[0].id, "archer"), "no building during an attack")
-	for i in 60 * 120:
+	for i in 60 * 300:
 		s2.step(DT, Vector2.ZERO)
-		if s2.phase == "build":
+		if s2.phase == "build" or s2.state != "play":
 			break
-	_ok(s2.phase == "build" and s2.wave == 1, "the wave ends when all are dead or through (wave %d)" % s2.wave)
-	_ok(s2.base_hp < Level.BASE_HP, "undefended, the keep took damage (%d)" % s2.base_hp)
+	_ok(s2.state == "lose", "undefended, the wave hammers the keep down (%s, keep %.0f)" % [s2.state, s2.base_hp])
 
 
 func _towers() -> void:
@@ -253,6 +277,23 @@ func _towers() -> void:
 		"a chilled enemy hits the gate slower (%.0f vs %.0f hp)" % [lost[1], lost[0]])
 	var coins_after: int = f.coins
 	_ok(coins_after >= 999 - 25 - 30 - 20 + 6, "the farm paid after the wave (%d)" % coins_after)
+	# Banks: BANK_RATE interest, capped; a second bank adds cap, not rate.
+	var bk = SimS.new(4)
+	bk.coins = 500
+	bk.buy("f_1", "bank")
+	bk.buy("f_2", "bank")
+	bk.coins = 150
+	bk.start_wave()
+	bk.wave = Level.WAVES.size() - 2
+	bk.horde.keep_hp = 1e9
+	bk.phase = "attack"
+	bk._spawned.clear()
+	for g in Level.WAVES[bk.wave]:
+		bk._spawned.push_back(int(g.count))
+	bk.step(DT, Vector2.ZERO)
+	var got: int = bk.coins - 150
+	_ok(got == mini(floori(150 * Level.BANK_RATE), 2 * int(Level.stats("bank", 0).cap)),
+		"two banks pay 10%% of 150 within their summed cap (+%d)" % got)
 
 
 func _coins() -> void:
@@ -265,6 +306,29 @@ func _coins() -> void:
 	for i in 30:
 		s.step(DT, Vector2.ZERO)
 	_ok(s.coins == before + 4, "magnet collects a nearby coin")
+
+
+## A run survives to_save() -> JSON -> from_save(), and the score order is
+## waves cleared first, then gold.
+func _save() -> void:
+	var a = SimS.new(11)
+	a.coins = 400
+	a.buy("k_east", "archer")
+	a.buy("k_east", "archer")
+	a.buy("g_centre", "gate")
+	a.buy("f_1", "bank")
+	a.wave = 4
+	a.base_hp = 321.0
+	var d: Dictionary = JSON.parse_string(JSON.stringify(a.to_save()))
+	var b = SimS.from_save(d)
+	_ok(b.wave == 4 and b.coins == a.coins and b.base_hp == 321.0 and b.horde.keep_hp == 321.0,
+		"a saved run comes back (wave, gold, keep)")
+	_ok(b.buildings.size() == 3 and b.buildings.k_east.level == 1 and b.buildings.f_1.kind == "bank"
+		and b.horde.gate_d[1] > 0.0 and b.horde.gate_hp[1] > 0.0, "with its buildings and a standing gate")
+	_ok(b._rng.state == a._rng.state and b.horde._rng.state == a.horde._rng.state, "and its dice")
+	var list := [{waves = 6, gold = 50}, {waves = 8, gold = 10}, {waves = 6, gold = 300}]
+	list.sort_custom(Save.better)
+	_ok(list[0].waves == 8 and list[1].gold == 300 and list[2].gold == 50, "scores: waves first, then gold")
 
 
 func _layout() -> void:

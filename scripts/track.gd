@@ -37,9 +37,17 @@ func _index(d: float) -> int:
 	return clampi(int(d / STEP), 0, _pts.size() - 1)
 
 
+## Blends the two nearest table entries (snapping to the 0.1 m table made
+## walkers visibly step). Past the end it carries straight on.
 func point(d: float, off := 0.0) -> Vector3:
-	var i := _index(d)
-	return _pts[i] + _right[i] * off
+	var last := _pts.size() - 1
+	if d >= last * STEP:
+		var r := _right[last]
+		return _pts[last] + Vector3(r.z, 0.0, -r.x) * (d - last * STEP) + r * off
+	var f := maxf(d, 0.0) / STEP
+	var i := int(f)
+	var a := f - i
+	return _pts[i].lerp(_pts[i + 1], a) + _right[i].lerp(_right[i + 1], a) * off
 
 
 ## Unit vector along the walking direction at `d`.

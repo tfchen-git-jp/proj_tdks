@@ -6,8 +6,8 @@ extends RefCounted
 ## same class.
 ##
 ## Phases: "build" (no enemies; stand on a spot to build or upgrade, stand
-## on the start spot to begin the next wave) and "attack" (the wave walks
-## in; no building). Six waves; clearing the last one wins.
+## on the start spot for START_COUNTDOWN s to begin the next wave) and "attack" (the wave walks
+## in; no building). Clearing the last wave (Level.WAVES) wins.
 
 const DROP_CAP := 1400
 const FLY_TIME := 0.22  # coin flight to the hero, s
@@ -27,9 +27,12 @@ var wave := 0  # the wave being fought (attack) or coming next (build)
 var state := "play"  # play / win / lose
 var coins: int = Level.START_GOLD
 var collected := 0
-var base_hp: int = Level.BASE_HP
+var base_hp: float = Level.BASE_HP  # the keep's HP (enemies at it hit it)
+var _base_hit_t := 0.0  # rate limit for base_hit events
+var start_t := 0.0  # seconds the hero has stood on the start pad (build phase)
 
 var hero_pos: Vector3 = Level.HERO_START
+var hero_prev: Vector3 = Level.HERO_START  # hero_pos before the last step (view interpolation)
 var hero_vel := Vector3.ZERO
 var hero_aim := Vector3.ZERO  # last shot direction (zero = none yet)
 var hero_aim_t := 9.0  # seconds since the last shot
@@ -54,13 +57,19 @@ var _pending: Array[Dictionary] = []  # from buy() / start_wave() between steps
 
 var _spawned: Array[int] = []
 var _rng := RandomNumberGenerator.new()
+var seed_value := 1
+## The build-phase state just before the current wave began (to_save()):
+## the game writes it as the run's checkpoint when the wave starts.
+var checkpoint := {}
 
 
-func _init(seed_value := 1) -> void:
-	_rng.seed = seed_value
+func _init(seed_v := 1) -> void:
+	seed_value = seed_v
+	_rng.seed = seed_v
 	for pts in Level.LANES:
 		tracks.push_back(Track.new(pts))
-	horde = Horde.new(tracks, seed_value)
+	horde = Horde.new(tracks, seed_v)
+	horde.keep_hp = base_hp
 
 
 func step(dt: float, move: Vector2) -> void:
@@ -70,6 +79,10 @@ func step(dt: float, move: Vector2) -> void:
 	_hero_move(dt, move if state == "play" else Vector2.ZERO)
 	if state != "play":
 		return
+	if phase == "build":
+		start_t = start_t + dt if at_start_spot() else 0.0
+		if start_t >= Level.START_COUNTDOWN:
+			start_wave()
 	if phase == "attack":
 		wave_time += dt
 		_spawn()
@@ -80,10 +93,12 @@ func step(dt: float, move: Vector2) -> void:
 	_gates()
 	_drops_from_deaths()
 	_drops_step(dt)
-	if horde.leaked > 0:
-		base_hp -= horde.leaked
-		horde.leaked = 0
-		events.push_back({type = "base_hit"})
+	_base_hit_t -= dt
+	if horde.keep_hp < base_hp:
+		base_hp = horde.keep_hp
+		if _base_hit_t <= 0.0:
+			_base_hit_t = 0.5
+			events.push_back({type = "base_hit"})
 	if base_hp <= 0:
 		base_hp = 0
 		state = "lose"
@@ -101,8 +116,10 @@ func at_start_spot() -> bool:
 func start_wave() -> bool:
 	if phase != "build" or state != "play":
 		return false
+	checkpoint = to_save()
 	phase = "attack"
 	wave_time = 0.0
+	start_t = 0.0
 	_spawned.clear()
 	for g in Level.WAVES[wave]:
 		_spawned.push_back(0)
@@ -115,7 +132,7 @@ func _spawn() -> void:
 	for i in groups.size():
 		var g: Dictionary = groups[i]
 		while _spawned[i] < int(g.count) and wave_time >= float(g.t) + _spawned[i] * float(g.every):
-			horde.spawn(int(g.type), int(g.lane))
+			horde.spawn(int(g.type), int(g.lane), Level.wave_hp(wave))
 			_spawned[i] += 1
 
 
@@ -129,18 +146,73 @@ func _wave_spawned() -> bool:
 
 func _end_wave() -> void:
 	var income := 0
+	var cap := 0
 	for b in buildings.values():
 		if b.kind == "farm":
 			income += int(Level.stats("farm", b.level).income)
+		if b.kind == "bank":
+			cap += int(Level.stats("bank", b.level).cap)
 		if b.kind == "gate":  # repaired for the next wave
 			b.broken = false
 			_raise_gate(b)
-	coins += income
-	events.push_back({type = "wave_cleared", wave = wave, income = income})
+	# Interest on what is held now, before the farms pay.
+	var interest := mini(floori(coins * Level.BANK_RATE), cap)
+	coins += income + interest
+	events.push_back({type = "wave_cleared", wave = wave, income = income, interest = interest})
 	wave += 1
 	phase = "build"
 	if wave >= Level.WAVES.size():
 		state = "win"
+
+
+# --- save / load ----------------------------------------------------------------
+
+const SAVE_VERSION := 1
+
+
+## The run as plain data (build phase only: no enemies or shots in flight).
+func to_save() -> Dictionary:
+	var bl := []
+	for id in buildings:
+		var b: Dictionary = buildings[id]
+		bl.push_back([id, b.kind, b.level])
+	var dl := []
+	for i in drop_pos.size():
+		dl.push_back([drop_pos[i].x, drop_pos[i].z, drop_val[i]])
+	return {v = SAVE_VERSION, seed = seed_value, wave = wave, coins = coins, collected = collected,
+		base_hp = base_hp, time = time, hero = [hero_pos.x, hero_pos.z], buildings = bl, drops = dl,
+		rng = str(_rng.state), hrng = str(horde._rng.state), killed = horde.killed}
+
+
+## A Sim in the build phase of the saved wave.
+static func from_save(d: Dictionary) -> Sim:
+	var s := Sim.new(int(d.seed))
+	s.wave = int(d.wave)
+	s.coins = int(d.coins)
+	s.collected = int(d.collected)
+	s.base_hp = float(d.base_hp)
+	s.horde.keep_hp = s.base_hp
+	s.time = float(d.time)
+	s.hero_pos = Vector3(float(d.hero[0]), 0.0, float(d.hero[1]))
+	s.hero_prev = s.hero_pos
+	s.horde.killed = int(d.killed)
+	s._rng.state = int(d.rng)
+	s.horde._rng.state = int(d.hrng)
+	for e in d.buildings:
+		for sp in Level.SPOTS:
+			if sp.id == e[0]:
+				var b := {spot = sp, kind = String(e[1]), level = int(e[2]), cd = 0.5, aim = Vector3(0, 0, 1),
+					pos = sp.pos, broken = false}
+				s.buildings[sp.id] = b
+				if b.kind == "gate":
+					s._raise_gate(b)
+	for e in d.drops:
+		var q := Vector3(float(e[0]), 0.0, float(e[1]))
+		s.drop_pos.push_back(q)
+		s.drop_val.push_back(int(e[2]))
+		s.drop_fly.push_back(-1.0)
+		s.drop_from.push_back(q)
+	return s
 
 
 # --- building -----------------------------------------------------------------
@@ -237,7 +309,7 @@ func obstacles() -> Array:
 	var out := [[Level.KEEP_POS, 1.9]]
 	for b in buildings.values():
 		if b.kind != "gate":
-			out.push_back([b.pos, 0.75 if b.kind != "farm" else 0.9])
+			out.push_back([b.pos, 0.9 if b.kind in ["farm", "bank"] else 0.75])
 	return out
 
 
@@ -255,6 +327,7 @@ func banner_buff(p: Vector3) -> float:
 # --- hero ------------------------------------------------------------------------
 
 func _hero_move(dt: float, move: Vector2) -> void:
+	hero_prev = hero_pos
 	if move.length() > 1.0:
 		move = move.normalized()
 	var v := Vector3(move.x, 0.0, move.y) * float(Level.HERO.speed)
@@ -429,10 +502,8 @@ func _drops_from_deaths() -> void:
 	for death in horde.deaths:
 		events.push_back({type = "kill", pos = death.pos, kind = death.kind, d = death.d, lane = death.lane})
 		var gold := int(Level.ENEMIES[death.kind].gold)
-		var pieces := mini(gold, 5)
 		var spread := 0.35 if death.kind != Level.BRUTE else 1.1
-		for k in pieces:
-			var v := floori(float(gold) / pieces) + (1 if k < gold % pieces else 0)
+		for v in gold_pieces(gold):
 			var p: Vector3 = death.pos + Vector3(_rng.randf_range(-spread, spread), 0.0, _rng.randf_range(-spread, spread))
 			if drop_pos.size() >= DROP_CAP:
 				drop_val[_rng.randi() % drop_val.size()] += v
@@ -442,6 +513,17 @@ func _drops_from_deaths() -> void:
 			drop_fly.push_back(-1.0)
 			drop_from.push_back(p)
 	horde.deaths.clear()
+
+
+## Split a reward into pieces worth an ingot (20), a coin stack (5) or a
+## coin (1), largest first, as few pieces as possible.
+static func gold_pieces(gold: int) -> Array[int]:
+	var out: Array[int] = []
+	for v in [20, 5, 1]:
+		while gold >= v:
+			out.push_back(v)
+			gold -= v
+	return out
 
 
 func _drops_step(dt: float) -> void:

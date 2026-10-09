@@ -72,7 +72,7 @@ func _draw() -> void:
 					var r := t.right(gd)
 					var c := t.point(gd)
 					draw_line(_to(c - r * 1.6), _to(c + r * 1.6), GATE, 4.0)
-			"farm":
+			"farm", "bank":
 				draw_rect(Rect2(p - Vector2(3, 3), Vector2(6, 6)), Color(0.9, 0.75, 0.3))
 			_:
 				draw_rect(Rect2(p - Vector2(3, 3), Vector2(6, 6)), TOWER)

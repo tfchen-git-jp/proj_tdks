@@ -4,9 +4,10 @@ config_version=5
 [application]
 
 config/name="RogueShot TD"
-config/version="0.1.10"
+config/version="0.1.13"
 config/description="RogueShot Tower Defense: a walk-and-build tower defense."
 run/main_scene="res://scenes/main.tscn"
+config/quit_on_go_back=false
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.png"
 
