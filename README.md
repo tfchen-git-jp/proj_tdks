@@ -78,3 +78,9 @@ shove the small ones aside at a gate). They get tougher every wave.
 - Music: "RPG City" by phantasticbeats via [Pixabay](https://pixabay.com)
   (Pixabay Content License; included for the game only).
 - Engine: [Godot Engine](https://godotengine.org) (MIT).
+
+## License
+
+The code is under the [MIT License](LICENSE). The assets keep their own
+licences (see Credits; the background music may not be redistributed on
+its own).
