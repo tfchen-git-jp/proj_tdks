@@ -91,7 +91,10 @@ summoning / commanding.
    walls (gates, keep), never the hero or towers (user, 2026-10-09: not a
    good idea).
 4. New enemy roles; boss wave.
-5. Hero upgrade cards after each wave.
+5. DONE (v0.1.15): hero upgrades. XP from kills near the hero (towers'
+   kills count), level-ups banked and picked after the wave (3 cards,
+   tiers I-III, reroll for gold), relics after waves 3/6/9. Pool and
+   numbers: scripts/perks.gd. No permanent unlocks yet.
 6. DONE in part (v0.1.11): 10 waves, tower level IV, per-wave enemy HP
    growth, bot loses sometimes (about 1 run in 6). Still to do: score
    screen.

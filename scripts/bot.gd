@@ -20,6 +20,11 @@ const PLAN := [
 	["c_far", "ballista"], ["w_mid", "mortar"], ["gc_t", "mortar"],
 ]
 
+## Card / relic preferences, best first (it never rerolls).
+const CARD_PRIORITY := ["dmg", "aspd", "multi", "ricochet", "fire", "crit", "slayer", "pierce", "blast",
+	"range", "rally", "frost", "engineer", "spotter", "bounty", "boots", "magnet"]
+const RELIC_PRIORITY := ["twin", "thunder", "volley", "wisp", "laststand", "midas"]
+
 var sim: Sim
 var _step := 0
 
@@ -37,6 +42,13 @@ func move() -> Vector2:
 
 
 func _target() -> Vector3:
+	if sim.phase == "build" and not sim.offer.is_empty():
+		var order: Array = RELIC_PRIORITY if sim.offer_relic else CARD_PRIORITY
+		var best := 0
+		for k in sim.offer.size():
+			if order.find(sim.offer[k]) < order.find(sim.offer[best]):
+				best = k
+		sim.pick(best)
 	if sim.phase == "build":
 		# Buy the next affordable plan step, walking to its spot first.
 		while _step < PLAN.size() and _done(PLAN[_step]):

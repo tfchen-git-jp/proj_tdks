@@ -122,25 +122,26 @@ const SPOT_REACH := 1.45
 ## Seconds per attack swing cycle (matches the baked attack clips' feel).
 const ATTACK_CYCLE := 0.55
 
-## Enemy types. dps hits gates and the keep (enemies that reach the keep
+## Enemy types. xp: what a kill near the hero is worth (Perks.XP_RADIUS).
+## dps hits gates and the keep (enemies that reach the keep
 ## stand and attack it until killed).
 ## heavy: shoves light enemies out of its way in a gate queue (they never
 ## hold it up). reach: m behind the front rank it can still hit the gate
 ## from (a second giant swings over the first one's shoulder).
 const ENEMIES := [
-	{name = "grunt", hp = 3.0, speed = 1.7, radius = 0.28, gold = 1, dps = 2.0},
-	{name = "armored", hp = 12.0, speed = 1.35, radius = 0.32, gold = 3, dps = 4.0},
-	{name = "brute", hp = 90.0, speed = 0.95, radius = 0.7, gold = 15, dps = 18.0,
+	{name = "grunt", hp = 3.0, speed = 1.7, radius = 0.28, gold = 1, xp = 1, dps = 2.0},
+	{name = "armored", hp = 12.0, speed = 1.35, radius = 0.32, gold = 3, xp = 3, dps = 4.0},
+	{name = "brute", hp = 90.0, speed = 0.95, radius = 0.7, gold = 15, xp = 12, dps = 18.0,
 		heavy = true, reach = 1.3},
-	{name = "runner", hp = 2.0, speed = 3.1, radius = 0.25, gold = 1, dps = 1.5},
+	{name = "runner", hp = 2.0, speed = 3.1, radius = 0.25, gold = 1, xp = 1, dps = 1.5},
 ]
 enum { GRUNT, ARMORED, BRUTE, RUNNER }
 const WEST := 0
 const CENTRE := 1
 const EAST := 2
 
-const HP_PER_WAVE := 0.05
-const HP_PER_WAVE2 := 0.022
+const HP_PER_WAVE := 0.25
+const HP_PER_WAVE2 := 0.05
 
 ## Waves. Each group: `count` enemies of `type` on `lane`, one every
 ## `every` s, starting `t` s into the wave.

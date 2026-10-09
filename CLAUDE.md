@@ -10,7 +10,7 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.1.13)
+## The game today (v0.1.15)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
@@ -24,6 +24,19 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   ATTACK (no building). 10 waves; clear them all to win. Enemies that reach
   the keep stand at it and hit it with their dps (queue like at a gate)
   until killed; keep HP Level.BASE_HP (600), lose at 0.
+- **Hero upgrades (rogue-like, scripts/perks.gd):** kills within
+  Perks.XP_RADIUS (8 m) of the hero give xp (ENEMIES `xp`), whoever kills.
+  Level-ups are banked during a wave; after it the picker (hud.show_cards,
+  modal) offers 3 cards per level, a relic first after waves 3/6/9; queued
+  picks follow one another and the start countdown waits for them. 17
+  cards x 3 tiers (drawing an owned one = next tier, maxed ones leave the
+  pool), 6 relics. Reroll 10, 20, 30... gold. Cards have their own dice
+  (Sim._card_rng, saved). Visuals in scripts/fx.gd (+ shaders/flame,
+  glow): element-coloured bolt glows, flame billboards on burning enemies,
+  jagged flickering lightning with a flash, blasts, crit sparks, wisp,
+  Rally/Spotter aura, Engineer rings on gates, level-up burst. Enemies
+  still attack only walls. No permanent unlocks (user: once 50+ waves or
+  several maps exist).
 - **Menu:** title screen over the drifting map (scripts/menu.gd): New game,
   Continue (user://run.json, written at every wave start and clear by
   scripts/save.gd; Sim.to_save / from_save), Scores (top 10 in
@@ -60,7 +73,11 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   phase line under them, minimap (bottom right; hidden while a popup is up),
   build version (bottom left), gate HP bars (blue), giant HP bars (red).
 - **Sound:** 32 SFX (assets/sfx) + looping BGM (assets/music, -16 dB).
-- Balance: user beat 6 waves on v0.1.6 (felt waves 1-2 a bit easy, 5-6 a
+- Balance v0.1.15 (with upgrades; bot picks by Bot.CARD_PRIORITY, never
+  rerolls): enemy HP x(1 + 0.25w + 0.05w^2), wins 5 of 6 seeds, keep
+  60-85%, ~14 levels a run, hero ~35-50% of all damage; without picks
+  (balance.gd --nopicks) it loses in wave 5; idle loses in wave 3.
+- Balance before upgrades: user beat 6 waves on v0.1.6 (felt waves 1-2 a bit easy, 5-6 a
   bit hard) and finished v0.1.10 with 300+ gold. v0.1.11 (10 waves): bot
   wins ~5 of 6 seeds with the keep at 15-70%, damage mostly in waves 7 and
   10, idle loses in wave 3. Gold left after wave 10 is that wave's loot.
@@ -74,8 +91,7 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 
 Enemies attack only walls (gates, keep), never the hero or towers (user).
 4. New enemy roles (siege, ranged) and a boss wave.
-5. Roguelike hero upgrade cards after each wave.
-6. Score screen; then more levels.
+5. More levels / maps; then permanent unlocks.
 
 ## Architecture
 
@@ -164,7 +180,8 @@ after changing Level.LANES; a test checks the stored hash). Probes:
 Game args (after `--`): `--auto --ff=SEC --speed=X (0 = freeze) --seed=N
 --shot=PATH --shot-delay=S --bench=S --zoom=X --cam=X,Z|gate --hero=X,Z
 --noshadow --mute --notree --drops --ff-idle --build=S:K[:N],... --load
---page=scores|credits --play --demo=anim|hero|clips --clips=A,B
+--page=scores|credits --play --newgame --perks=ID[:T],... --offer
+--lightning --demo=anim|hero|clips --clips=A,B
 --bowrot=X,Y,Z`. `--demo=clips` (raw hero clips side by side) is how
 the carry pitch was picked; render it with `--resolution 1500x600`. `--bench` prints [prof]
 per-section ms and [render] counters.
@@ -248,6 +265,9 @@ Windows build, never in WSL.
   scores, credits; bank; 11 more tower spots; attack-phase range ring;
   giant HP bars (were divided by the base HP, not the wave-scaled one, so
   the first 2/3 of a late giant's HP never showed: Horde.max_hp).
+- v0.1.14: gold invisible after New game (drop MultiMesh list not
+  cleared on restart). v0.1.15: hero upgrades (XP, cards, relics, FX).
+  Save format v2 (older run.json files are ignored).
 - MultiMesh bounds go stale when the buffer is written directly: a close
   camera culled the whole crowd; `custom_aabb` = whole map.
 - Kenney/KayKit building meshes shadow-acne at any bias: they don't

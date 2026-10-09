@@ -17,6 +17,9 @@ extends Node3D
 ##   --build=S:K[:N],… build kind K on spot S (N levels) for free
 ##   --newgame         open the menu, then press New game (restart path)
 ##   --load            start from the saved run (as Continue does)
+##   --perks=ID[:T],…  start with these cards (tier T) / relics
+##   --lightning       strike + set the crowd ablaze every 0.35 s (FX shots)
+##   --offer           open the picker: a relic, then two level-ups
 ##   --drops           a coin, a coin stack and an ingot beside the hero
 ##   --ff-idle         during --ff the hero starts the wave, then stands aside
 ##   --noshadow        sun casts no shadows (performance / artefact tests)
@@ -89,10 +92,11 @@ var _cam_target := Vector3.ZERO
 var _shake := 0.0
 var _phase_seen := ""
 var menu: MainMenu
+var fx: Fx
 var _in_menu := false
 ## Real play (no debug args): show the title menu, keep saves and scores.
 var _persist := false
-const DEBUG_ARGS := ["auto", "ff", "hero", "demo", "bench", "drops", "build", "cam", "play"]
+const DEBUG_ARGS := ["auto", "ff", "hero", "demo", "bench", "drops", "build", "cam", "play", "perks", "offer"]
 
 
 func _ready() -> void:
@@ -215,6 +219,17 @@ func _start(save := {}) -> void:
 		sim.coins = keep_coins
 		sim.step(DT, Vector2.ZERO)
 		_apply_events()
+	if _args.has("perks"):  # card[:tier] or relic, comma separated
+		for item in String(_args.perks).split(","):
+			var f := item.split(":")
+			if Perks.RELICS.has(f[0]):
+				sim.relics.push_back(f[0])
+			else:
+				sim.perks[f[0]] = int(f[1]) if f.size() > 1 else 1
+	if _args.has("offer"):  # a relic and two level-ups waiting
+		sim.pending_relics = 1
+		sim.pending_levels = 2
+		sim._next_offer()
 	if _args.has("ff"):
 		var ff_bot := bot if bot else Bot.new(sim)
 		var steps := int(float(_args.ff) / DT)
@@ -299,6 +314,9 @@ func _build_scene() -> void:
 	_pay_mm = _multimesh(coin, 64, null, false)
 	_arrow_mm = _multimesh(Models.arrow_mesh(), PROJ_CAP, null, false)
 	_rock_mm = _multimesh(Models.boulder_mesh(), 64, null, false)
+	fx = Fx.new()
+	add_child(fx)
+	fx.setup(_ring)
 
 	_hero = Node3D.new()
 	var h := Models.hero()
@@ -345,6 +363,12 @@ func _build_scene() -> void:
 		_start()
 		_open_menu())
 	hud.menu_pick.connect(_on_menu_pick)
+	hud.card_pick.connect(func(k: int) -> void:
+		if sim.pick(k):
+			sfx.play("upgrade"))
+	hud.card_reroll.connect(func() -> void:
+		if sim.reroll():
+			sfx.play("coin_pay"))
 	hud.menu_opened.connect(func() -> void: sfx.play("ui_open", -6.0))
 	add_child(hud)
 	hud.minimap.set_sim(sim, cam)
@@ -604,9 +628,18 @@ func _ring_near_hero() -> void:
 func _sync_menu() -> void:
 	if sim.state != "play" or sim.phase != "build":
 		hud.show_countdown(0)
+		hud.hide_cards()
 		hud.hide_menu()
 		_ring_near_hero()
 		return
+	if not sim.offer.is_empty():
+		hud.hide_menu()
+		hud.show_countdown(0)
+		_range_ring.visible = false
+		hud.show_cards(sim.offer_view(), sim.offer_relic, sim.pending_levels + sim.pending_relics,
+			sim.reroll_cost(), sim.coins >= sim.reroll_cost())
+		return
+	hud.hide_cards()
 	if sim.at_start_spot():
 		_range_ring.visible = false
 		var left := ceili(Level.START_COUNTDOWN - sim.start_t)
@@ -706,6 +739,31 @@ func _apply_events() -> void:
 							bv.reload = 0.35
 			"hit":
 				sfx.play("hit_flesh", -2.0)
+				if e.get("crit", false) and not _fast_forwarding:
+					fx.crit(e.pos)
+			"blast":
+				sfx.play("mortar_boom", -12.0, 1.6)
+				if not _fast_forwarding:
+					fx.blast(e.pos, e.r)
+			"lightning":
+				sfx.play("mortar_boom", -2.0, 1.9)
+				sfx.play("frost_pulse", -4.0, 1.7)
+				_shake = maxf(_shake, 0.2)
+				if not _fast_forwarding:
+					fx.lightning(e.points)
+			"volley":
+				sfx.play("arrow_shot", -2.0, 1.3)
+			"level_up":
+				sfx.play("upgrade", 0.0, 1.2)
+				if not _fast_forwarding:
+					fx.level_up(_hero.position)
+			"perk":
+				if not _fast_forwarding:
+					_flash(_hero.position)
+			"midas":
+				sfx.play("coin_pay", 0.0, 0.8)
+				if not _fast_forwarding:
+					_flash(e.pos)
 			"boom":
 				sfx.play("mortar_boom", -3.0)
 				if not _fast_forwarding:
@@ -747,6 +805,10 @@ func _apply_events() -> void:
 					var extra := "\n+%d gold from farms" % e.income if e.income > 0 else ""
 					if int(e.get("interest", 0)) > 0:
 						extra += "\n+%d gold interest" % e.interest
+					if "laststand" in sim.relics:
+						extra += "\nLast Stand: the keep recovers"
+						if not _fast_forwarding:
+							_flash(Level.KEEP_POS)
 					hud.message("Wave %d cleared!%s" % [e.wave + 1, extra], 3.0)
 			"base_hit":
 				sfx.play("base_hit", -3.0)
@@ -920,6 +982,7 @@ func _sync_view(delta: float) -> void:
 	t0 = _t("enemies", t0)
 	_draw_drops()
 	_draw_projectiles()
+	fx.draw(sim, _hero.position, _alpha, DT)
 	_draw_pay(delta)
 	t0 = _t("drops/proj/pay", t0)
 	_sync_buildings(delta)
@@ -939,6 +1002,7 @@ func _sync_view(delta: float) -> void:
 	_sync_menu()
 	hud.set_coins(sim.coins)
 	hud.set_base(float(sim.base_hp) / Level.BASE_HP)
+	hud.set_xp(sim.level, float(sim.xp) / Perks.xp_needed(sim.level))
 	_t("menu/hud", t0)
 
 
@@ -1056,6 +1120,9 @@ func _draw_enemies() -> void:
 		var frame := cycle * float(clip[1])
 		var b := Basis.looking_at(h.forward(i), Vector3.UP).scaled(Vector3.ONE * float(en.scale))
 		var col := Color(1.7, 1.7, 1.7) if h.flash[i] > 0.0 else (Color(0.7, 0.85, 1.25) if h.slow[i] > 0.0 else Color.WHITE)
+		if h.burn_t[i] > 0.0 and h.flash[i] <= 0.0:  # scorched, flickering
+			var fl := 0.85 + 0.15 * sin(sim.time * 23.0 + float(h.uid[i]))
+			col = Color(1.35 * fl, 0.75 * fl, 0.5 * fl)
 		_put(en.buf, n, Transform3D(b, p), col, clip, frame)
 	for c in _corpses:
 		var k: int = c.kind
@@ -1137,6 +1204,8 @@ func _draw_projectiles() -> void:
 	var nr := 0
 	for p in sim.projectiles:
 		var pt := float(p.t) - (1.0 - _alpha) * DT  # between sim steps, like the crowd
+		if pt < 0.0 or p.kind == "wisp":  # held-back Twin volley; wisp shots are glows only (Fx)
+			continue
 		var at := Sim.proj_pos(p, pt)
 		if p.kind == "shell":
 			if nr < _rock_mm.instance_count:
@@ -1357,7 +1426,29 @@ func _make_start_pad() -> Node3D:
 
 # --- screenshots and benchmarks --------------------------------------------------------
 
+## --lightning: re-fire Thunderstrike (and burn the crowd) every 0.35 s.
+var _demo_fx_t := 0.0
+
+
+func _demo_fx(delta: float) -> void:
+	_demo_fx_t -= delta
+	if _demo_fx_t > 0.0 or sim.horde.count() == 0:
+		return
+	_demo_fx_t = 0.35
+	sim._thunder_cd = 0.0
+	sim._thunder(0.0)
+	for i in sim.horde.count():
+		if i % 2 == 0:
+			sim.horde.ignite(i, 0.01, 3.0)
+	for e in sim.events:
+		if e.type == "lightning":
+			fx.lightning(e.points)
+	sim.events.clear()
+
+
 func _tick_tools(delta: float) -> void:
+	if _args.has("lightning"):
+		_demo_fx(delta)
 	_frames.push_back(delta)
 	hud.tick_fps(delta)
 	if _shot_t >= 0.0:

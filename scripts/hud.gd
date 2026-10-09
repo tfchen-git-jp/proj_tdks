@@ -6,6 +6,8 @@ extends CanvasLayer
 ## so the phone and PC run the same code path.
 
 signal restart
+signal card_pick(k: int)
+signal card_reroll
 signal to_menu
 ## A build-popup button was tapped (its option id).
 signal menu_pick(id: String)
@@ -24,6 +26,14 @@ var _count_n := 0
 var _count_pop := 0.0
 var _msg_t := 0.0
 var _end: Control
+var _xp_fill: ColorRect
+var _lv_label: Label
+var _cards: Control
+var _cards_title: Label
+var _cards_sub: Label
+var _cards_list: VBoxContainer
+var _cards_reroll: Button
+var _cards_key := ""
 var _end_info: Label
 var _end_label: Label
 var _joy: Control
@@ -91,6 +101,21 @@ func _ready() -> void:
 	var hp_label := _label("KEEP", 18)
 	hp_label.position = Vector2(20, top + 4)
 	_root.add_child(hp_label)
+
+	# Hero level and XP, under the keep bar.
+	var xp_back := ColorRect.new()
+	xp_back.color = Color(0.1, 0.1, 0.12, 0.75)
+	xp_back.position = Vector2(20, top + 64)
+	xp_back.size = Vector2(160, 14)
+	_root.add_child(xp_back)
+	_xp_fill = ColorRect.new()
+	_xp_fill.color = Color(0.7, 0.45, 1.0)
+	_xp_fill.position = Vector2(3, 3)
+	_xp_fill.size = Vector2(0, 8)
+	xp_back.add_child(_xp_fill)
+	_lv_label = _label("Lv 0", 20)
+	_lv_label.position = Vector2(188, top + 57)
+	_root.add_child(_lv_label)
 
 	# FPS, top centre (always on: the phone is judged by it).
 	_fps_label = _label("-- FPS", 22)
@@ -201,6 +226,7 @@ func _ready() -> void:
 	box.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	box.grow_vertical = Control.GROW_DIRECTION_BOTH
 	_end.add_child(box)
+	_build_cards()
 	_end_label = _label("", 72)
 	_end_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_end_label)
@@ -223,6 +249,118 @@ func _ready() -> void:
 	home.add_theme_stylebox_override("pressed", _box(Color(0.22, 0.24, 0.3), 18, Color.WHITE, 3))
 	home.pressed.connect(func() -> void: to_menu.emit())
 	box.add_child(home)
+
+
+## The level-up / relic picker (build phase, modal): three cards and a
+## reroll button. main.gd fills it from Sim.offer_view().
+func _build_cards() -> void:
+	_cards = ColorRect.new()
+	(_cards as ColorRect).color = Color(0.03, 0.02, 0.08, 0.72)
+	_cards.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_cards.visible = false
+	_root.add_child(_cards)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_cards.add_child(center)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 18)
+	center.add_child(box)
+	_cards_title = _label("", 58)
+	_cards_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_cards_title)
+	_cards_sub = _label("", 24)
+	_cards_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_cards_sub.modulate = Color(1, 1, 1, 0.75)
+	box.add_child(_cards_sub)
+	_cards_list = VBoxContainer.new()
+	_cards_list.add_theme_constant_override("separation", 16)
+	box.add_child(_cards_list)
+	_cards_reroll = Button.new()
+	_cards_reroll.add_theme_font_size_override("font_size", 30)
+	_cards_reroll.custom_minimum_size = Vector2(0, 70)
+	_cards_reroll.add_theme_stylebox_override("normal", _box(Color(0.45, 0.36, 0.12), 16, Color(1, 0.85, 0.4), 3))
+	_cards_reroll.add_theme_stylebox_override("hover", _box(Color(0.55, 0.45, 0.16), 16, Color.WHITE, 3))
+	_cards_reroll.add_theme_stylebox_override("pressed", _box(Color(0.35, 0.28, 0.1), 16, Color.WHITE, 3))
+	_cards_reroll.add_theme_stylebox_override("disabled", _box(Color(0.22, 0.22, 0.24), 16, Color(1, 1, 1, 0.3), 3))
+	_cards_reroll.pressed.connect(func() -> void: card_reroll.emit())
+	box.add_child(_cards_reroll)
+
+
+## Show an offer: views from Sim.offer_view(); `left` picks still to come
+## after this one.
+func show_cards(views: Array, relic: bool, left: int, cost: int, can_reroll: bool) -> void:
+	_cards.visible = true
+	minimap.visible = false
+	_touch = -1
+	_update_move()
+	var key := str(views) + str(cost) + str(can_reroll) + str(left)
+	if key == _cards_key:
+		return
+	_cards_key = key
+	_cards_title.text = "RELIC" if relic else "LEVEL UP!"
+	_cards_title.add_theme_color_override("font_color", Color(0.85, 0.6, 1.0) if relic else Color(1.0, 0.85, 0.35))
+	_cards_sub.text = ("Choose one" if left == 0 else "Choose one  -  %d more to come" % left)
+	_cards_reroll.text = "Reroll  (%d gold)" % cost
+	_cards_reroll.disabled = not can_reroll
+	for c in _cards_list.get_children():
+		c.queue_free()
+	for k in views.size():
+		_cards_list.add_child(_card(views[k], k))
+
+
+func hide_cards() -> void:
+	if _cards.visible:
+		_cards.visible = false
+		minimap.visible = not _end.visible and not _menu.visible
+	_cards_key = ""
+
+
+func cards_open() -> bool:
+	return _cards.visible
+
+
+func _card(v: Dictionary, k: int) -> Button:
+	var relic: bool = v.relic
+	var tier: int = v.tier
+	var tint := Color(0.42, 0.2, 0.6) if relic else Color(0.14, 0.3, 0.42)
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(620, 150)
+	b.add_theme_stylebox_override("normal", _box(tint, 18, Color(1, 1, 1, 0.75), 3))
+	b.add_theme_stylebox_override("hover", _box(tint.lightened(0.15), 18, Color.WHITE, 3))
+	b.add_theme_stylebox_override("pressed", _box(tint.darkened(0.2), 18, Color.WHITE, 4))
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	b.pressed.connect(func() -> void: card_pick.emit(k))
+	var col := VBoxContainer.new()
+	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	col.offset_left = 22
+	col.offset_right = -22
+	col.offset_top = 14
+	col.offset_bottom = -12
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(col)
+	var head := HBoxContainer.new()
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(head)
+	var name := _label(String(v.name), 34)
+	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(name)
+	var badge := _label("RELIC" if relic else ("NEW" if tier == 0 else Models.ROMAN[tier]), 30)
+	badge.add_theme_color_override("font_color", Color(0.85, 0.6, 1.0) if relic
+		else (Color(0.6, 1.0, 0.6) if tier == 0 else Models.BADGE_COLORS[tier].lightened(0.2)))
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(badge)
+	var desc := _label(String(v.desc), 24)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc.modulate = Color(1, 1, 1, 0.9)
+	desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(desc)
+	return b
+
+
+func set_xp(level: int, frac: float) -> void:
+	_lv_label.text = "Lv %d" % level
+	_xp_fill.size.x = 154.0 * clampf(frac, 0.0, 1.0)
 
 
 ## Top inset for the status bar / camera notch on phones (0 on PC).
@@ -258,7 +396,7 @@ func _box(fill: Color, radius: int, border: Color, bw: int) -> StyleBoxFlat:
 
 
 func _input(event: InputEvent) -> void:
-	if _end.visible:
+	if _end.visible or (_cards != null and _cards.visible):
 		return
 	if event is InputEventScreenTouch:
 		var t := event as InputEventScreenTouch

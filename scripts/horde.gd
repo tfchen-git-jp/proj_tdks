@@ -20,6 +20,8 @@ var phase := PackedFloat32Array()  # walk (or, when blocked, attack) cycle, radi
 var flash := PackedFloat32Array()  # hit-flash timer, s
 var slow := PackedFloat32Array()  # current slow fraction (0..1)
 var slow_t := PackedFloat32Array()  # seconds the slow lasts
+var burn_dps := PackedFloat32Array()  # Fire Bolts: damage per second while burning
+var burn_t := PackedFloat32Array()  # seconds it keeps burning
 var blocked := PackedByteArray()  # 1 = at the gate, hitting it; 2 = held up
                                   # behind another enemy in the queue; 0 = walking
 var pos := PackedVector3Array()
@@ -31,6 +33,8 @@ var prev_phase := PackedFloat32Array()
 ## Per lane, set by the game: gate road distance (-1 = none) and its HP.
 var gate_d := PackedFloat32Array([-1.0, -1.0, -1.0])
 var gate_hp := PackedFloat32Array([0.0, 0.0, 0.0])
+## Per lane, set by the game: fraction of gate damage blocked (Engineer).
+var gate_armor := PackedFloat32Array([0.0, 0.0, 0.0])
 ## The keep: every lane ends at it. Enemies that get there stop and attack
 ## it like a gate (queueing the same way) until killed; one HP pool.
 var keep_hp := 1e9
@@ -38,6 +42,7 @@ var keep_hp := 1e9
 ## Results since the caller last drained them.
 var deaths: Array[Dictionary] = []  # {pos, kind, d, lane}
 var killed := 0
+var dealt := 0.0  # all damage taken (balance stats)
 
 var _rng := RandomNumberGenerator.new()
 var _next_uid := 1
@@ -99,6 +104,8 @@ func spawn(type: int, ln: int, hp_mult := 1.0) -> void:
 	flash.push_back(0.0)
 	slow.push_back(0.0)
 	slow_t.push_back(0.0)
+	burn_dps.push_back(0.0)
+	burn_t.push_back(0.0)
 	blocked.push_back(0)
 	pos.push_back(tracks[ln].point(d[d.size() - 1], off[off.size() - 1]))
 
@@ -116,16 +123,24 @@ func targetable(i: int) -> bool:
 
 ## Deal damage; returns true if this hit killed it. Hits on the already
 ## dead (hp <= 0, waiting for removal) do nothing.
-func damage(i: int, amount: float) -> bool:
+func damage(i: int, amount: float, flashes := true) -> bool:
 	if hp[i] <= 0.0:
 		return false
+	dealt += minf(amount, hp[i])
 	hp[i] -= amount
-	flash[i] = 0.12
+	if flashes:
+		flash[i] = 0.12
 	if hp[i] <= 0.0:
 		killed += 1
 		deaths.push_back({pos = pos[i], kind = kind[i], d = d[i], lane = lane[i]})
 		return true
 	return false
+
+
+## Set enemy i ablaze (the stronger burn wins; the timer restarts).
+func ignite(i: int, dps: float, seconds: float) -> void:
+	burn_dps[i] = maxf(burn_dps[i], dps)
+	burn_t[i] = seconds
 
 
 func chill(i: int, fraction: float, seconds: float) -> void:
@@ -148,6 +163,12 @@ func step(dt: float) -> void:
 		if hp[i] <= 0.0:
 			continue
 		flash[i] = maxf(flash[i] - dt, 0.0)
+		if burn_t[i] > 0.0:
+			burn_t[i] -= dt
+			if damage(i, burn_dps[i] * dt, false):
+				continue
+			if burn_t[i] <= 0.0:
+				burn_dps[i] = 0.0
 		slow_t[i] -= dt
 		if slow_t[i] <= 0.0:
 			slow[i] = 0.0
@@ -177,7 +198,7 @@ func step(dt: float) -> void:
 		if blocked[i] == 1:
 			var dmg := float(e.dps) * (1.0 - slow[i]) * dt
 			if _at_gate(i):
-				gate_hp[lane[i]] -= dmg
+				gate_hp[lane[i]] -= dmg * (1.0 - gate_armor[lane[i]])
 			else:
 				keep_hp -= dmg
 		if blocked[i] == 0:
@@ -277,6 +298,24 @@ func nearest(p: Vector3, r: float) -> int:
 	return best_i
 
 
+## Up to k targetable enemies within r of p, nearest first, skipping the
+## uids in `skip`.
+func nearest_k(p: Vector3, r: float, k: int, skip: Array = []) -> Array[int]:
+	var found: Array = []
+	for i in count():
+		if not targetable(i) or uid[i] in skip:
+			continue
+		var q := pos[i]
+		var dd := (q.x - p.x) * (q.x - p.x) + (q.z - p.z) * (q.z - p.z)
+		if dd < r * r:
+			found.push_back(Vector2(dd, i))
+	found.sort()
+	var out: Array[int] = []
+	for v in found.slice(0, k):
+		out.push_back(int(v.y))
+	return out
+
+
 ## Index of the targetable enemy closest to the keep (least road left)
 ## between `r_min` and `r` of `p` -- the classic TD "first" target -- or -1.
 func first_in_range(p: Vector3, r: float, r_min := 0.0) -> int:
@@ -338,11 +377,13 @@ func _compact() -> void:
 		d[i] = d[last]; off[i] = off[last]; spd[i] = spd[last]; gap[i] = gap[last]
 		phase[i] = phase[last]; flash[i] = flash[last]; slow[i] = slow[last]
 		slow_t[i] = slow_t[last]; blocked[i] = blocked[last]; pos[i] = pos[last]
+		burn_dps[i] = burn_dps[last]; burn_t[i] = burn_t[last]
 		prev_pos[i] = prev_pos[last]; prev_phase[i] = prev_phase[last]
 		kind.resize(last); lane.resize(last); uid.resize(last); hp.resize(last); max_hp.resize(last)
 		d.resize(last); off.resize(last); spd.resize(last); gap.resize(last)
 		phase.resize(last); flash.resize(last); slow.resize(last)
 		slow_t.resize(last); blocked.resize(last); pos.resize(last)
+		burn_dps.resize(last); burn_t.resize(last)
 		prev_pos.resize(last); prev_phase.resize(last)
 	_index.clear()
 	for k in count():

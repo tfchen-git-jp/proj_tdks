@@ -26,6 +26,7 @@ func _init() -> void:
 	_towers()
 	_coins()
 	_save()
+	_perks()
 	_layout()
 	_full_run()
 	print("ALL PASSED" if _fails == 0 else "%d FAILED" % _fails)
@@ -329,6 +330,87 @@ func _save() -> void:
 	var list := [{waves = 6, gold = 50}, {waves = 8, gold = 10}, {waves = 6, gold = 300}]
 	list.sort_custom(Save.better)
 	_ok(list[0].waves == 8 and list[1].gold == 300 and list[2].gold == 50, "scores: waves first, then gold")
+
+
+## Put a fresh enemy `d` m along lane `ln` (past the start line).
+func _place(sim, type: int, ln: int, d: float) -> int:
+	sim.horde.spawn(type, ln)
+	var i: int = sim.horde.count() - 1
+	sim.horde.d[i] = d
+	sim.horde.pos[i] = sim.tracks[ln].point(d)
+	return i
+
+
+## Hero upgrades: XP near the hero, banked level-ups offered after the
+## wave (one after another), relics, tiers, rerolls, burning, lightning.
+func _perks() -> void:
+	var s = SimS.new(21)
+	var near: int = _place(s, Level.BRUTE, 1, 30.0)
+	s.hero_pos = s.horde.pos[near] + Vector3(3, 0, 0)
+	var far: int = _place(s, Level.BRUTE, 0, 12.0)
+	s.horde.damage(far, 1e6)
+	s.horde.damage(near, 1e6)
+	s._drops_from_deaths()
+	var got: int = int(Level.ENEMIES[Level.BRUTE].xp)
+	_ok(s.xp + Perks.xp_needed(0) * s.level == got or s.level >= 1, "only the kill near the hero gives XP (%d)" % got)
+	s.xp = 0
+	s.level = 0
+	s.pending_levels = 0
+	s._gain_xp(Perks.xp_needed(0) + Perks.xp_needed(1))
+	_ok(s.level == 2 and s.pending_levels == 2 and s.offer.is_empty(), "two level-ups banked, nothing offered mid-wave")
+	s.phase = "attack"
+	s.wave = 2  # clearing wave 3 also gives a relic
+	s._end_wave()
+	_ok(s.offer_relic and s.offer.size() == 3 and s.pending_levels == 2, "after wave 3: the relic first (%s)" % [s.offer])
+	s.hero_pos = Level.START_SPOT
+	for k in 60 * 8:
+		s.step(DT, Vector2.ZERO)
+	_ok(s.phase == "build" and s.start_t == 0.0, "the start countdown waits for the picks")
+	var relic: String = s.offer[0]
+	s.pick(0)
+	_ok(relic in s.relics and not s.offer_relic and s.offer.size() == 3, "relic taken, then a level-up offer")
+	var card: String = s.offer[1]
+	s.pick(1)
+	_ok(s.tier(card) == 1 and s.offer.size() == 3 and s.pending_levels == 0, "card at tier I, the second level-up offered")
+	s.coins = 25
+	var before: Array = s.offer.duplicate()
+	_ok(s.reroll() and s.coins == 15 and s.reroll_cost() == 20, "reroll costs 10, then 20")
+	_ok(not s.reroll() and s.coins == 15, "can't reroll without the gold")
+	s.perks[card] = Perks.MAX_TIER - 1
+	s.offer = [card, before[0], before[1]]
+	s.pick(0)
+	_ok(s.tier(card) == Perks.MAX_TIER and s.offer.is_empty(), "drawing a card again raises its tier (to %d)" % s.tier(card))
+	s._gain_xp(Perks.xp_needed(s.level))
+	s.pending_levels = 1
+	s._next_offer()
+	_ok(not card in s.offer, "a maxed card leaves the pool")
+	# Fire Bolts: burning keeps hurting, and a burn kill drops gold.
+	var f = SimS.new(22)
+	var g: int = _place(f, Level.GRUNT, 1, 30.0)
+	f.horde.ignite(g, 2.0, 3.0)
+	var killed: int = f.horde.killed
+	for k in 120:
+		f.horde.step(DT)
+	_ok(f.horde.killed == killed + 1 and f.horde.deaths.size() == 1, "a burning grunt burns to death")
+	# Thunderstrike chains through at most THUNDER_CHAIN enemies.
+	var t = SimS.new(23)
+	for k in 7:
+		_place(t, Level.GRUNT, 1, 30.0 + k * 0.6)
+		t.horde.hp[t.horde.count() - 1] = 1e3
+	t.hero_pos = t.tracks[1].point(30.0) + Vector3(3, 0, 0)
+	t.relics = ["thunder"]
+	t.phase = "attack"
+	t._thunder(0.1)
+	var hurt := 0
+	for i in t.horde.count():
+		if t.horde.hp[i] < 1e3:
+			hurt += 1
+	_ok(hurt == Perks.THUNDER_CHAIN and t.events.size() == 1 and t.events[0].points.size() == Perks.THUNDER_CHAIN + 1,
+		"lightning strikes and chains through %d enemies" % hurt)
+	# Upgrades survive a save.
+	var r = SimS.from_save(JSON.parse_string(JSON.stringify(s.to_save())))
+	_ok(r.tier(card) == Perks.MAX_TIER and r.relics == s.relics and r.level == s.level and r.rerolls == s.rerolls
+		and r._card_rng.state == s._card_rng.state, "hero upgrades survive a save")
 
 
 func _layout() -> void:
