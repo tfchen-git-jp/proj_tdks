@@ -7,6 +7,10 @@ extends RefCounted
 
 var tracks: Array[Track] = []  # one per lane
 var entry := PackedFloat32Array()  # per lane: the start line (road distance)
+## Flyers don't follow the road (user, v0.1.30): per lane a straight line
+## from the lane's start to its end at the keep, with its own start line.
+var fly_tracks: Array[Track] = []
+var fly_entry := PackedFloat32Array()
 var kind := PackedInt32Array()
 var lane := PackedInt32Array()
 var uid := PackedInt32Array()
@@ -29,10 +33,15 @@ var freeze_t := PackedFloat32Array()  # seconds frozen solid (Glacier): no walki
 var brittle := PackedFloat32Array()  # extra damage taken (Frostbite) ...
 var brittle_t := PackedFloat32Array()  # ... for this many seconds
 var immune := PackedByteArray()  # 1 = slows and freezes don't work (the berserk boss)
+var mark_v := PackedFloat32Array()  # Spotter: extra damage from towers ...
+var mark_t := PackedFloat32Array()  # ... for this many seconds
 ## Per enemy this step: the best haste from a captain nearby (walk and
 ## attack x 1 + haste), and whether a bone mage is healing it (view).
 var haste := PackedFloat32Array()
 var healed := PackedByteArray()
+## Per support enemy this step: the walking speed of the allies around it
+## (0 = none near): it keeps up with its crowd.
+var escort := PackedFloat32Array()
 var stage := PackedInt32Array()  # boss phase reached (Sim._bosses)
 var blocked := PackedByteArray()  # 1 = at the gate, hitting it; 2 = held up
                                   # behind another enemy in the queue; 0 = walking
@@ -48,8 +57,15 @@ var prev_phase := PackedFloat32Array()
 var gate_lane := PackedInt32Array([0, 1, 2, 0, 1, 2])
 var gate_d := PackedFloat32Array([-1.0, -1.0, -1.0, -1.0, -1.0, -1.0])
 var gate_hp := PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-## Per gate slot, set by the game: fraction of damage blocked (Engineer).
-var gate_armor := PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+## Last Stand: a wall (gate slot or the keep) about to fall instead turns
+## invulnerable for `last_stand` s, once per wave each (arm_last_stand).
+var last_stand := 0.0
+var gate_shield := PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+var gate_saved := PackedByteArray([0, 0, 0, 0, 0, 0])
+var keep_shield := 0.0
+var keep_saved := false
+## Walls saved this step (their positions, for the view).
+var saved: Array[Vector3] = []
 ## The keep: every lane ends at it. Enemies that get there stop and attack
 ## it like a gate (queueing the same way) until killed; one HP pool.
 var keep_hp := 1e9
@@ -88,6 +104,9 @@ func _init(lane_tracks: Array[Track], seed_value := 1) -> void:
 	wall_dmg.resize(Level.ENEMIES.size())
 	for t in tracks:
 		entry.push_back(start_line(t))
+		var ft := Track.new([t.point(0.0), t.point(t.length)])
+		fly_tracks.push_back(ft)
+		fly_entry.push_back(start_line(ft))
 
 
 ## Road distance where a lane comes within START_LINE_OUT of the hero's
@@ -125,8 +144,11 @@ func spawn(type: int, ln: int, hp_mult := 1.0, at_d := -1.0, at_off := INF) -> v
 	brittle.push_back(0.0)
 	brittle_t.push_back(0.0)
 	immune.push_back(0)
+	mark_v.push_back(0.0)
+	mark_t.push_back(0.0)
 	haste.push_back(0.0)
 	healed.push_back(0)
+	escort.push_back(0.0)
 	stage.push_back(0)
 	max_hp.push_back(float(e.hp) * hp_mult)
 	d.push_back(_rng.randf_range(0.0, 0.6) if at_d < 0.0 else at_d)
@@ -149,7 +171,8 @@ func spawn(type: int, ln: int, hp_mult := 1.0, at_d := -1.0, at_off := INF) -> v
 	blocked.push_back(0)
 	if at_off != INF:
 		off[off.size() - 1] = clampf(at_off, -lim, lim)
-	pos.push_back(tracks[ln].point(d[d.size() - 1], off[off.size() - 1]))
+	var tr: Track = fly_tracks[ln] if e.get("flies", false) else tracks[ln]
+	pos.push_back(tr.point(d[d.size() - 1], off[off.size() - 1]))
 	# Spawned mid-step (a slime's brood): the view interpolates from here.
 	if prev_pos.size() < pos.size():
 		prev_pos.push_back(pos[pos.size() - 1])
@@ -164,7 +187,16 @@ func index_of(id: int) -> int:
 
 ## Can towers and the hero hit it yet (past its lane's start line)?
 func targetable(i: int) -> bool:
-	return hp[i] > 0.0 and d[i] >= entry[lane[i]]
+	return hp[i] > 0.0 and d[i] >= (fly_entry[lane[i]] if _flies(i) else entry[lane[i]])
+
+
+func _flies(i: int) -> bool:
+	return Level.ENEMIES[kind[i]].get("flies", false)
+
+
+## The path enemy i follows: its lane's road, or the straight flight line.
+func track_of(i: int) -> Track:
+	return fly_tracks[lane[i]] if _flies(i) else tracks[lane[i]]
 
 
 ## Deal damage; returns true if this hit killed it. Hits on the already
@@ -186,7 +218,8 @@ func damage(i: int, amount: float, flashes := true, armored := true) -> bool:
 		flash[i] = 0.12
 	if hp[i] <= 0.0:
 		killed += 1
-		deaths.push_back({pos = pos[i], kind = kind[i], d = d[i], lane = lane[i], off = off[i], mult = mult[i]})
+		deaths.push_back({pos = pos[i], kind = kind[i], d = d[i], lane = lane[i], off = off[i], mult = mult[i],
+			fwd = forward(i)})
 		return true
 	return false
 
@@ -221,6 +254,12 @@ func freeze(i: int, seconds: float) -> void:
 	freeze_t[i] = maxf(freeze_t[i], seconds)
 
 
+## Spotter: towers deal enemy i `extra` more damage for `seconds`.
+func mark(i: int, extra: float, seconds: float) -> void:
+	mark_v[i] = maxf(mark_v[i], extra)
+	mark_t[i] = seconds
+
+
 ## Frostbite: enemy i takes `extra` more damage for `seconds`.
 func make_brittle(i: int, extra: float, seconds: float) -> void:
 	brittle[i] = maxf(brittle[i], extra)
@@ -246,7 +285,7 @@ func pace(i: int) -> float:
 
 ## Walking direction of enemy i.
 func forward(i: int) -> Vector3:
-	return tracks[lane[i]].forward(d[i])
+	return track_of(i).forward(d[i])
 
 
 func step(dt: float) -> void:
@@ -277,7 +316,8 @@ func step(dt: float) -> void:
 			slow[i] = 0.0
 		freeze_t[i] = maxf(freeze_t[i] - dt, 0.0)
 		brittle_t[i] -= dt
-		var nd := d[i] + spd[i] * pace(i) * dt
+		mark_t[i] -= dt
+		var nd := d[i] + maxf(spd[i], escort[i]) * pace(i) * dt
 		blocked[i] = 0
 		var stop := d[i] + 1e9
 		var rng_r := float(Level.ENEMIES[kind[i]].get("ranged", 0.0))
@@ -285,7 +325,7 @@ func step(dt: float) -> void:
 		if g >= 0:
 			stop = gate_d[g] - (gap[i] if rng_r <= 0.0 else rng_r + gap[i])
 		else:
-			stop = tracks[lane[i]].length - (_keep_gap(i) if rng_r <= 0.0 else rng_r + gap[i])
+			stop = track_of(i).length - (_keep_gap(i) if rng_r <= 0.0 else rng_r + gap[i])
 		if nd >= stop:
 			nd = maxf(stop, d[i])
 			blocked[i] = 1
@@ -299,6 +339,10 @@ func step(dt: float) -> void:
 		_queue(ln, tracks[ln].length + KEEP_REACH, -1, prev, dt)
 	# 3. Gate / keep damage, animation phase, positions.
 	shots.clear()
+	saved.clear()
+	keep_shield = maxf(keep_shield - dt, 0.0)
+	for g in gate_shield.size():
+		gate_shield[g] = maxf(gate_shield[g] - dt, 0.0)
 	for i in n:
 		if hp[i] <= 0.0:
 			continue
@@ -310,9 +354,22 @@ func step(dt: float) -> void:
 			var dmg := float(e.dps) * power[i] * pc * dt
 			var g := gate_of(i)
 			if g >= 0:
-				dmg *= 1.0 - gate_armor[g]
+				if gate_shield[g] > 0.0:
+					dmg = 0.0
+				elif gate_hp[g] - dmg <= 0.0 and last_stand > 0.0 and not gate_saved[g]:
+					dmg = maxf(gate_hp[g] - 1.0, 0.0)
+					gate_saved[g] = 1
+					gate_shield[g] = last_stand
+					saved.push_back(tracks[gate_lane[g]].point(gate_d[g]))
 				gate_hp[g] -= dmg
 			else:
+				if keep_shield > 0.0:
+					dmg = 0.0
+				elif keep_hp - dmg <= 0.0 and last_stand > 0.0 and not keep_saved:
+					dmg = maxf(keep_hp - 1.0, 0.0)
+					keep_saved = true
+					keep_shield = last_stand
+					saved.push_back(Level.KEEP_POS)
 				keep_hp -= dmg
 			wall_dmg[kind[i]] += dmg
 		if blocked[i] == 0:
@@ -323,10 +380,20 @@ func step(dt: float) -> void:
 			if blocked[i] == 1 and float(e.get("ranged", 0.0)) > 0.0 and floori((phase[i] + inc) / TAU) > floori(phase[i] / TAU):
 				shots.push_back([pos[i] + Vector3(0, 1.0, 0), _wall_point(i)])
 			phase[i] += inc
-		pos[i] = tracks[lane[i]].point(d[i], off[i])
+		pos[i] = track_of(i).point(d[i], off[i])
 		if e.get("flies", false):
 			pos[i].y += float(e.fly_h) + 0.18 * sin(phase[i] * 0.5)
 	_compact()
+
+
+## A new wave: Last Stand (s, 0 = none) is ready again on every wall.
+func arm_last_stand(seconds: float) -> void:
+	last_stand = seconds
+	keep_saved = false
+	keep_shield = 0.0
+	for g in gate_saved.size():
+		gate_saved[g] = 0
+		gate_shield[g] = 0.0
 
 
 ## Support enemies: bone mages heal and captains hasten everyone within
@@ -338,20 +405,31 @@ func _auras(dt: float) -> void:
 	for i in n:
 		haste[i] = 0.0
 		healed[i] = 0
+		escort[i] = 0.0
 	for j in n:
 		var ej: Dictionary = Level.ENEMIES[kind[j]]
-		if hp[j] <= 0.0 or not ej.has("aura") or not targetable(j):
+		if hp[j] <= 0.0 or not ej.has("aura"):
 			continue
 		var r := float(ej.aura)
 		var pj := pos[j]
+		var pace_sum := 0.0
+		var pace_n := 0
 		for i in n:
-			if hp[i] <= 0.0 or Level.ENEMIES[kind[i]].get("boss", false):
+			if hp[i] <= 0.0 or Level.ENEMIES[kind[i]].get("boss", false) or lane[i] != lane[j]:
 				continue
 			var q := pos[i]
-			if (q.x - pj.x) * (q.x - pj.x) + (q.z - pj.z) * (q.z - pj.z) > r * r:
+			var dd := (q.x - pj.x) * (q.x - pj.x) + (q.z - pj.z) * (q.z - pj.z)
+			# Keep pace with the non-support allies around (a little wider
+			# than the aura, so it doesn't drop out of its crowd).
+			if i != j and not Level.ENEMIES[kind[i]].has("aura") and dd <= (r + 2.0) * (r + 2.0):
+				pace_sum += spd[i]
+				pace_n += 1
+			if dd > r * r or not targetable(j):
 				continue
 			haste[i] = maxf(haste[i], float(ej.get("haste", 0.0)))
 			heal[i] = maxf(heal[i], float(ej.get("heal", 0.0)))
+		if pace_n > 0:
+			escort[j] = pace_sum / pace_n
 	for i in n:
 		if heal[i] > 0.0 and hp[i] > 0.0 and hp[i] < max_hp[i]:
 			hp[i] = minf(max_hp[i], hp[i] + max_hp[i] * heal[i] * dt)
@@ -499,7 +577,7 @@ func first_in_range(p: Vector3, r: float, r_min := 0.0, ground_only := false) ->
 	for i in count():
 		if not targetable(i) or (ground_only and Level.ENEMIES[kind[i]].get("flies", false)):
 			continue
-		var left := tracks[lane[i]].length - d[i]
+		var left := track_of(i).length - d[i]
 		if left >= best_left:
 			continue
 		var q := pos[i]
@@ -519,7 +597,7 @@ func first_k(p: Vector3, r: float, k: int) -> Array[int]:
 			continue
 		var q := pos[i]
 		if (q.x - p.x) * (q.x - p.x) + (q.z - p.z) * (q.z - p.z) < r * r:
-			found.push_back(Vector2(tracks[lane[i]].length - d[i], i))
+			found.push_back(Vector2(track_of(i).length - d[i], i))
 	found.sort()
 	var out: Array[int] = []
 	for v in found.slice(0, k):
@@ -582,6 +660,7 @@ func _compact() -> void:
 		power[i] = power[last]; stage[i] = stage[last]
 		mult[i] = mult[last]; freeze_t[i] = freeze_t[last]; brittle[i] = brittle[last]
 		brittle_t[i] = brittle_t[last]; immune[i] = immune[last]; haste[i] = haste[last]; healed[i] = healed[last]
+		escort[i] = escort[last]; mark_v[i] = mark_v[last]; mark_t[i] = mark_t[last]
 		d[i] = d[last]; off[i] = off[last]; spd[i] = spd[last]; gap[i] = gap[last]
 		phase[i] = phase[last]; flash[i] = flash[last]; slow[i] = slow[last]
 		slow_t[i] = slow_t[last]; blocked[i] = blocked[last]; pos[i] = pos[last]
@@ -590,7 +669,8 @@ func _compact() -> void:
 		kind.resize(last); lane.resize(last); uid.resize(last); hp.resize(last); max_hp.resize(last)
 		power.resize(last); stage.resize(last)
 		mult.resize(last); freeze_t.resize(last); brittle.resize(last); brittle_t.resize(last)
-		immune.resize(last); haste.resize(last); healed.resize(last)
+		immune.resize(last); haste.resize(last); healed.resize(last); escort.resize(last)
+		mark_v.resize(last); mark_t.resize(last)
 		d.resize(last); off.resize(last); spd.resize(last); gap.resize(last)
 		phase.resize(last); flash.resize(last); slow.resize(last)
 		slow_t.resize(last); blocked.resize(last); pos.resize(last)

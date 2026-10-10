@@ -5,6 +5,7 @@ wins and what loses.
 
   tools/meta_report.py [--runs=120] [--jobs=4] [--fixed] [--from=0] [--json=out.jsonl]
       [--specs=archer:repeater,...]   (the fixed bot's specs, for A/B runs)
+      [--force=ID]                    (this card / relic first in the bot's picks)
 
 Report: win rate; where runs die (wave) and lose keep HP; damage share by
 source (hero vs each tower kind) in wins and losses; win rate by how much
@@ -30,10 +31,10 @@ def arg(name, default):
 
 
 def play(chunk):
-    start, count, fixed, specs = chunk
+    start, count, fixed, specs, force = chunk
     cmd = ["godot", "--headless", "--path", ROOT, "--script", "res://tools/meta.gd", "--",
            "--from=%d" % start, "--count=%d" % count] + (["--fixed"] if fixed else []) + \
-        (["--specs=" + specs] if specs else [])
+        (["--specs=" + specs] if specs else []) + (["--force=" + force] if force else [])
     out = subprocess.run(cmd, capture_output=True, text=True, timeout=3600).stdout
     return [json.loads(line[6:]) for line in out.splitlines() if line.startswith("[run] ")]
 
@@ -47,7 +48,8 @@ def main():
     start = arg("from", 0)
     per = max(1, (runs + jobs - 1) // jobs)
     specs = arg("specs", "")
-    chunks = [(k, min(per, start + runs - k), fixed, specs) for k in range(start, start + runs, per)]
+    force = arg("force", "")
+    chunks = [(k, min(per, start + runs - k), fixed, specs, force) for k in range(start, start + runs, per)]
     games = []
     with ThreadPoolExecutor(jobs) as ex:
         for got in ex.map(play, chunks):

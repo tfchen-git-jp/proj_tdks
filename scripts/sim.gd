@@ -62,6 +62,8 @@ var _thunder_cd := 0.0
 var _wisp_cd := 0.0
 var _near_kills := 0  # for Midas
 var _bounty_left := 0
+## Gold this wave by source (the wave-cleared message): kills, midas, bounty.
+var wave_gold := {}
 ## Damage dealt by source (balance stats): hero (bolts, burning,
 ## lightning, wisp, blasts) and each tower kind.
 var dealt_by := {}
@@ -129,7 +131,6 @@ func step(dt: float, move: Vector2) -> void:
 		wave_time += dt
 		_spawn()
 	_hero_shoot(dt)
-	_engineer()
 	_towers(dt)
 	_projectiles(dt)
 	var burnt := horde.burn_dealt
@@ -140,6 +141,8 @@ func step(dt: float, move: Vector2) -> void:
 		dealt_by.mortar = float(dealt_by.get("mortar", 0.0)) + horde.burn_mortar - burnt_m
 	for sh in horde.shots:
 		events.push_back({type = "enemy_shot", from = sh[0], to = sh[1]})
+	for at in horde.saved:
+		events.push_back({type = "last_stand", pos = at})
 	_bosses()
 	_gates()
 	_drops_from_deaths()
@@ -174,12 +177,14 @@ func start_wave() -> bool:
 		return false
 	checkpoint = to_save()
 	phase = "attack"
+	horde.arm_last_stand(float(rv("laststand")) if "laststand" in relics else 0.0)
 	wave_time = 0.0
 	start_t = 0.0
 	_spawned.clear()
 	for g in Level.WAVES[wave]:
 		_spawned.push_back(0)
 	_bounty_left = int(pv("bounty", 0))
+	wave_gold = {kills = 0, midas = 0, bounty = 0}
 	_pending.push_back({type = "wave_start", wave = wave, new = Level.new_types(wave)})
 	return true
 
@@ -222,10 +227,8 @@ func _end_wave() -> void:
 		held += v
 	var interest := mini(floori(held * rate), cap)
 	coins += income + interest
-	if "laststand" in relics:
-		base_hp = minf(Level.BASE_HP, base_hp + Level.BASE_HP * float(rv("laststand")))
-		horde.keep_hp = base_hp
-	events.push_back({type = "wave_cleared", wave = wave, income = income, interest = interest})
+	events.push_back({type = "wave_cleared", wave = wave, income = income, interest = interest,
+		kills = int(wave_gold.get("kills", 0)), midas = int(wave_gold.get("midas", 0)), bounty = int(wave_gold.get("bounty", 0))})
 	_vacuum()
 	if (wave + 1) in Perks.RELIC_WAVES:
 		pending_relics += 1
@@ -280,6 +283,8 @@ func _vacuum() -> void:
 ## Damage enemy i, credited to `src` (dealt_by). Returns true if it died.
 ## armored false: armour doesn't count (the Sniper).
 func _hurt(i: int, amount: float, src: String, armored := true) -> bool:
+	if src != "hero" and horde.mark_t[i] > 0.0:  # Spotter's mark
+		amount *= 1.0 + horde.mark_v[i]
 	var before := horde.dealt
 	var died := horde.damage(i, amount, true, armored)
 	dealt_by[src] = float(dealt_by.get(src, 0.0)) + horde.dealt - before
@@ -306,15 +311,23 @@ func rv(id: String) -> Variant:
 
 
 func hero_damage() -> float:
-	return float(Level.HERO.damage) * pv("dmg", 1.0) * (1.0 + standard_buff(hero_pos))
+	var scholar := Perks.SCHOLAR_PER_LEVEL * level if tier("scholar") > 0 else 0.0
+	return float(Level.HERO.damage) * pv("dmg", 1.0) * (1.0 + standard_buff(hero_pos)) * (1.0 + scholar)
 
 
 func hero_range() -> float:
-	return float(Level.HERO.range) + pv("range", 0.0)
+	return float(Level.HERO.range) + pa("range", 0, 0.0)
+
+
+## Element k of card `id`'s value at the owned tier (cards whose value is
+## a list, e.g. Long Shot [range, far damage]), or `none` without it.
+func pa(id: String, k: int, none: float) -> float:
+	var t := tier(id)
+	return none if t == 0 else float(Perks.CARDS[id].v[t - 1][k])
 
 
 func hero_speed() -> float:
-	return float(Level.HERO.speed) * pv("boots", 1.0)
+	return float(Level.HERO.speed) * (1.0 + pv("boots", 0.0))
 
 
 func reroll_cost() -> int:
@@ -375,6 +388,10 @@ func pick(k: int) -> bool:
 		relics[id] = int(relics.get(id, 0)) + 1
 	else:
 		perks[id] = tier(id) + 1
+		if id == "engineer":  # standing gates get their extra HP at once
+			for b in buildings.values():
+				if b.kind == "gate" and not b.broken:
+					_raise_gate(b)
 	_pending.push_back({type = "perk", id = id, relic = offer_relic,
 		tier = int(relics[id]) if offer_relic else tier(id)})
 	offer = []
@@ -413,19 +430,7 @@ func _gain_xp(n: float) -> void:
 		events.push_back({type = "level_up", level = level, opened = opened})
 
 
-## Engineer: gates near the hero shrug off part of the damage.
-func _engineer() -> void:
-	var armor := pv("engineer", 0.0)
-	for g in horde.gate_armor.size():
-		horde.gate_armor[g] = 0.0
-	if armor <= 0.0:
-		return
-	for b in buildings.values():
-		if b.kind == "gate" and not b.broken and _flat_dist(b.pos, hero_pos) <= Perks.ENGINEER_R:
-			horde.gate_armor[int(b.spot.slot)] = armor
-
-
-## Rally / Spotter: is a tower at p inside the hero's aura?
+## Rally: is a tower at p inside the hero's ring (double bonus)?
 func _in_aura(p: Vector3) -> bool:
 	return _flat_dist(p, hero_pos) <= Perks.AURA
 
@@ -644,14 +649,19 @@ func _raise_gate(b: Dictionary) -> void:
 	var ln := int(b.spot.lane)
 	horde.gate_lane[g] = ln
 	horde.gate_d[g] = tracks[ln].closest_d(b.spot.pos)
-	horde.gate_hp[g] = float(Level.bstats(b).hp)
+	horde.gate_hp[g] = gate_max_hp(b)
+
+
+## A gate's full HP (Engineer adds its share).
+func gate_max_hp(b: Dictionary) -> float:
+	return float(Level.bstats(b).hp) * (1.0 + pv("engineer", 0.0))
 
 
 ## HP fraction of the gate in `slot` (0 if none stands there).
 func gate_hp_frac(slot: int) -> float:
 	for b in buildings.values():
 		if b.kind == "gate" and int(b.spot.slot) == slot and not b.broken:
-			return clampf(horde.gate_hp[slot] / float(Level.bstats(b).hp), 0.0, 1.0)
+			return clampf(horde.gate_hp[slot] / gate_max_hp(b), 0.0, 1.0)
 	return 0.0
 
 
@@ -728,7 +738,9 @@ func _hero_move(dt: float, move: Vector2) -> void:
 
 
 func _hero_shoot(dt: float) -> void:
-	_hero_cd -= dt * (1.0 + banner_buff(hero_pos, true))
+	# Swift Boots: faster shooting while on the move.
+	var moving := hero_vel.length() > 0.5
+	_hero_cd -= dt * (1.0 + banner_buff(hero_pos, true) + (pv("boots", 0.0) if moving else 0.0))
 	hero_aim_t += dt
 	if "thunder" in relics:
 		_thunder(dt)
@@ -786,6 +798,12 @@ func _hero_hit(i: int, p: Dictionary) -> void:
 	var dmg: float = p.dmg
 	if Level.ENEMIES[horde.kind[i]].get("heavy", false):
 		dmg *= pv("slayer", 1.0)
+	# Long Shot: more damage to far targets.
+	if _flat_dist(horde.pos[i], hero_pos) > Perks.FAR:
+		dmg *= 1.0 + pa("range", 1, 0.0)
+	# Spotter: marked for the towers.
+	if tier("spotter") > 0:
+		horde.mark(i, pv("spotter", 0.0), Perks.MARK_TIME)
 	var crit := _rng.randf() < pv("crit", 0.0)
 	if crit:
 		dmg *= Perks.CRIT_MULT
@@ -801,7 +819,7 @@ func _hero_hit(i: int, p: Dictionary) -> void:
 		var r := pv("blast", 0.0)
 		for j in horde.within(at, r):
 			if j != i:
-				_hurt(j, dmg * 0.5, "hero")
+				_hurt(j, dmg * Perks.BLAST_DAMAGE, "hero")
 		events.push_back({type = "blast", pos = at, r = r})
 	if int(p.get("bounces", 0)) > 0:
 		var chain: Array = p.get("chain", [])
@@ -859,7 +877,9 @@ func _wisp(dt: float) -> void:
 	_wisp_cd = float(rv("wisp"))
 	var from := wisp_pos()
 	var to := horde.pos[i] + Vector3(0, CHEST, 0)
-	_launch("wisp", from, to, horde.uid[i], from.distance_to(to) / 14.0, 0.3, hero_damage() * Perks.WISP_DAMAGE)
+	# Its bolts carry every bolt card (crit, fire, blast, Giant Slayer...).
+	var p := _launch("wisp", from, to, horde.uid[i], from.distance_to(to) / 14.0, 0.3, hero_damage() * Perks.WISP_DAMAGE)
+	p.hero = true
 
 
 # --- towers -----------------------------------------------------------------------
@@ -869,7 +889,9 @@ func _towers(dt: float) -> void:
 		if not b.kind in Level.TOWER_KINDS or b.kind == "banner":
 			continue
 		var st := Level.bstats(b)
-		b.cd -= dt * (1.0 + banner_buff(b.pos) + (pv("rally", 0.0) if _in_aura(b.pos) else 0.0))
+		# Rally: every tower, twice as much near the hero.
+		var rally := pv("rally", 0.0) * (2.0 if _in_aura(b.pos) else 1.0)
+		b.cd -= dt * (1.0 + banner_buff(b.pos) + rally)
 		if b.cd > 0.0:
 			continue
 		match String(b.kind):
@@ -879,9 +901,9 @@ func _towers(dt: float) -> void:
 			"frost": _pulse_frost(b, st)
 
 
-## A tower's range, Spotter included.
-func _reach(b: Dictionary, st: Dictionary) -> float:
-	return float(st.range) + (pv("spotter", 0.0) if _in_aura(b.pos) else 0.0)
+## A tower's range.
+func _reach(_b: Dictionary, st: Dictionary) -> float:
+	return float(st.range)
 
 
 ## Archer: the enemy nearest the keep (a Sniper: the one with the most HP;
@@ -1052,8 +1074,9 @@ func _drops_from_deaths() -> void:
 		for k in (int(split[1]) if not split.is_empty() else 0):
 			horde.spawn(int(split[0]), int(death.lane), float(death.mult),
 				maxf(0.0, float(death.d) + _rng.randf_range(-0.5, 0.3)), float(death.off) + _rng.randf_range(-0.5, 0.5))
-		events.push_back({type = "kill", pos = death.pos, kind = death.kind, d = death.d, lane = death.lane})
+		events.push_back({type = "kill", pos = death.pos, kind = death.kind, d = death.d, lane = death.lane, fwd = death.fwd})
 		var gold := int(Level.ENEMIES[death.kind].gold)
+		wave_gold.kills = int(wave_gold.get("kills", 0)) + gold
 		var spread := 1.1 if Level.ENEMIES[death.kind].get("big", false) else 0.35
 		var pieces := gold_pieces(gold)
 		if _flat_dist(death.pos, hero_pos) <= xp_radius():
@@ -1061,10 +1084,12 @@ func _drops_from_deaths() -> void:
 			if _bounty_left > 0:
 				_bounty_left -= 1
 				pieces.push_back(1)
+				wave_gold.bounty = int(wave_gold.get("bounty", 0)) + 1
 			if "midas" in relics:
 				_near_kills += 1
 				if _near_kills % int(rv("midas")) == 0:
 					pieces.push_back(20)
+					wave_gold.midas = int(wave_gold.get("midas", 0)) + 20
 					events.push_back({type = "midas", pos = death.pos})
 		for v in pieces:
 			# On the ground under the body (a bat dies in the air).

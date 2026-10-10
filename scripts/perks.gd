@@ -28,17 +28,22 @@ const CARDS := {
 		desc = ["+20% bolt damage", "+40% bolt damage", "+60% bolt damage"]},
 	aspd = {name = "Quick Draw", v = [1.1, 1.2, 1.35],
 		desc = ["+10% attack speed", "+20% attack speed", "+35% attack speed"]},
-	range = {name = "Long Shot", v = [1.0, 2.0, 3.0],
-		desc = ["+1 m range", "+2 m range", "+3 m range"]},
+	# v0.1.30 reworks (measured weak, docs/DESIGN.md "Card and relic value"):
+	# Long Shot, Ricochet, Swift Boots, Scholar, Rally, Spotter, Engineer,
+	# Bounty; Midas, Last Stand, Spirit Wisp.
+	range = {name = "Long Shot", v = [[1.0, 0.15], [2.0, 0.3], [3.0, 0.45]],
+		desc = ["+1 m range; +15% damage to enemies over 5 m away", "+2 m range; +30% damage over 5 m",
+			"+3 m range; +45% damage over 5 m"]},
 	multi = {name = "Multishot", v = [1, 2, 3],
 		desc = ["+1 bolt (40% damage) at another enemy", "+2 bolts (40% damage) at other enemies",
 			"+3 bolts (40% damage) at other enemies"]},
 	pierce = {name = "Piercing Bolts", v = [1, 2, 3],
 		desc = ["Bolts fly straight through 1 more enemy", "...through 2 more enemies", "...through 3 more enemies"]},
 	ricochet = {name = "Ricochet", v = [1, 2, 3],
-		desc = ["Bolts bounce to 1 nearby enemy (-40% each bounce)", "Bounce to 2 nearby enemies", "Bounce to 3 nearby enemies"]},
-	blast = {name = "Explosive Tips", v = [0.9, 1.2, 1.5],
-		desc = ["Hits explode: half damage within 0.9 m", "Blast radius 1.2 m", "Blast radius 1.5 m"]},
+		desc = ["Bolts bounce to 1 nearby enemy (-25% each bounce)", "Bounce to 2 nearby enemies", "Bounce to 3 nearby enemies"]},
+	# v0.1.30: measured the strongest card (was half damage, 0.9/1.2/1.5 m).
+	blast = {name = "Explosive Tips", v = [0.8, 1.0, 1.2],
+		desc = ["Hits explode: 35% damage within 0.8 m", "Blast radius 1.0 m", "Blast radius 1.2 m"]},
 	fire = {name = "Fire Bolts", v = [0.4, 0.6, 0.9],
 		desc = ["Set enemies ablaze: 40% of bolt damage per second for 3 s", "Burn 60% per second", "Burn 90% per second"]},
 	frost = {name = "Frost Bolts", v = [0.2, 0.3, 0.4],
@@ -47,23 +52,31 @@ const CARDS := {
 		desc = ["10% chance of a 2.5x critical hit", "20% critical chance", "30% critical chance"]},
 	slayer = {name = "Giant Slayer", v = [1.4, 1.8, 2.2],
 		desc = ["+40% damage to giants", "+80% damage to giants", "+120% damage to giants"]},
-	boots = {name = "Swift Boots", v = [1.1, 1.2, 1.3],
-		desc = ["+10% move speed", "+20% move speed", "+30% move speed"]},
+	boots = {name = "Swift Boots", v = [0.1, 0.2, 0.3],
+		desc = ["+10% move speed, and +10% attack speed while moving", "+20% move speed and attack speed while moving",
+			"+30% move speed and attack speed while moving"]},
 	# Replaced Magnet (v0.1.17: coins fly to the hero at every wave's end).
+	# Scholar (user, v0.1.30): +2% bolt damage per hero level (the level
+	# now, not counted from the pick), on top of the XP.
 	scholar = {name = "Scholar", v = [1.2, 1.4, 1.6],
-		desc = ["+20% XP", "+40% XP", "+60% XP"]},
-	rally = {name = "Rally", v = [0.1, 0.2, 0.3],
-		desc = ["Towers within 5 m of you attack 10% faster", "...20% faster", "...30% faster"]},
-	spotter = {name = "Spotter", v = [1.0, 2.0, 3.0],
-		desc = ["Towers within 5 m of you: +1 m range", "...+2 m range", "...+3 m range"]},
+		desc = ["+20% XP; +2% bolt damage per hero level", "+40% XP; +2% bolt damage per level",
+			"+60% XP; +2% bolt damage per level"]},
+	# Tower-wide cards scale with the whole build: small numbers.
+	rally = {name = "Rally", v = [0.04, 0.08, 0.12],
+		desc = ["All towers attack 4% faster; twice that within 6 m of you", "...8% faster (16% near you)",
+			"...12% faster (24% near you)"]},
+	spotter = {name = "Spotter", v = [0.12, 0.2, 0.3],
+		desc = ["Enemies your bolts hit are marked for 4 s: towers deal them +12% damage", "...+20%", "...+30%"]},
 	engineer = {name = "Engineer", v = [0.2, 0.35, 0.5],
-		desc = ["Gates within 6 m of you take 20% less damage", "...35% less", "...50% less"]},
-	bounty = {name = "Bounty", v = [10, 20, 30],
-		desc = ["Kills near you drop +1 gold (up to 10 a wave)", "...up to 20 a wave", "...up to 30 a wave"]},
+		desc = ["All gates +20% HP", "All gates +35% HP", "All gates +50% HP"]},
+	bounty = {name = "Bounty", v = [20, 40, 60],
+		desc = ["Kills near you drop +1 gold (up to 20 a wave)", "...up to 40 a wave", "...up to 60 a wave"]},
 }
-## Radius of the tower-synergy auras (Rally, Spotter) and Engineer.
-const AURA := 5.0
-const ENGINEER_R := 6.0
+## Rally's doubled ring around the hero; Spotter's mark (s).
+const AURA := 6.0
+const MARK_TIME := 4.0
+## Long Shot's damage bonus counts beyond this distance.
+const FAR := 5.0
 
 ## Relics: game-changing, 3 tiers each (user, 2026-10-10: a relic drawn
 ## again gets stronger, e.g. Thunderstrike strikes more often). v: per
@@ -78,20 +91,26 @@ const RELICS := {
 	thunder = {name = "Thunderstrike", v = [[8.0, 5], [6.0, 6], [4.5, 8]],
 		desc = ["Every 8 s lightning strikes the toughest enemy near you and chains through 4 more.",
 			"Every 6 s, chains through 5 more", "Every 4.5 s, chains through 7 more"]},
-	wisp = {name = "Spirit Wisp", v = [0.7, 0.5, 0.35],
-		desc = ["A wisp circles you and shoots magic bolts at enemies.", "The wisp shoots 40% faster",
+	wisp = {name = "Spirit Wisp", v = [0.5, 0.35, 0.25],
+		desc = ["A wisp circles you and shoots bolts with all your bolt cards (80% damage).", "The wisp shoots 40% faster",
 			"The wisp shoots twice as fast"]},
-	midas = {name = "Midas Touch", v = [40, 30, 20],
-		desc = ["Every 40th kill near you drops a gold ingot (20).", "Every 30th kill", "Every 20th kill"]},
-	laststand = {name = "Last Stand", v = [0.1, 0.15, 0.2],
-		desc = ["The keep regains 10% of its HP after every wave.", "Regains 15%", "Regains 20%"]},
+	# Was every 40/30/20 kills: measured the best pick by far (v0.1.29).
+	midas = {name = "Midas Touch", v = [60, 45, 30],
+		desc = ["Every 60th kill near you drops a gold ingot (20).", "Every 45th kill", "Every 30th kill"]},
+	# Last Stand (user, v0.1.30): a gate or the keep about to fall turns
+	# invulnerable for v s instead, once per wave each (Horde.last_stand).
+	laststand = {name = "Last Stand", v = [3.0, 5.0, 7.0],
+		desc = ["Once per wave, a gate or the keep about to fall becomes invulnerable for 3 s.",
+			"Invulnerable for 5 s", "Invulnerable for 7 s"]},
 }
 const THUNDER_RANGE := 9.0
 const THUNDER_JUMP := 4.5  # m between chained enemies
 const THUNDER_DAMAGE := 7.0  # x the hero's bolt damage
-const WISP_DAMAGE := 0.6  # x the hero's bolt damage
-const RICOCHET_RANGE := 4.0
-const RICOCHET_FALLOFF := 0.6
+const WISP_DAMAGE := 0.8  # x the hero's bolt damage
+const BLAST_DAMAGE := 0.35  # Explosive Tips: share of the hit's damage
+const SCHOLAR_PER_LEVEL := 0.02  # bolt damage per hero level
+const RICOCHET_RANGE := 5.0
+const RICOCHET_FALLOFF := 0.75
 const MULTI_DAMAGE := 0.4  # extra Multishot bolts
 const BURN_TIME := 3.0
 const CRIT_MULT := 2.5

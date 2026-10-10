@@ -31,6 +31,7 @@ func _init() -> void:
 	_new_enemies()
 	_specs_and_selling()
 	_support_and_split()
+	_reworks()
 	_layout()
 	_full_run()
 	print("ALL PASSED" if _fails == 0 else "%d FAILED" % _fails)
@@ -192,9 +193,13 @@ func _giant_shove() -> void:
 func _phases_and_building() -> void:
 	var s = SimS.new(5)
 	_ok(s.phase == "build" and s.coins == Level.START_GOLD, "starts in the build phase with start gold")
-	s.hero_pos = Level.SPOTS[0].pos
+	var first: Dictionary = {}
+	for sp in Level.SPOTS:
+		if sp.kind == "tower" and int(sp.lv) == 1 and first.is_empty():
+			first = sp
+	s.hero_pos = first.pos
 	var spot: Dictionary = s.spot_under_hero()
-	_ok(spot.get("id", "") == Level.SPOTS[0].id, "standing on a spot finds it")
+	_ok(spot.get("id", "") == first.id, "standing on a spot finds it")
 	var opts: Array = s.options(spot)
 	_ok(opts.size() == Level.TOWER_KINDS.size(), "an empty tower spot offers every tower (%d)" % opts.size())
 	_ok(s.buy(spot.id, "archer") and s.coins == Level.START_GOLD - 15, "buying an archer tower costs 15")
@@ -409,11 +414,11 @@ func _unlocks() -> void:
 		if s.unlocked(sp):
 			open += 1
 			_ok(sp.kind != "gate", "no gate spot at level 1 (%s)" % sp.id)
-	_ok(open == 6, "level 1 opens 6 spots (%d)" % open)
+	_ok(open == 5, "level 1 opens 5 spots (%d)" % open)
 	s.coins = 999
-	s.hero_pos = Vector3(1.6, 0, 12.6)  # e_mid, level 3
+	s.hero_pos = Vector3(1.6, 0, 12.6)  # e_mid, level 14
 	_ok(s.spot_under_hero().is_empty() and not s.buy("e_mid", "archer"), "a locked spot has no menu and can't be built")
-	s.level = 3
+	s.level = 14
 	_ok(s.spot_under_hero().get("id", "") == "e_mid" and s.buy("e_mid", "archer"), "at its level it opens")
 	var sets := {}
 	for sp in Level.SPOTS:
@@ -424,11 +429,16 @@ func _unlocks() -> void:
 	for sp in Level.SPOTS:
 		if sp.kind == "tower":
 			per_level[int(sp.lv)] = int(per_level.get(int(sp.lv), 0)) + 1
+	# v0.1.30: spread thin up to level 17, at most two tower spots a level,
+	# and every level 2-17 opens something.
+	var any := {}
+	for sp in Level.SPOTS:
+		any[int(sp.lv)] = true
 	var gaps := 0
-	for lv in range(2, 11):
-		if int(per_level.get(lv, 0)) < 1 or int(per_level.get(lv, 0)) > 2:
+	for lv in range(2, 18):
+		if int(per_level.get(lv, 0)) > 2 or not any.has(lv):
 			gaps += 1
-	_ok(gaps == 0, "levels 2-10 each open 1-2 tower spots (%s)" % per_level)
+	_ok(gaps == 0, "levels 2-17 each open something, at most 2 tower spots (%s)" % per_level)
 	# Two gates on the centre lane: enemies stop at the outer one first.
 	var h = HordeS.new(_lane_tracks(), 13)
 	h.gate_lane[4] = 1
@@ -603,6 +613,19 @@ func _new_enemies() -> void:
 	_ok(f.d[0] > 25.0 and f.blocked[0] == 1 and f.keep_hp < 1e4 and f.gate_hp[1] == 1e4,
 		"a bat flies over the gate and attacks the keep")
 	_ok(f.pos[0].y > 1.5, "it flies (%.1f m up)" % f.pos[0].y)
+	# Flyers go straight from the lane's start to the keep (v0.1.30).
+	var fl = HordeS.new(_lane_tracks(), 35)
+	fl.spawn(Level.BAT, 0)
+	var a0: Vector3 = fl.tracks[0].point(0.0)
+	var a1: Vector3 = fl.tracks[0].point(fl.tracks[0].length)
+	var worst := 0.0
+	for k in 60 * 10:
+		fl.step(DT)
+		var p: Vector3 = fl.pos[0]
+		var t := clampf((p - a0).dot(a1 - a0) / (a1 - a0).length_squared(), 0.0, 1.0)
+		var q: Vector3 = a0.lerp(a1, t)
+		worst = maxf(worst, Vector2(p.x - q.x, p.z - q.z).length())
+	_ok(worst < 1.5, "a bat flies a straight line to the keep (%.1f m off it at most)" % worst)
 	var at: Vector3 = f.pos[0]
 	_ok(f.first_in_range(at, 3.0) == 0 and f.first_in_range(at, 3.0, 0.0, true) == -1
 		and f.within(at, 3.0, true).is_empty(), "ground-only attacks (mortar, frost) can't reach it")
@@ -794,6 +817,55 @@ func _support_and_split() -> void:
 	c.step(DT)
 	_ok(is_equal_approx(c.d[0] - 30.0, DT * (1.0 + float(Level.ENEMIES[Level.CAPTAIN].haste))) and is_equal_approx(c.d[2] - 10.0, DT),
 		"a captain hastens those near it only")
+
+
+## v0.1.30 card / relic reworks and support enemies keeping pace.
+func _reworks() -> void:
+	var s = SimS.new(61)
+	s.coins = 9999
+	s.level = 20
+	s.buy("g_c1", "gate")
+	var hp0: float = s.horde.gate_hp[1]
+	s.offer = ["engineer"]
+	s.offer_relic = false
+	s.pick(0)
+	_ok(is_equal_approx(s.horde.gate_hp[1], hp0 * (1.0 + Perks.CARDS.engineer.v[0])), "Engineer: gates get more HP at once")
+	var d0: float = s.hero_damage()
+	s.perks.scholar = 1
+	_ok(is_equal_approx(s.hero_damage(), d0 * (1.0 + Perks.SCHOLAR_PER_LEVEL * s.level)), "Scholar: +2% bolt damage per hero level")
+	# Last Stand: a falling wall holds, invulnerable, once per wave.
+	var w = HordeS.new(_lane_tracks(), 63)
+	w.keep_hp = 5.0
+	w.spawn(Level.BRUTE, 1)
+	w.d[0] = w.tracks[1].length
+	w.arm_last_stand(3.0)
+	for k in 60:
+		w.step(DT)
+	_ok(w.keep_hp > 0.0 and w.keep_saved and w.keep_shield > 0.0, "Last Stand: the keep holds, invulnerable (%.1f HP)" % w.keep_hp)
+	for k in 60 * 4:
+		w.step(DT)
+	_ok(w.keep_hp <= 0.0, "...and falls once it wears off (once per wave)")
+	# Spotter: a marked enemy takes more from towers, not from the hero.
+	var i: int = _place(s, Level.GRUNT, 1, 30.0)
+	s.horde.hp[i] = 100.0
+	s.horde.mark(i, 0.25, 3.0)
+	s._hurt(i, 10.0, "archer")
+	_ok(is_equal_approx(s.horde.hp[i], 87.5), "Spotter's mark: +25% tower damage")
+	s._hurt(i, 10.0, "hero")
+	_ok(is_equal_approx(s.horde.hp[i], 77.5), "...but not the hero's")
+	# Long Shot: far targets take more.
+	_ok(s.pa("range", 1, 0.0) == 0.0 and s.hero_range() == float(Level.HERO.range), "no Long Shot: base range")
+	# Support enemies keep pace with their crowd.
+	var h = HordeS.new(_lane_tracks(), 62)
+	h.spawn(Level.MAGE, 1)
+	for k in 6:
+		h.spawn(Level.GRUNT, 1)
+	for k in h.count():
+		h.d[k] = 20.0 + k * 0.3
+		h.pos[k] = h.tracks[1].point(h.d[k], h.off[k])
+	var m0: float = h.d[0]
+	h.step(DT)
+	_ok(h.d[0] - m0 > float(Level.ENEMIES[Level.MAGE].speed) * 1.1 * DT, "a bone mage keeps up with the grunts around it")
 
 
 func _spot(id: String) -> Dictionary:

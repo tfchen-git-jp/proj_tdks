@@ -141,44 +141,52 @@ const TOWER_KINDS := ["archer", "ballista", "mortar", "frost", "banner"]
 
 ## Building spots. kind: tower / gate / eco (farm or bank); gates also
 ## name their lane.
-## lv: the hero level that unlocks the spot (user, 2026-10-10: few spots
-## at first, 1-2 more per level). Gates come in sets, one per lane, all
+## lv: the hero level that unlocks the spot. Since v0.1.30 (user,
+## 2026-10-11) by TACTICAL value, not distance from the keep: spots that
+## reach one lane (or only the end of the roads by the keep) open first,
+## spots reaching two lanes later, the crossroads spot x_w4 (all three)
+## last; spread up to level 17 (the hero reaches ~20 in 15 waves). Measure
+## with tools/spot_value.gd. Gates come in sets, one per lane, all
 ## unlocked together; `slot` is the gate's Horde slot (0-2 the inner set
 ## near the middle of the map, 3-5 the outer set nearer the lane mouths).
 const SPOTS := [
-	# Level 1: around the keep.
-	{id = "k_west", kind = "tower", lv = 1, pos = Vector3(-4.6, 0, -8.6)},
-	{id = "k_east", kind = "tower", lv = 1, pos = Vector3(3.6, 0, -7.2)},
-	{id = "w_in", kind = "tower", lv = 1, pos = Vector3(-4.6, 0, 3.6)},
-	{id = "e_in", kind = "tower", lv = 1, pos = Vector3(1.1, 0, 2.6)},
-	{id = "x_w4", kind = "tower", lv = 1, pos = Vector3(-3.7, 0, -1.4)},
+	# Level 1: one-lane spots and the keep's flanks (low tactical value).
 	{id = "f_1", kind = "eco", lv = 1, pos = Vector3(-7.5, 0, -11.0)},
-	{id = "x_e1", kind = "tower", lv = 2, pos = Vector3(5.8, 0, -1.4)},
-	{id = "x_c2", kind = "tower", lv = 2, pos = Vector3(0.3, 0, 7.6)},
+	{id = "k_east", kind = "tower", lv = 1, pos = Vector3(3.6, 0, -7.2)},
+	{id = "k_west", kind = "tower", lv = 1, pos = Vector3(-4.6, 0, -8.6)},
+	{id = "x_e1", kind = "tower", lv = 1, pos = Vector3(5.8, 0, -1.4)},
+	{id = "x_w2", kind = "tower", lv = 1, pos = Vector3(-11.2, 0, 2.6)},
+	{id = "w_out", kind = "tower", lv = 2, pos = Vector3(-13.6, 0, 9.5)},
+	{id = "x_w5", kind = "tower", lv = 2, pos = Vector3(-10.9, 0, 5.8)},
 	# Level 3: the inner gates, side by side across the middle of the map.
-	{id = "g_w1", kind = "gate", lane = 0, slot = 0, lv = 3, pos = Vector3(-11.4, 0, 8.7)},
 	{id = "g_c1", kind = "gate", lane = 1, slot = 1, lv = 3, pos = Vector3(-5.0, 0, 9.2)},
 	{id = "g_e1", kind = "gate", lane = 2, slot = 2, lv = 3, pos = Vector3(2.0, 0, 9.8)},
-	{id = "e_mid", kind = "tower", lv = 3, pos = Vector3(1.6, 0, 12.6)},
-	{id = "w_out", kind = "tower", lv = 3, pos = Vector3(-13.6, 0, 9.5)},
-	{id = "x_w2", kind = "tower", lv = 4, pos = Vector3(-11.2, 0, 2.6)},
-	{id = "x_w5", kind = "tower", lv = 4, pos = Vector3(-10.9, 0, 5.8)},
+	{id = "g_w1", kind = "gate", lane = 0, slot = 0, lv = 3, pos = Vector3(-11.4, 0, 8.7)},
 	{id = "f_2", kind = "eco", lv = 4, pos = Vector3(-10.5, 0, -4.5)},
-	{id = "gc_t", kind = "tower", lv = 5, pos = Vector3(-5.2, 0, 15.6)},
-	{id = "x_e2", kind = "tower", lv = 5, pos = Vector3(2.3, 0, 17.6)},
-	{id = "w_mid", kind = "tower", lv = 6, pos = Vector3(-6.0, 0, 20.0)},
-	{id = "x_w3", kind = "tower", lv = 6, pos = Vector3(-13.2, 0, 15.1)},
-	{id = "ge_t", kind = "tower", lv = 7, pos = Vector3(1.5, 0, 22.2)},
+	{id = "x_w3", kind = "tower", lv = 4, pos = Vector3(-13.2, 0, 15.1)},
+	{id = "gw_t", kind = "tower", lv = 5, pos = Vector3(-13.6, 0, 23.6)},
+	{id = "x_w6", kind = "tower", lv = 5, pos = Vector3(-13.7, 0, 27.6)},
+	# From level 6: spots covering two lanes, the best last.
+	{id = "x_w1", kind = "tower", lv = 6, pos = Vector3(-8.2, 0, 29.6)},
 	{id = "f_3", kind = "eco", lv = 7, pos = Vector3(5.2, 0, -10.4)},
-	# Level 8: the outer gates, nearer the lane mouths.
-	{id = "g_w2", kind = "gate", lane = 0, slot = 3, lv = 8, pos = Vector3(-14.0, 0, 21.0)},
-	{id = "g_c2", kind = "gate", lane = 1, slot = 4, lv = 8, pos = Vector3(-3.9, 0, 20.7)},
-	{id = "g_e2", kind = "gate", lane = 2, slot = 5, lv = 8, pos = Vector3(6.5, 0, 20.2)},
-	{id = "gw_t", kind = "tower", lv = 8, pos = Vector3(-13.6, 0, 23.6)},
-	{id = "x_c1", kind = "tower", lv = 8, pos = Vector3(-5.2, 0, 25.1)},
-	{id = "c_far", kind = "tower", lv = 9, pos = Vector3(0.9, 0, 28.5)},
-	{id = "x_w1", kind = "tower", lv = 9, pos = Vector3(-8.2, 0, 29.6)},
-	{id = "x_w6", kind = "tower", lv = 10, pos = Vector3(-13.7, 0, 27.6)},
+	{id = "x_c1", kind = "tower", lv = 7, pos = Vector3(-5.2, 0, 25.1)},
+	{id = "c_far", kind = "tower", lv = 8, pos = Vector3(0.9, 0, 28.5)},
+	# Level 9: the outer gates, nearer the lane mouths.
+	{id = "g_c2", kind = "gate", lane = 1, slot = 4, lv = 9, pos = Vector3(-3.9, 0, 20.7)},
+	{id = "g_e2", kind = "gate", lane = 2, slot = 5, lv = 9, pos = Vector3(6.5, 0, 20.2)},
+	{id = "g_w2", kind = "gate", lane = 0, slot = 3, lv = 9, pos = Vector3(-14.0, 0, 21.0)},
+	{id = "w_mid", kind = "tower", lv = 9, pos = Vector3(-6.0, 0, 20.0)},
+	{id = "gc_t", kind = "tower", lv = 10, pos = Vector3(-5.2, 0, 15.6)},
+	{id = "x_e2", kind = "tower", lv = 11, pos = Vector3(2.3, 0, 17.6)},
+	{id = "f_4", kind = "eco", lv = 12, pos = Vector3(-12.5, 0, -11.5)},
+	{id = "ge_t", kind = "tower", lv = 12, pos = Vector3(1.5, 0, 22.2)},
+	{id = "x_c2", kind = "tower", lv = 13, pos = Vector3(0.3, 0, 7.6)},
+	{id = "e_mid", kind = "tower", lv = 14, pos = Vector3(1.6, 0, 12.6)},
+	{id = "e_in", kind = "tower", lv = 15, pos = Vector3(1.1, 0, 2.6)},
+	{id = "f_5", kind = "eco", lv = 15, pos = Vector3(-13.0, 0, -8.0)},
+	{id = "w_in", kind = "tower", lv = 16, pos = Vector3(-4.6, 0, 3.6)},
+	# Level 17: the crossroads spot that reaches all three lanes.
+	{id = "x_w4", kind = "tower", lv = 17, pos = Vector3(-3.7, 0, -1.4)},
 ]
 ## Gate slots in Horde (one standing gate per slot).
 const GATE_SLOTS := 6
@@ -207,7 +215,10 @@ const ATTACK_CYCLE := 0.55
 ## split: [type, count] it bursts into when it dies (slime). Support
 ## enemies (user, 2026-10-10: "the player will want to kill them first")
 ## work on allies within `aura` m, never on bosses: heal (share of max HP
-## per second), haste (walk and attack faster). The best one counts.
+## per second), haste (walk and attack faster). The best one counts. They
+## walk with their crowd (user, v0.1.30: healers used to trail behind and
+## had no one left to heal): at the pace of the allies around them, and
+## their wave groups start inside the crowd's.
 const ENEMIES := [
 	{name = "grunt", plural = "grunts", hp = 3.0, speed = 1.7, radius = 0.28, gold = 1, xp = 1, dps = 2.0,
 		desc = "Basic foot soldier, comes in big crowds.", weak = "mortars, archers", strong = "nothing, but there are many"},
@@ -235,7 +246,7 @@ const ENEMIES := [
 	{name = "slimeling", plural = "slimelings", hp = 3.0, speed = 2.2, radius = 0.24, gold = 1, xp = 1, dps = 1.5,
 		desc = "Small and quick, born from a slime.", weak = "mortars, frost, Repeater", strong = "single big shots"},
 	{name = "bone mage", plural = "bone mages", hp = 10.0, speed = 1.2, radius = 0.3, gold = 4, xp = 4, dps = 1.0,
-		ranged = 5.0, cycle = 1.4, aura = 4.5, heal = 0.05,
+		cycle = 1.4, aura = 4.5, heal = 0.05,
 		desc = "Heals all within 4.5 m, 5% HP a second. Kill it first.", weak = "the hero, Sniper", strong = "gate queues"},
 	{name = "captain", plural = "captains", hp = 26.0, speed = 1.3, radius = 0.36, gold = 5, xp = 5, dps = 5.0,
 		armor = 1.0, aura = 4.0, haste = 0.4,
@@ -257,7 +268,7 @@ const EAST := 2
 
 ## Enemy HP x (1 + HP_PER_WAVE w + HP_PER_WAVE2 w^2) in wave w (0-based).
 const HP_PER_WAVE := 0.2
-const HP_PER_WAVE2 := 0.046
+const HP_PER_WAVE2 := 0.058
 
 ## Waves. Each group: `count` enemies of `type` on `lane`, one every
 ## `every` s, starting `t` s into the wave; `hp` (bosses): HP x this
@@ -320,7 +331,7 @@ const WAVES := [
 		{lane = WEST, type = ARMORED, count = 10, every = 1.0, t = 5.0},
 		{lane = EAST, type = SLIME, count = 6, every = 1.2, t = 5.0},
 		{lane = CENTRE, type = BAT, count = 12, every = 0.5, t = 8.0},
-		{lane = CENTRE, type = MAGE, count = 2, every = 3.0, t = 14.0},
+		{lane = CENTRE, type = MAGE, count = 2, every = 3.0, t = 3.0},
 		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 12.0},
 		{lane = CENTRE, type = BOSS, count = 1, every = 1.0, t = 20.0}],
 	[{lane = WEST, type = SLIME, count = 10, every = 1.0, t = 0.0},
@@ -337,7 +348,7 @@ const WAVES := [
 		{lane = EAST, type = ARMORED, count = 22, every = 0.7, t = 0.0},
 		{lane = EAST, type = CAPTAIN, count = 2, every = 5.0, t = 4.0},
 		{lane = WEST, type = BAT, count = 16, every = 0.45, t = 6.0},
-		{lane = CENTRE, type = MAGE, count = 3, every = 2.5, t = 8.0},
+		{lane = CENTRE, type = MAGE, count = 3, every = 2.5, t = 3.0},
 		{lane = EAST, type = SIEGE, count = 8, every = 1.0, t = 10.0},
 		{lane = WEST, type = BRUTE, count = 2, every = 7.0, t = 8.0},
 		{lane = CENTRE, type = BRUTE, count = 2, every = 7.0, t = 14.0}],
@@ -353,7 +364,7 @@ const WAVES := [
 	[{lane = WEST, type = ARMORED, count = 24, every = 0.6, t = 0.0},
 		{lane = WEST, type = CAPTAIN, count = 3, every = 5.0, t = 2.0},
 		{lane = CENTRE, type = RUNNER, count = 40, every = 0.2, t = 0.0},
-		{lane = CENTRE, type = MAGE, count = 4, every = 2.5, t = 8.0},
+		{lane = EAST, type = MAGE, count = 4, every = 2.0, t = 6.0},
 		{lane = EAST, type = SLIME, count = 16, every = 0.7, t = 0.0},
 		{lane = EAST, type = GRUNT, count = 40, every = 0.25, t = 4.0},
 		{lane = EAST, type = BAT, count = 20, every = 0.4, t = 6.0},
@@ -371,7 +382,7 @@ const WAVES := [
 		{lane = WEST, type = ARMORED, count = 16, every = 0.8, t = 6.0},
 		{lane = EAST, type = ARMORED, count = 16, every = 0.8, t = 6.0},
 		{lane = CENTRE, type = BAT, count = 20, every = 0.4, t = 8.0},
-		{lane = CENTRE, type = MAGE, count = 3, every = 2.5, t = 10.0},
+		{lane = CENTRE, type = MAGE, count = 3, every = 2.5, t = 3.0},
 		{lane = WEST, type = SIEGE, count = 6, every = 1.2, t = 12.0},
 		{lane = EAST, type = SIEGE, count = 6, every = 1.2, t = 12.0},
 		{lane = WEST, type = BRUTE, count = 2, every = 8.0, t = 10.0},

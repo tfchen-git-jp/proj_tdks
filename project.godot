@@ -7,7 +7,7 @@ config/name="RogueShot TD"
 config/name_localized={
 "zh_TW": "俠盜塔防"
 }
-config/version="0.1.29"
+config/version="0.1.30"
 config/description="RogueShot Tower Defense: a walk-and-build tower defense."
 run/main_scene="res://scenes/main.tscn"
 config/quit_on_go_back=false

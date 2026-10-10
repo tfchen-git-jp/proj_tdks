@@ -129,13 +129,20 @@ t_native() {
 }
 
 # Each APK gets the next build number: Android's version code (an update
-# must not go backwards) and the "v0.1.N" shown in the game's corner.
+# must not go backwards) and the "v0.2.N" shown in the game's corner.
+# The shown name is 0.MINOR.(n - MINOR_FROM): v0.1.1-0.1.30 were builds
+# 1-30; from build 31 it reads v0.2.1 (user, 2026-10-11). The build
+# number itself (Android versionCode) keeps counting.
+VERSION_MINOR=2
+MINOR_FROM=30
+
 bump_version() {
   local n=$(( $(cat "$ROOT/build_number.txt" 2>/dev/null || echo 0) + 1 ))
   echo "$n" > "$ROOT/build_number.txt"
-  sed -i "s/^version\/code=.*/version\/code=$n/; s/^version\/name=.*/version\/name=\"0.1.$n\"/" "$ROOT/export_presets.cfg"
-  sed -i "s/^config\/version=.*/config\/version=\"0.1.$n\"/" "$ROOT/project.godot"
-  VERSION="0.1.$n"
+  local name="0.$VERSION_MINOR.$(( n - MINOR_FROM ))"
+  sed -i "s/^version\/code=.*/version\/code=$n/; s/^version\/name=.*/version\/name=\"$name\"/" "$ROOT/export_presets.cfg"
+  sed -i "s/^config\/version=.*/config\/version=\"$name\"/" "$ROOT/project.godot"
+  VERSION="$name"
 }
 
 t_apk() {

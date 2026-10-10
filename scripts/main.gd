@@ -1022,6 +1022,12 @@ func _apply_events() -> void:
 			"perk":
 				if not _fast_forwarding:
 					_flash(_hero.position)
+			"last_stand":
+				sfx.play("upgrade", 0.0, 0.7)
+				_shake = maxf(_shake, 0.3)
+				hud.message(tr("Last Stand! Invulnerable for %d s") % roundi(sim.horde.last_stand), 2.0)
+				if not _fast_forwarding:
+					_flash(e.pos)
 			"midas":
 				sfx.play("coin_pay", 0.0, 0.8)
 				if not _fast_forwarding:
@@ -1038,7 +1044,7 @@ func _apply_events() -> void:
 					_pulse(e.pos, e.r, e.get("spec", ""))
 			"kill":
 				if _corpses.size() < CORPSE_CAP:
-					var f: Vector3 = sim.tracks[e.lane].forward(e.d)
+					var f: Vector3 = e.fwd
 					_corpses.push_back({pos = e.pos, basis = Basis.looking_at(f, Vector3.UP), kind = e.kind, t = 0.0})
 				if Level.ENEMIES[e.kind].get("big", false):
 					_shake = maxf(_shake, 0.25)
@@ -1076,13 +1082,17 @@ func _apply_events() -> void:
 					Save.save_run(sim.to_save())
 				if sim.state == "play":
 					sfx.play("wave_clear")
-					var extra := "\n" + tr("+%d gold from farms") % e.income if e.income > 0 else ""
+					# Where this wave's gold came from (user, v0.1.30: make the
+					# value of gold visible).
+					var extra := "\n" + tr("+%d gold from kills") % e.kills if int(e.get("kills", 0)) > 0 else ""
+					if int(e.get("midas", 0)) > 0:
+						extra += "\n" + tr("+%d gold from Midas Touch") % e.midas
+					if int(e.get("bounty", 0)) > 0:
+						extra += "\n" + tr("+%d gold from Bounty") % e.bounty
+					if e.income > 0:
+						extra += "\n" + tr("+%d gold from farms") % e.income
 					if int(e.get("interest", 0)) > 0:
 						extra += "\n" + tr("+%d gold interest") % e.interest
-					if "laststand" in sim.relics:
-						extra += "\n" + tr("Last Stand: the keep recovers")
-						if not _fast_forwarding:
-							_flash(Level.KEEP_POS)
 					hud.message(tr("Wave %d cleared!") % (e.wave + 1) + extra, 3.0)
 			"base_hit":
 				sfx.play("base_hit", -3.0)
@@ -1476,6 +1486,8 @@ func _draw_enemies() -> void:
 			col = Color(0.85, 1.35, 0.85)
 		elif h.haste[i] > 0.0:
 			col = Color(1.3, 1.1, 0.75)
+		elif h.mark_t[i] > 0.0:  # Spotter's mark: a golden glint
+			col = Color(1.45, 1.35, 0.7)
 		if h.burn_t[i] > 0.0 and h.flash[i] <= 0.0:  # scorched, flickering
 			var fl := 0.85 + 0.15 * sin(sim.time * 23.0 + float(h.uid[i]))
 			col = Color(1.35 * fl, 0.75 * fl, 0.5 * fl)

@@ -150,6 +150,21 @@ to 0.8 s and halved on bosses (Horde.BOSS_FREEZE), Repeater and
 Frostbite strengthened. Banner specs untested by the bot. Random builds
 win ~6%.
 
+## Card and relic value (v0.1.29 measurement)
+
+tools/meta_report.py --fixed --force=ID: the standard bot (62%) takes
+that card / relic first whenever offered (96 seeds each). A minus means
+"worse than the bot's usual first picks" (Sharpened Bolts, Quick Draw;
+relic: Twin Crossbow), not useless.
+Relics: Midas 93% (!), Volley 67, Twin 62 (= base), Thunderstrike 61,
+Wisp 40, Last Stand 33. Cards: Explosive Tips 79, Keen Eye 73, Piercing
+66, Frost Bolts 66, Multishot 65, Giant Slayer 64, Bounty 64, Sharpened
+62, Quick Draw 60, Scholar 60 (+3.3 hero levels, no gain), Fire 58,
+Ricochet 48, Long Shot 44, Rally 44, Spotter 36, Engineer 31, Boots 24
+(useless to a bot that walks to fixed spots). Lesson: early gold
+snowballs (Midas from wave 3 buys the whole plan waves earlier); the
+gold left over at the end is only the plan running out.
+
 ## Roadmap (agreed 2026-10-10; batch 1 done in v0.1.18)
 
 1. DONE: armour, flyers (bats), ranged siege (crossbowmen), wave-10 boss.

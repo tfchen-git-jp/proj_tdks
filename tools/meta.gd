@@ -6,6 +6,8 @@ extends SceneTree
 ##     [--specs=archer:repeater,...]
 ## --fixed: the standard Bot.PLAN and card priority (only the seed varies).
 ## --specs: the fixed bot takes these specs instead of Bot.SPECS (A/B).
+## --force=ID[:N]: this card or relic goes first (or N-th) in the bot's
+## pick order.
 
 const SimS := preload("res://scripts/sim.gd")
 const BotS := preload("res://scripts/bot.gd")
@@ -17,7 +19,10 @@ func _init() -> void:
 	var count := 10
 	var fixed := false
 	var specs := {}
+	var force := ""
 	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--force="):
+			force = a.get_slice("=", 1)
 		if a.begins_with("--specs="):
 			for item in a.get_slice("=", 1).split(","):
 				specs[item.get_slice(":", 0)] = item.get_slice(":", 1)
@@ -28,13 +33,19 @@ func _init() -> void:
 		elif a == "--fixed":
 			fixed = true
 	for r in range(from, from + count):
-		print("[run] ", JSON.stringify(_play(r, fixed, specs)))
+		print("[run] ", JSON.stringify(_play(r, fixed, specs, force)))
 	quit()
 
 
-func _play(r: int, fixed: bool, specs: Dictionary) -> Dictionary:
+func _play(r: int, fixed: bool, specs: Dictionary, force: String) -> Dictionary:
 	var sim = SimS.new(1000 + r)
 	var bot = BotS.new(sim, -1 if fixed else 5000 + r)
+	var fid := force.get_slice(":", 0)
+	var slot := int(force.get_slice(":", 1)) - 1 if force.contains(":") else 0
+	for order in [bot.card_priority, bot.relic_priority]:
+		if fid in order:
+			order.erase(fid)
+			order.insert(mini(slot, order.size()), fid)
 	for id in bot.layout():
 		if specs.has(bot.layout()[id]):
 			bot.specs[id] = specs[bot.layout()[id]]

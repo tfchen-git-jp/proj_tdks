@@ -10,7 +10,7 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.1.28)
+## The game today (v0.1.30)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
@@ -29,6 +29,19 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   clear them all to win.
   Enemies that reach the keep stand at it and hit it with their dps
   (queueing like at a gate) until killed; keep HP Level.BASE_HP (600).
+- **Cards / relics reworked in v0.1.30** (measured weak or strong): Long
+  Shot (+range and damage beyond 5 m), Ricochet (-25% a bounce, 5 m),
+  Swift Boots (+attack speed while moving), Scholar (+XP and +2% bolt
+  damage per hero level), Rally (all towers, double near the hero),
+  Spotter (hero hits mark enemies: towers +12-30% damage), Engineer (all
+  gates +20-50% HP), Bounty (cap 20/40/60), Explosive Tips (35% damage,
+  0.8-1.2 m), Midas (every 60/45/30 kills), Spirit Wisp (bolts carry
+  every bolt card, 80%, faster), Last Stand (user: a gate or the keep
+  about to fall turns invulnerable 3/5/7 s, once per wave each;
+  Horde.arm_last_stand). The wave-cleared message lists the gold by
+  source (kills, Midas, Bounty, farms, interest: Sim.wave_gold).
+  Support enemies keep pace with their crowd (Horde.escort; the bone
+  mage walks in the queue, no longer ranged).
 - **Hero upgrades (rogue-like, scripts/perks.gd):** kills within
   Sim.xp_radius() of the hero give xp (ENEMIES `xp`), whoever kills: 8 m,
   or hero range + 2 m with Long Shot (up to 11 m). The hero starts at
@@ -66,12 +79,16 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   %APPDATA%/Godot/app_userdata/RogueShot TD/, phone
   /data/user/0/com.tfc.rogueshottd/files/.
 - **Map:** three lanes (west, centre, east) converging on the keep at the
-  top. 30 spots: 21 tower, 6 gate, 3 economy ("GOLD": farm or bank).
-  Spots unlock with the hero's level (Level.SPOTS `lv`; Sim.unlocked; user
-  2026-10-10): Lv 1 = 5 tower + 1 gold spot near the keep, then 1-2 tower
-  spots per level up to Lv 10, gold plots at 4 and 7. Gates come in two
+  top. 32 spots: 21 tower, 6 gate, 5 economy ("GOLD": farm or bank).
+  Spots unlock with the hero's level (Level.SPOTS `lv`; Sim.unlocked),
+  since v0.1.30 by TACTICAL value (user, 2026-10-11), spread to Lv 17:
+  one-lane spots and the keep's flanks first (Lv 1: k_west, k_east,
+  x_e1, x_w2 + gold f_1), spots reaching two lanes from Lv 6, the best
+  last, the crossroads spot x_w4 (all three lanes) at Lv 17; gold plots
+  at 1, 4, 7, 12, 15 (f_4 / f_5 in the back-west corner).
+  tools/spot_value.gd measures each spot's road in reach per lane. Gates come in two
   sets of three, one per lane, unlocked together: inner set (Lv 3, side by
-  side across the middle, z ~9) and outer set (Lv 8, z ~21, nearer the
+  side across the middle, z ~9) and outer set (Lv 9, z ~21, nearer the
   lane mouths); later: synergy for a full set (user idea). Locked pads
   show "Lv N", smaller and dimmed; a level-up names what opened. Horde
   gates are 6 slots (`slot` 0-2 inner, 3-5 outer); an enemy is held by
@@ -111,7 +128,9 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   4.5 m.
 - **Enemies:** grunt (red), armored (grey, `armor` 1), runner (yellow,
   fast), brute (giant, KayKit Barbarian, red HP bar), bat (wave 4+, flies
-  over gates at 2.2 m; mortar and frost can't target it), crossbowman
+  at 2.2 m in a straight line from its lane's start to the keep, over
+  gates: Horde.fly_tracks / track_of(i), since v0.1.30; mortar and frost
+  can't target it), crossbowman
   (wave 5+, skeleton; stops `ranged` 6.5 m short of the gate / keep, out
   of the queue, and shoots it), Bone Warlord (the
   boss of waves 10 and 15: own HP (a wave group's `hp` multiplies it:
@@ -155,19 +174,18 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 - **Sound:** 32 SFX (assets/sfx) + looping BGM (assets/music, -16 dB).
 - **PC build:** the exported exe sizes its window to 90% of the screen
   height (main._fit_pc_window); editor/WSL runs keep 450x1000.
-- **Balance (v0.1.28, tools/meta_report.py):** target set by the user:
-  the standard bot (Bot.PLAN, extended for waves 11-15; Bot.SPECS sniper /
-  great / cluster / glacier / standard; Bot.CARD_PRIORITY) wins 60-65%.
-  It wins 62% of 96 seeds (keep ~74% left in wins); losses: 3 at the
-  wave-10 boss, the rest at wave 15 (two bosses). Waves 1-9 barely touch
-  the keep; the boss waves decide. Hero ~41% of all damage. Enemy HP
-  x(1 + 0.2w + 0.046w^2) (Level.wave_hp): the new wave 10 is x6.5
-  (old wave 10: x8.4), wave 15 x12.8. The win rate is a knife edge:
-  0.046 -> 0.05 on the quadratic, or wave-15 bosses x1.6 -> x1.85,
-  each cost ~20 points. Spec A/B (tools/meta_report.py --specs): see
-  docs/DESIGN.md "Spec balance". Random builds win only a few %.
-  Older figures: v0.1.23 (10 waves) 91% standard, ~12% random. The user
-  found v0.1.15 "feels good".
+- **Balance (v0.1.30, tools/meta_report.py):** target set by the user:
+  the standard bot (Bot.PLAN, Bot.SPECS sniper / great / cluster /
+  glacier / standard, Bot.CARD_PRIORITY) wins 60-65%. Last measured 64%
+  with enemy HP x(1 + 0.2w + 0.058w^2) before the v0.1.30 card tuning
+  and the new spot unlocks; RETUNE after the next enemy types (user:
+  re-measuring later). Losses mostly on the wave-15 bosses. Card / relic
+  value: `--force=ID[:N]` puts it N-th in the bot's picks (docs/DESIGN.md
+  "Card and relic value"): tower-wide effects (Rally, Spotter,
+  Engineer) and Explosive Tips came out strongest, hence their small
+  numbers; Long Shot / Swift Boots look weak partly because the bot
+  hardly moves. Spec A/B: `--specs` (DESIGN.md "Spec balance").
+  Older: v0.1.23 (10 waves) 91% standard, ~12% random builds.
 
 ## Localization (v0.1.24)
 
@@ -311,7 +329,7 @@ written in one buffer per frame (main.gd `_put`); corpses share it.
 ## Releasing a build to the phone
 
 `./build.sh apk` bumps build_number.txt -> Android versionCode and the
-"v0.1.N" shown bottom-left, writes `D:\wsl_scratch\proj_tdks\rogueshot_td.apk`
+"v0.2.N" shown bottom-left (build.sh VERSION_MINOR / MINOR_FROM: builds 1-30 were v0.1.1-0.1.30, build 31 = v0.2.1), writes `D:\wsl_scratch\proj_tdks\rogueshot_td.apk`
 and deletes the .idsig side file. The same debug key signs every build, so
 a new APK installs over the old one. The user copies it to the phone and
 taps it, or after pairing Wireless debugging (`./build.sh adb pair
@@ -432,6 +450,13 @@ Windows build, never in WSL.
   to 2 m outside the walkable area and marked (user: enemies "in range"
   at the bottom of the centre lane weren't shot); score = keep % x 10 +
   gold for ties on waves.
+- v0.1.30: card / relic measurement and reworks (tools/meta_report.py
+  --force), spots unlocked by tactical value up to Lv 17 + 2 gold plots,
+  flyers fly straight, support enemies walk with their crowd, Last Stand
+  invulnerability, Scholar damage per level, gold-by-source message.
+  Gotcha: the bot's win rate swings 30+ points with card changes it
+  picks itself (Ricochet, Rally, Engineer), so re-measure the baseline
+  before comparing cards.
 - v0.1.28: 15 waves, tower specs + selling, relic tiers, slimes / bone
   mages / captains, boss rework (two on wave 15). Balance by A/B runs:
   the bosses decide most games, so anything that hurts or holds a boss

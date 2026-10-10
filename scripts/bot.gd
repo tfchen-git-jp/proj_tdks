@@ -7,7 +7,10 @@ extends RefCounted
 
 ## [spot id, building] in order; a repeated pair upgrades it.
 const PLAN := [
-	["k_east", "archer"], ["k_west", "archer"], ["e_in", "archer"], ["f_1", "farm"],
+	# v0.1.30: the spots open by tactical value; the cheap one-lane spots
+	# come first.
+	["k_east", "archer"], ["k_west", "archer"], ["x_e1", "archer"], ["f_1", "farm"], ["x_w2", "archer"],
+	["e_in", "archer"],
 	["w_in", "archer"], ["e_mid", "frost"], ["g_c1", "gate"], ["w_mid", "mortar"],
 	["k_east", "archer"], ["k_west", "archer"], ["f_3", "farm"], ["x_e2", "ballista"],
 	["g_e1", "gate"], ["g_w1", "gate"], ["w_out", "archer"],
@@ -27,6 +30,7 @@ const PLAN := [
 	["x_c2", "ballista"], ["x_e1", "mortar"], ["x_c1", "ballista"], ["x_w3", "archer"],
 	["g_c2", "gate"], ["g_e2", "gate"], ["g_w2", "gate"], ["x_c1", "ballista"], ["x_w3", "archer"],
 	["x_w4", "archer"], ["x_w4", "archer"], ["x_w4", "archer"], ["x_w1", "mortar"], ["x_w1", "mortar"],
+	["f_4", "farm"], ["f_5", "farm"],
 ]
 
 ## The spec each tower kind takes at level IV (a variant bot picks at
@@ -46,6 +50,9 @@ var _step := 0
 var plan: Array = PLAN
 var _rng: RandomNumberGenerator = null  # set: random card / relic picks
 var specs := {}  # spot id -> spec id (variant bots; else SPECS by kind)
+## Pick orders in use (tools/meta.gd --force puts one card / relic first).
+var card_priority: Array = CARD_PRIORITY.duplicate()
+var relic_priority: Array = RELIC_PRIORITY.duplicate()
 
 
 func _init(s: Sim, variant := -1) -> void:
@@ -90,7 +97,7 @@ func move() -> Vector2:
 
 func _target() -> Vector3:
 	if sim.phase == "build" and not sim.offer.is_empty():
-		var order: Array = RELIC_PRIORITY if sim.offer_relic else CARD_PRIORITY
+		var order: Array = relic_priority if sim.offer_relic else card_priority
 		var best := 0
 		for k in sim.offer.size():
 			if order.find(sim.offer[k]) < order.find(sim.offer[best]):
@@ -120,7 +127,7 @@ func _target() -> Vector3:
 		return coin
 	var lead := sim.horde.first_in_range(sim.hero_pos, 1000.0)
 	if lead >= 0:
-		var t: Track = sim.tracks[sim.horde.lane[lead]]
+		var t: Track = sim.horde.track_of(lead)
 		return t.point(clampf(sim.horde.d[lead], 0.0, t.length - 4.0), -3.0)
 	return Level.HERO_START
 

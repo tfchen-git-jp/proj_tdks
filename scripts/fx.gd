@@ -161,11 +161,11 @@ func draw(sim: Sim, hero_at: Vector3, alpha: float, dt_step: float) -> void:
 	_wisp.visible = "wisp" in sim.relics and sim.state == "play"
 	if _wisp.visible:
 		_wisp.global_position = hero_at + (sim.wisp_pos() - sim.hero_pos)
-	_aura.visible = (sim.tier("rally") > 0 or sim.tier("spotter") > 0) and sim.state == "play"
+	_aura.visible = sim.tier("rally") > 0 and sim.state == "play"
 	if _aura.visible:
 		_aura.position = hero_at + Vector3(0, 0.05, 0)
 		(_aura.material_override as StandardMaterial3D).albedo_color.a = 0.22 + 0.12 * sin(sim.time * 3.0)
-	# Engineer: a blue ring on each gate it shields.
+	# Engineer: a blue ring on each gate it strengthens.
 	for b in sim.buildings.values():
 		if b.kind != "gate":
 			continue
@@ -175,7 +175,7 @@ func draw(sim: Sim, hero_at: Vector3, alpha: float, dt_step: float) -> void:
 			add_child(r)
 			_gate_rings[ln] = r
 		var ring: MeshInstance3D = _gate_rings[ln]
-		ring.visible = h.gate_armor[ln] > 0.0 and not b.broken
+		ring.visible = sim.tier("engineer") > 0 and not b.broken
 		if ring.visible:
 			ring.position = sim.tracks[h.gate_lane[ln]].point(h.gate_d[ln]) + Vector3(0, 0.06, 0)
 			var s := 1.0 + 0.05 * sin(sim.time * 5.0)

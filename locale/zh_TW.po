@@ -151,8 +151,17 @@ msgstr "農場 +%d 黃金"
 msgid "+%d gold interest"
 msgstr "利息 +%d 黃金"
 
-msgid "Last Stand: the keep recovers"
-msgstr "背水一戰：主堡恢復生命"
+msgid "+%d gold from kills"
+msgstr "擊殺 +%d 黃金"
+
+msgid "+%d gold from Midas Touch"
+msgstr "點金術 +%d 黃金"
+
+msgid "+%d gold from Bounty"
+msgstr "賞金 +%d 黃金"
+
+msgid "Last Stand! Invulnerable for %d s"
+msgstr "背水一戰！無敵 %d 秒"
 
 msgid "The %s gate fell!"
 msgstr "%s城門被攻破了！"
@@ -908,14 +917,14 @@ msgstr "攻擊速度 +20%"
 msgid "+35% attack speed"
 msgstr "攻擊速度 +35%"
 
-msgid "+1 m range"
-msgstr "射程 +1 公尺"
+msgid "+1 m range; +15% damage to enemies over 5 m away"
+msgstr "射程 +1 公尺；對 5 公尺外的敵人傷害 +15%"
 
-msgid "+2 m range"
-msgstr "射程 +2 公尺"
+msgid "+2 m range; +30% damage over 5 m"
+msgstr "射程 +2 公尺；5 公尺外傷害 +30%"
 
-msgid "+3 m range"
-msgstr "射程 +3 公尺"
+msgid "+3 m range; +45% damage over 5 m"
+msgstr "射程 +3 公尺；5 公尺外傷害 +45%"
 
 msgid "+1 bolt (40% damage) at another enemy"
 msgstr "多 1 支弩箭（40% 傷害）射向另一個敵人"
@@ -935,8 +944,8 @@ msgstr "……穿透多 2 個敵人"
 msgid "...through 3 more enemies"
 msgstr "……穿透多 3 個敵人"
 
-msgid "Bolts bounce to 1 nearby enemy (-40% each bounce)"
-msgstr "弩箭彈向附近 1 個敵人（每次彈射 -40%）"
+msgid "Bolts bounce to 1 nearby enemy (-25% each bounce)"
+msgstr "弩箭彈向附近 1 個敵人（每次彈射 -25%）"
 
 msgid "Bounce to 2 nearby enemies"
 msgstr "彈向附近 2 個敵人"
@@ -944,14 +953,14 @@ msgstr "彈向附近 2 個敵人"
 msgid "Bounce to 3 nearby enemies"
 msgstr "彈向附近 3 個敵人"
 
-msgid "Hits explode: half damage within 0.9 m"
-msgstr "命中時爆炸：0.9 公尺內造成一半傷害"
+msgid "Hits explode: 35% damage within 0.8 m"
+msgstr "命中時爆炸：0.8 公尺內造成 35% 傷害"
+
+msgid "Blast radius 1.0 m"
+msgstr "爆炸半徑 1.0 公尺"
 
 msgid "Blast radius 1.2 m"
 msgstr "爆炸半徑 1.2 公尺"
-
-msgid "Blast radius 1.5 m"
-msgstr "爆炸半徑 1.5 公尺"
 
 msgid "Set enemies ablaze: 40% of bolt damage per second for 3 s"
 msgstr "點燃敵人：每秒造成弩箭傷害 40%，持續 3 秒"
@@ -989,59 +998,59 @@ msgstr "對巨人傷害 +80%"
 msgid "+120% damage to giants"
 msgstr "對巨人傷害 +120%"
 
-msgid "+10% move speed"
-msgstr "移動速度 +10%"
+msgid "+10% move speed, and +10% attack speed while moving"
+msgstr "移動速度 +10%，移動中攻擊速度 +10%"
 
-msgid "+20% move speed"
-msgstr "移動速度 +20%"
+msgid "+20% move speed and attack speed while moving"
+msgstr "移動速度與移動中攻擊速度 +20%"
 
-msgid "+30% move speed"
-msgstr "移動速度 +30%"
+msgid "+30% move speed and attack speed while moving"
+msgstr "移動速度與移動中攻擊速度 +30%"
 
-msgid "+20% XP"
-msgstr "經驗值 +20%"
+msgid "+20% XP; +2% bolt damage per hero level"
+msgstr "經驗值 +20%；英雄每級弩箭傷害 +2%"
 
-msgid "+40% XP"
-msgstr "經驗值 +40%"
+msgid "+40% XP; +2% bolt damage per level"
+msgstr "經驗值 +40%；每級弩箭傷害 +2%"
 
-msgid "+60% XP"
-msgstr "經驗值 +60%"
+msgid "+60% XP; +2% bolt damage per level"
+msgstr "經驗值 +60%；每級弩箭傷害 +2%"
 
-msgid "Towers within 5 m of you attack 10% faster"
-msgstr "你周圍 5 公尺內的防禦塔攻擊速度 +10%"
+msgid "All towers attack 4% faster; twice that within 6 m of you"
+msgstr "所有防禦塔攻擊速度 +4%；你周圍 6 公尺內加倍"
 
-msgid "...20% faster"
+msgid "...8% faster (16% near you)"
+msgstr "……+8%（你附近 +16%）"
+
+msgid "...12% faster (24% near you)"
+msgstr "……+12%（你附近 +24%）"
+
+msgid "Enemies your bolts hit are marked for 4 s: towers deal them +12% damage"
+msgstr "被你的弩箭命中的敵人會被標記 4 秒：防禦塔對其傷害 +12%"
+
+msgid "...+20%"
 msgstr "……+20%"
 
-msgid "...30% faster"
+msgid "...+30%"
 msgstr "……+30%"
 
-msgid "Towers within 5 m of you: +1 m range"
-msgstr "你周圍 5 公尺內的防禦塔：射程 +1 公尺"
+msgid "All gates +20% HP"
+msgstr "所有城門生命 +20%"
 
-msgid "...+2 m range"
-msgstr "……射程 +2 公尺"
+msgid "All gates +35% HP"
+msgstr "所有城門生命 +35%"
 
-msgid "...+3 m range"
-msgstr "……射程 +3 公尺"
+msgid "All gates +50% HP"
+msgstr "所有城門生命 +50%"
 
-msgid "Gates within 6 m of you take 20% less damage"
-msgstr "你周圍 6 公尺內的城門受到的傷害 -20%"
+msgid "Kills near you drop +1 gold (up to 20 a wave)"
+msgstr "在你附近擊殺額外掉落 1 黃金（每波最多 20）"
 
-msgid "...35% less"
-msgstr "……-35%"
+msgid "...up to 40 a wave"
+msgstr "……每波最多 40"
 
-msgid "...50% less"
-msgstr "……-50%"
-
-msgid "Kills near you drop +1 gold (up to 10 a wave)"
-msgstr "在你附近擊殺額外掉落 1 黃金（每波最多 10）"
-
-msgid "...up to 20 a wave"
-msgstr "……每波最多 20"
-
-msgid "...up to 30 a wave"
-msgstr "……每波最多 30"
+msgid "...up to 60 a wave"
+msgstr "……每波最多 60"
 
 msgid "Twin Crossbow"
 msgstr "雙聯弩"
@@ -1088,8 +1097,8 @@ msgstr "每 6 秒，連鎖到另外 5 個"
 msgid "Every 4.5 s, chains through 7 more"
 msgstr "每 4.5 秒，連鎖到另外 7 個"
 
-msgid "A wisp circles you and shoots magic bolts at enemies."
-msgstr "追射妖精繞著你飛行，向敵人發射魔法彈。"
+msgid "A wisp circles you and shoots bolts with all your bolt cards (80% damage)."
+msgstr "追射妖精繞著你飛行，射出帶有你所有弩箭卡效果的弩箭（80% 傷害）。"
 
 msgid "The wisp shoots 40% faster"
 msgstr "追射妖精射速 +40%"
@@ -1097,20 +1106,20 @@ msgstr "追射妖精射速 +40%"
 msgid "The wisp shoots twice as fast"
 msgstr "追射妖精射速加倍"
 
-msgid "Every 40th kill near you drops a gold ingot (20)."
-msgstr "在你附近每擊殺 40 個敵人，掉落一塊金條（20）。"
+msgid "Every 60th kill near you drops a gold ingot (20)."
+msgstr "在你附近每擊殺 60 個敵人，掉落一塊金條（20）。"
+
+msgid "Every 45th kill"
+msgstr "每擊殺 45 個"
 
 msgid "Every 30th kill"
 msgstr "每擊殺 30 個"
 
-msgid "Every 20th kill"
-msgstr "每擊殺 20 個"
+msgid "Once per wave, a gate or the keep about to fall becomes invulnerable for 3 s."
+msgstr "每波一次：即將被攻破的城門或主堡無敵 3 秒。"
 
-msgid "The keep regains 10% of its HP after every wave."
-msgstr "每波結束後，主堡恢復 10% 生命。"
+msgid "Invulnerable for 5 s"
+msgstr "無敵 5 秒"
 
-msgid "Regains 15%"
-msgstr "恢復 15%"
-
-msgid "Regains 20%"
-msgstr "恢復 20%"
+msgid "Invulnerable for 7 s"
+msgstr "無敵 7 秒"
