@@ -84,7 +84,10 @@ func _draw() -> void:
 			continue
 		match h.kind[i]:
 			Level.BRUTE: draw_circle(p, 4.0, ENEMY)
+			Level.BOSS: draw_circle(p, 6.0, Color(0.75, 0.3, 1.0))
 			Level.RUNNER: draw_circle(p, 1.6, RUNNER)
+			Level.BAT: draw_circle(p, 2.0, Color(0.75, 0.45, 1.0))
+			Level.SIEGE: draw_circle(p, 2.0, Color(0.95, 0.95, 0.85))
 			_: draw_circle(p, 1.8, ENEMY)
 	# What the camera sees
 	if cam:

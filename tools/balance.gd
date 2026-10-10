@@ -60,5 +60,5 @@ func _init() -> void:
 	print("RESULT %s at %.1fs wave=%d/%d keep=%d/%d killed=%d coins=%d spent=%d peak=%d level=%d (%d ms)" % [
 		sim.state, sim.time, sim.wave + (1 if sim.state != "win" else 0), Level.WAVES.size(), sim.base_hp, Level.BASE_HP,
 		sim.horde.killed, sim.coins, spent, peak, sim.level, Time.get_ticks_msec() - t0])
-	print("hero bolt hits dealt %.0f of %.0f damage (%.0f%%)" % [sim.hero_dealt, sim.horde.dealt, 100.0 * sim.hero_dealt / maxf(sim.horde.dealt, 1.0)])
+	print("hero dealt %.0f of %.0f damage (%.0f%%)" % [sim.dealt_by.get("hero", 0.0), sim.horde.dealt, 100.0 * float(sim.dealt_by.get("hero", 0.0)) / maxf(sim.horde.dealt, 1.0)])
 	quit()

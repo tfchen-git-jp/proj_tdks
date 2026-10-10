@@ -22,6 +22,8 @@ var slow := PackedFloat32Array()  # current slow fraction (0..1)
 var slow_t := PackedFloat32Array()  # seconds the slow lasts
 var burn_dps := PackedFloat32Array()  # Fire Bolts: damage per second while burning
 var burn_t := PackedFloat32Array()  # seconds it keeps burning
+var power := PackedFloat32Array()  # damage multiplier (an enraged boss)
+var stage := PackedInt32Array()  # boss phase reached (Sim._bosses)
 var blocked := PackedByteArray()  # 1 = at the gate, hitting it; 2 = held up
                                   # behind another enemy in the queue; 0 = walking
 var pos := PackedVector3Array()
@@ -43,6 +45,9 @@ var keep_hp := 1e9
 var deaths: Array[Dictionary] = []  # {pos, kind, d, lane}
 var killed := 0
 var dealt := 0.0  # all damage taken (balance stats)
+var burn_dealt := 0.0  # of which by burning (Fire Bolts)
+## Ranged enemies' shots this step, for the view: [from, to].
+var shots: Array = []
 
 var _rng := RandomNumberGenerator.new()
 var _next_uid := 1
@@ -85,9 +90,12 @@ func count() -> int:
 	return kind.size()
 
 
-## hp_mult: the wave's toughness (Level.wave_hp).
-func spawn(type: int, ln: int, hp_mult := 1.0) -> void:
+## hp_mult: the wave's toughness (Level.wave_hp; bosses ignore it). at_d
+## >= 0: appear there (a boss's summons) instead of at the lane's start.
+func spawn(type: int, ln: int, hp_mult := 1.0, at_d := -1.0) -> void:
 	var e: Dictionary = Level.ENEMIES[type]
+	if e.get("boss", false):
+		hp_mult = 1.0
 	var lim := Level.ROAD_HALF_WIDTH - float(e.radius) * 0.6
 	kind.push_back(type)
 	lane.push_back(ln)
@@ -95,11 +103,19 @@ func spawn(type: int, ln: int, hp_mult := 1.0) -> void:
 	_index[_next_uid] = kind.size() - 1
 	_next_uid += 1
 	hp.push_back(float(e.hp) * hp_mult)
+	power.push_back(1.0)
+	stage.push_back(0)
 	max_hp.push_back(float(e.hp) * hp_mult)
-	d.push_back(_rng.randf_range(0.0, 0.6))
-	off.push_back(_rng.randf_range(-lim, lim) if type != Level.BRUTE else _rng.randf_range(-0.3, 0.3))
+	d.push_back(_rng.randf_range(0.0, 0.6) if at_d < 0.0 else at_d)
+	if float(e.get("ranged", 0.0)) > 0.0:  # along the road's edges, out of the queue's way
+		off.push_back(_rng.randf_range(0.55, 0.95) * (1.0 if _rng.randf() < 0.5 else -1.0))
+	elif e.get("flies", false):
+		off.push_back(_rng.randf_range(-1.3, 1.3))
+	else:
+		off.push_back(_rng.randf_range(-lim, lim) if not e.get("heavy", false) else _rng.randf_range(-0.3, 0.3))
 	spd.push_back(float(e.speed) * _rng.randf_range(0.9, 1.1))
-	gap.push_back(GATE_HALF_DEPTH + float(e.radius) * 0.8 + _rng.randf_range(0.0, 0.25))
+	gap.push_back(GATE_HALF_DEPTH + float(e.radius) * 0.8 + _rng.randf_range(0.0, 0.25)
+		if float(e.get("ranged", 0.0)) <= 0.0 else _rng.randf_range(0.0, 1.6))
 	phase.push_back(_rng.randf() * TAU)
 	flash.push_back(0.0)
 	slow.push_back(0.0)
@@ -123,9 +139,14 @@ func targetable(i: int) -> bool:
 
 ## Deal damage; returns true if this hit killed it. Hits on the already
 ## dead (hp <= 0, waiting for removal) do nothing.
-func damage(i: int, amount: float, flashes := true) -> bool:
+## armored: false for burning (armour doesn't stop fire).
+func damage(i: int, amount: float, flashes := true, armored := true) -> bool:
 	if hp[i] <= 0.0:
 		return false
+	if armored:
+		var ar := float(Level.ENEMIES[kind[i]].get("armor", 0.0))
+		if ar > 0.0:
+			amount = maxf(amount - ar, amount * Level.ARMOR_FLOOR)
 	dealt += minf(amount, hp[i])
 	hp[i] -= amount
 	if flashes:
@@ -165,7 +186,10 @@ func step(dt: float) -> void:
 		flash[i] = maxf(flash[i] - dt, 0.0)
 		if burn_t[i] > 0.0:
 			burn_t[i] -= dt
-			if damage(i, burn_dps[i] * dt, false):
+			var before := dealt
+			var died := damage(i, burn_dps[i] * dt, false, false)
+			burn_dealt += dealt - before
+			if died:
 				continue
 			if burn_t[i] <= 0.0:
 				burn_dps[i] = 0.0
@@ -175,10 +199,11 @@ func step(dt: float) -> void:
 		var nd := d[i] + spd[i] * (1.0 - slow[i]) * dt
 		blocked[i] = 0
 		var stop := d[i] + 1e9
+		var rng_r := float(Level.ENEMIES[kind[i]].get("ranged", 0.0))
 		if _at_gate(i):
-			stop = gate_d[lane[i]] - gap[i]
+			stop = gate_d[lane[i]] - (gap[i] if rng_r <= 0.0 else rng_r + gap[i])
 		else:
-			stop = tracks[lane[i]].length - _keep_gap(i)
+			stop = tracks[lane[i]].length - (_keep_gap(i) if rng_r <= 0.0 else rng_r + gap[i])
 		if nd >= stop:
 			nd = maxf(stop, d[i])
 			blocked[i] = 1
@@ -190,13 +215,14 @@ func step(dt: float) -> void:
 			_queue(ln, gate_d[ln], false, prev, dt)
 		_queue(ln, tracks[ln].length + KEEP_REACH, true, prev, dt)
 	# 3. Gate / keep damage, animation phase, positions.
+	shots.clear()
 	for i in n:
 		if hp[i] <= 0.0:
 			continue
 		var e: Dictionary = Level.ENEMIES[kind[i]]
 		# Frost slows attacks as much as walking (swing and damage).
 		if blocked[i] == 1:
-			var dmg := float(e.dps) * (1.0 - slow[i]) * dt
+			var dmg := float(e.dps) * power[i] * (1.0 - slow[i]) * dt
 			if _at_gate(i):
 				gate_hp[lane[i]] -= dmg * (1.0 - gate_armor[lane[i]])
 			else:
@@ -204,15 +230,35 @@ func step(dt: float) -> void:
 		if blocked[i] == 0:
 			phase[i] += spd[i] * (1.0 - slow[i]) * dt * 7.0
 		else:
-			phase[i] += (1.0 - slow[i]) * dt * TAU / Level.ATTACK_CYCLE
+			var inc := (1.0 - slow[i]) * dt * TAU / float(e.get("cycle", Level.ATTACK_CYCLE))
+			# A ranged attacker looses a bolt once per attack cycle.
+			if blocked[i] == 1 and float(e.get("ranged", 0.0)) > 0.0 and floori((phase[i] + inc) / TAU) > floori(phase[i] / TAU):
+				shots.push_back([pos[i] + Vector3(0, 1.0, 0), _wall_point(i)])
+			phase[i] += inc
 		pos[i] = tracks[lane[i]].point(d[i], off[i])
+		if e.get("flies", false):
+			pos[i].y += float(e.fly_h) + 0.18 * sin(phase[i] * 0.5)
 	_compact()
 
 
-## Is enemy i in front of (blocked by) its lane's standing gate?
+## Is enemy i in front of (blocked by) its lane's standing gate? Flyers
+## never are.
 func _at_gate(i: int) -> bool:
 	var ln := lane[i]
-	return gate_d[ln] >= 0.0 and gate_hp[ln] > 0.0 and d[i] < gate_d[ln]
+	return gate_d[ln] >= 0.0 and gate_hp[ln] > 0.0 and d[i] < gate_d[ln] and not Level.ENEMIES[kind[i]].get("flies", false)
+
+
+## Where enemy i's attacks land: its gate, or the keep.
+func _wall_point(i: int) -> Vector3:
+	if _at_gate(i):
+		return tracks[lane[i]].point(gate_d[lane[i]]) + Vector3(0, 1.0, 0)
+	return Level.KEEP_POS + Vector3(0, 1.5, 0)
+
+
+## Walks in the gate / keep queue (not flyers, not ranged attackers).
+func queues(i: int) -> bool:
+	var e: Dictionary = Level.ENEMIES[kind[i]]
+	return not e.get("flies", false) and float(e.get("ranged", 0.0)) <= 0.0
 
 
 ## How far short of its lane's end enemy i stops (negative: past it, up to
@@ -232,7 +278,7 @@ func _keep_gap(i: int) -> float:
 func _queue(ln: int, gd: float, keep: bool, prev: PackedFloat32Array, dt: float) -> void:
 	var near: Array = []
 	for i in count():
-		if hp[i] > 0.0 and lane[i] == ln and d[i] <= gd and gd - d[i] < QUEUE_ZONE and _at_gate(i) != keep:
+		if hp[i] > 0.0 and lane[i] == ln and d[i] <= gd and gd - d[i] < QUEUE_ZONE and _at_gate(i) != keep and queues(i):
 			near.push_back(Vector2(d[i], i))
 	near.sort()
 	near.reverse()  # front (largest d) first
@@ -318,11 +364,11 @@ func nearest_k(p: Vector3, r: float, k: int, skip: Array = []) -> Array[int]:
 
 ## Index of the targetable enemy closest to the keep (least road left)
 ## between `r_min` and `r` of `p` -- the classic TD "first" target -- or -1.
-func first_in_range(p: Vector3, r: float, r_min := 0.0) -> int:
+func first_in_range(p: Vector3, r: float, r_min := 0.0, ground_only := false) -> int:
 	var best_left := INF
 	var best_i := -1
 	for i in count():
-		if not targetable(i):
+		if not targetable(i) or (ground_only and Level.ENEMIES[kind[i]].get("flies", false)):
 			continue
 		var left := tracks[lane[i]].length - d[i]
 		if left >= best_left:
@@ -335,11 +381,11 @@ func first_in_range(p: Vector3, r: float, r_min := 0.0) -> int:
 	return best_i
 
 
-## Targetable enemies within `r` of `p` (xz).
-func within(p: Vector3, r: float) -> Array[int]:
+## Targetable enemies within `r` of `p` (xz); ground_only skips flyers.
+func within(p: Vector3, r: float, ground_only := false) -> Array[int]:
 	var out: Array[int] = []
 	for i in count():
-		if not targetable(i):
+		if not targetable(i) or (ground_only and Level.ENEMIES[kind[i]].get("flies", false)):
 			continue
 		var q := pos[i]
 		var rr := r + float(Level.ENEMIES[kind[i]].radius)
@@ -374,12 +420,14 @@ func _compact() -> void:
 			continue
 		var last := count() - 1
 		kind[i] = kind[last]; lane[i] = lane[last]; uid[i] = uid[last]; hp[i] = hp[last]; max_hp[i] = max_hp[last]
+		power[i] = power[last]; stage[i] = stage[last]
 		d[i] = d[last]; off[i] = off[last]; spd[i] = spd[last]; gap[i] = gap[last]
 		phase[i] = phase[last]; flash[i] = flash[last]; slow[i] = slow[last]
 		slow_t[i] = slow_t[last]; blocked[i] = blocked[last]; pos[i] = pos[last]
 		burn_dps[i] = burn_dps[last]; burn_t[i] = burn_t[last]
 		prev_pos[i] = prev_pos[last]; prev_phase[i] = prev_phase[last]
 		kind.resize(last); lane.resize(last); uid.resize(last); hp.resize(last); max_hp.resize(last)
+		power.resize(last); stage.resize(last)
 		d.resize(last); off.resize(last); spd.resize(last); gap.resize(last)
 		phase.resize(last); flash.resize(last); slow.resize(last)
 		slow_t.resize(last); blocked.resize(last); pos.resize(last)

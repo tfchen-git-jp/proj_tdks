@@ -127,8 +127,9 @@ const CREDITS := """RogueShot Tower Defense
 Made with Godot Engine 4.7 (godotengine.org), by directing Claude.
 
 3D MODELS (CC0)
-Kay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian), Medieval Hexagon (archer tower, windmill, market, keep, flag, gate), Dungeon Remastered (coins), Forest Nature (rocks)
+Kay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian), Skeletons (crossbowmen, Bone Warlord), Medieval Hexagon (archer tower, windmill, market, keep, flag, gate), Dungeon Remastered (coins), Forest Nature (rocks)
 Kenney (kenney.nl): Tower Defense Kit, Mini Dungeon, Mini Arena, Nature Kit
+Quaternius (quaternius.com): Animated Monsters (bat)
 
 SOUND (CC0 unless noted)
 Kenney: RPG Audio, Impact Sounds, Interface Sounds, Casino Audio, Sci-fi Sounds, Music Jingles

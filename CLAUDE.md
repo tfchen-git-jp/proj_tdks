@@ -10,7 +10,7 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.1.17)
+## The game today (v0.1.18)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
@@ -31,7 +31,8 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   or hero range + 2 m with Long Shot (up to 11 m). Each gain floats as
   "+N XP" over the hero (no pop-up = out of range).
   Level-ups are banked during a wave; after it the picker (hud.show_cards,
-  modal) offers 3 cards per level, a relic first after waves 3/6/9; queued
+  modal) offers 3 cards per level, a relic first after waves 3/6/9; the
+  picker opens only once the end-of-wave coin sweep has landed, queued
   picks follow one another and the start countdown waits for them. 17
   cards x 3 tiers (drawing an owned one = next tier, maxed ones leave the
   pool; Scholar +XP replaced Magnet in v0.1.17), 6 relics. Reroll 10,
@@ -60,18 +61,28 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   (cheap, single target), Ballista (bolt piercing a line), Mortar (lobbed
   splash, minimum range), Frost Crystal (pulse every 2.5 s; 3.5-5 s chill
   slows walking AND attacks), War Banner (towers and hero in its ring
-  attack faster), Farm (fixed gold after each wave), Bank (10% interest on
-  held gold after each wave; the rate never stacks, each bank adds
-  10/18/28 to the cap), Gate (blocks its lane, has HP, repaired after
+  attack faster), Farm (6/16/30 gold after each wave: an upgrade pays more
+  per gold than another level-1 farm), Bank (interest on held gold
+  after each wave: rate 10/15/20% by level, the best bank's rate counts;
+  each bank adds 12/25/45 to the cap),
+  Gate (blocks its lane, has HP, repaired after
   each wave). Range rings: on an empty tower spot the first tap on a
   tower previews its reach (blue; a mortar's dead zone red), the second
   builds; a built tower shows its reach and the next level's (gold).
   During an attack: the tower the hero stands next to (main.RING_NEAR).
   Level-1 reach: archer 6, ballista 8, mortar 2.5-7, frost 3.8, banner
   4.5 m.
-- **Enemies:** grunt (red), armored (grey), runner (yellow, fast), brute
-  (giant, KayKit Barbarian, red HP bar). HP x Level.wave_hp(w) = 1 +
-  0.25 w + 0.05 w^2 (Horde.max_hp keeps it for the bars); gold per kill
+- **Enemies:** grunt (red), armored (grey, `armor` 1), runner (yellow,
+  fast), brute (giant, KayKit Barbarian, red HP bar), bat (wave 4+, flies
+  over gates at 2.2 m; mortar and frost can't target it), crossbowman
+  (wave 5+, skeleton; stops `ranged` 6.5 m short of the gate / keep, out
+  of the queue, and shoots it), Bone Warlord (wave 10 boss: 1500 HP, no
+  wave scaling, armour 2.5; at 66% / 33% HP calls 8 grunts, at 33% goes
+  berserk x1.4; HP bar at the top of the HUD). Armour: each hit loses
+  `armor`, never below Level.ARMOR_FLOOR (40%) of it; burning ignores it.
+  A new type's `intro` shows with the wave that first brings it
+  (Level.new_types). HP x Level.wave_hp(w) = 1 +
+  0.25 w + 0.047 w^2 (Horde.max_hp keeps it for the bars); gold per kill
   doesn't grow. Drops: coins (1), coin stacks (5), ingots (20)
   (Sim.gold_pieces). They walk in from beyond the map and are untargetable
   until their lane's start line (red dashes on the road,
@@ -82,19 +93,25 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 - **HUD:** keep HP + hero level / XP bar (top left), coins (top right), FPS
   (top centre), wave / phase line under them, minimap (bottom right;
   hidden while a popup is up), build version (bottom left), gate HP bars
-  (blue), giant HP bars (red).
+  (blue), giant HP bars (red), boss HP bar (under the wave line).
 - **Sound:** 32 SFX (assets/sfx) + looping BGM (assets/music, -16 dB).
 - **PC build:** the exported exe sizes its window to 90% of the screen
   height (main._fit_pc_window); editor/WSL runs keep 450x1000.
-- **Balance (v0.1.16, `./build.sh sim`):** the bot (Bot.PLAN builds,
-  Bot.CARD_PRIORITY picks, never rerolls) wins 5 of 6 seeds with the keep
-  at ~40-85%, reaches ~level 14, hero ~35-50% of all damage; without picks
-  (balance.gd --nopicks) it loses in wave 5, idle in wave 3. The user
-  found v0.1.15 "feels good". Gold left after wave 10 is that wave's loot.
+- **Balance (v0.1.18, tools/meta_report.py):** the standard bot (Bot.PLAN,
+  Bot.CARD_PRIORITY) wins ~88% of 96 seeds (keep ~64% left; losses in
+  waves 8-10), hero ~51% of all damage (archer 14, ballista 18, mortar
+  16, frost 1). Random builds (Bot variant: random tower per spot, farm /
+  bank, random picks) win ~12%: most die in waves 5-6; ballista-heavy
+  builds win most, banner-heavy ones least, frost and the Rally /
+  Engineer cards rank low. Enemy HP x(1 + 0.25w + 0.047w^2). The user
+  found v0.1.15 "feels good".
 
 ## Next (docs/DESIGN.md "Build order")
 
-- New enemy roles (siege, ranged) and a boss wave.
+- Endless mode + mutators; card evolutions + tower-changing relics;
+  tower specialisations + selling (agreed order, 2026-10-10).
+- Balance leads from the meta report: banner and frost are weak, ballista
+  strong; Rally / Engineer cards weak.
 - More levels / maps (the user designs them); then permanent unlocks and
   difficulty mutators.
 
@@ -119,7 +136,11 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   buildings, enemies, waves. `scripts/perks.gd` -- cards, relics, XP
   curve. Balance changes go in these two only.
 - `scripts/bot.gd` -- scripted player (PLAN build order, card priority)
-  for --auto, --ff, tests and balance runs (`tools/balance.gd`).
+  for --auto, --ff, tests and balance runs (`tools/balance.gd`); with a
+  variant seed it randomises the build for `tools/meta.gd`, which
+  `tools/meta_report.py --runs=N --jobs=J [--fixed]` runs in parallel and
+  summarises (win rate, losses by wave, damage share by source, win rate
+  by tower mix / economy / relic / card). Sim.dealt_by credits damage.
 - `scripts/main.gd` -- view: camera, light, MultiMesh crowds/coins/
   projectiles, buildings, popups, effects, sound, music, menu flow, debug
   args. Draws between sim steps (`_alpha`).
@@ -144,7 +165,12 @@ assets_in/INVENTORY.md lists 16 CC0 packs (previews in assets_in/_previews).
 - Enemies: Kenney Mini Dungeon `character-human` (grunt; runner = same,
   yellow tint, 0.85 scale), Mini Arena `character-soldier` (armored),
   KayKit Adventurers `Barbarian` (brute, with 2H axe / hat / cape baked as
-  rigid bone parts; was Quaternius Giant until v0.1.10). All baked to VAT.
+  rigid bone parts; was Quaternius Giant until v0.1.10), Quaternius
+  Animated Monster Pack Bat (CC0; .blend converted to GLB with Blender,
+  NLA tracks per action; flat colours baked to a palette texture), KayKit
+  Skeletons Rogue + crossbow (crossbowman) and Warrior + axe + shield
+  (boss; weapons from separate gltf files via bake_vat `extra`). All
+  baked to VAT; the raw .glb/.gltf are left out of exports.
 - Downloaded on the main PC from github.com/KayKit-Game-Assets
   (CC0): Barbarian.glb, Dungeon Remastered coin_stack_*.glb, Hexagon
   building_market_blue (bank). Not yet in
@@ -294,6 +320,11 @@ Windows build, never in WSL.
   to 2 m outside the walkable area and marked (user: enemies "in range"
   at the bottom of the centre lane weren't shot); score = keep % x 10 +
   gold for ties on waves.
+- v0.1.18: armour, bats, crossbowmen, Bone Warlord boss; farm / bank
+  rework; picks wait for the coin sweep; meta-analysis tools. Bake gotcha:
+  GDScript lambdas capture locals by value (the baked material came out
+  null until it went through an array); glTF colour factors are linear
+  (palette needs linear_to_srgb).
 - v0.1.17 (tester feedback): end-of-wave coin sweep (bank interest counts
   coins still on the ground; saves bank them), Magnet -> Scholar, XP
   radius follows Long Shot, "+N XP" pop-ups, two-tap tower range preview,

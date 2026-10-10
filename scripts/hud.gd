@@ -26,6 +26,10 @@ var _count_n := 0
 var _count_pop := 0.0
 var _msg_t := 0.0
 var _end: Control
+var _boss: Control
+var _boss_fill: ColorRect
+var _boss_name: Label
+var _top := 0.0  # status-bar inset
 var _xp_fill: ColorRect
 var _lv_label: Label
 var _cards: Control
@@ -62,6 +66,7 @@ func _ready() -> void:
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root)
 	var top := _safe_top()
+	_top = top
 
 	# Coin pill, top right.
 	var pill := PanelContainer.new()
@@ -466,6 +471,37 @@ func set_gate_bars(bars: Array) -> void:
 
 
 ## Red HP bars over enemies (giants only): [[screen position, frac], ...].
+## The boss's big HP bar under the wave line; [] hides it, else [name,
+## hp fraction, berserk].
+func set_boss(b: Array) -> void:
+	if _boss == null:
+		_boss = Control.new()
+		_boss.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+		_boss.position = Vector2(-260, _top + 104)
+		_boss.size = Vector2(520, 60)
+		_boss.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_root.add_child(_boss)
+		var back := ColorRect.new()
+		back.color = Color(0.08, 0.04, 0.1, 0.85)
+		back.position = Vector2(0, 30)
+		back.size = Vector2(520, 26)
+		_boss.add_child(back)
+		_boss_fill = ColorRect.new()
+		_boss_fill.position = Vector2(4, 4)
+		_boss_fill.size = Vector2(512, 18)
+		back.add_child(_boss_fill)
+		_boss_name = _label("", 26)
+		_boss_name.size = Vector2(520, 30)
+		_boss_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_boss.add_child(_boss_name)
+	_boss.visible = not b.is_empty()
+	if b.is_empty():
+		return
+	_boss_name.text = String(b[0]) + ("  -  BERSERK" if b[2] else "")
+	_boss_fill.size.x = 512.0 * clampf(float(b[1]), 0.0, 1.0)
+	_boss_fill.color = Color(0.95, 0.25, 0.2) if b[2] else Color(0.7, 0.35, 0.95)
+
+
 func set_enemy_bars(bars: Array) -> void:
 	_bars(_enemy_bars, bars, Vector2(84, 12), Color(0.92, 0.18, 0.15), false)
 

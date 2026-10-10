@@ -41,11 +41,13 @@ packs. Not published anywhere.
 | Mortar | Lobs boulders that splash a group; can't hit up close |
 | Frost Crystal | Pulse that slows walking and attacks nearby |
 | War Banner | No attack; towers and the hero in its ring attack faster |
-| Farm / Bank | Gold after every wave: a fixed amount, or 10% interest on what you hold (capped) |
+| Farm / Bank | Gold after every wave: a fixed amount, or interest on what you hold (capped) |
 | Gate | Blocks its lane until broken; repaired after each wave |
 
-Enemies: grunts, armoured soldiers, fast runners and giant barbarians (who
-shove the small ones aside at a gate). They get tougher every wave.
+Enemies: grunts, armoured soldiers (light hits barely scratch them), fast
+runners, giant barbarians (who shove the small ones aside at a gate), bats
+that fly over gates, skeleton crossbowmen that shoot gates from range,
+and the Bone Warlord boss in wave 10. They get tougher every wave.
 
 ## Building and running
 
@@ -72,8 +74,9 @@ shove the small ones aside at a gate). They get tougher every wave.
 ## Credits
 
 - 3D models (CC0): [Kenney](https://kenney.nl) (Tower Defense Kit, Mini
-  Dungeon, Mini Arena, Nature Kit) and [Kay Lousberg / KayKit](https://kaylousberg.com)
-  (Adventurers, Medieval Hexagon, Forest Nature, Dungeon Remastered).
+  Dungeon, Mini Arena, Nature Kit), [Kay Lousberg / KayKit](https://kaylousberg.com)
+  (Adventurers, Skeletons, Medieval Hexagon, Forest Nature, Dungeon
+  Remastered) and [Quaternius](https://quaternius.com) (Animated Monsters: bat).
 - Sound effects: Kenney and OpenGameArt contributors, CC0; the wave horn is
   "Scary Echoey Horn Esque Sound" by Kat (CC-BY 4.0). Full list in
   [assets/sfx/CREDITS.txt](assets/sfx/CREDITS.txt).

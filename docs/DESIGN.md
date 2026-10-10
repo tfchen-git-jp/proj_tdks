@@ -111,7 +111,8 @@ summoning / commanding.
 3. DONE (v0.1.11), changed: enemies that reach the keep stand and attack
    it (keep HP, like a gate). Enemies attack only walls (user: hero /
    tower HP not a good idea).
-4. TODO: new enemy roles (siege, ranged) and a boss wave.
+4. DONE (v0.1.18): armour, flyers (bats), ranged siege (skeleton
+   crossbowmen), a wave-10 boss with phases.
 5. DONE (v0.1.15): hero upgrade cards and relics (scripts/perks.gd).
 6. DONE (v0.1.11-0.1.16): 10 waves, bot balance (loses ~1 run in 6),
    score + top 10. TODO: more levels / maps, then permanent unlocks and

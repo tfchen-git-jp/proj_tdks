@@ -9,10 +9,12 @@ extends SceneTree
 ## of all clips are stacked: row = (clip_start + frame) * rows + vid / ROW_W.
 
 const ROW_W := 1024
+const PALETTE_W := 16
 
 ## name, source, height in metres (feet to top of head, frame 0 of walk),
 ## fps, clips: [name, source clip, loops], attach: rigid meshes on bones
-## (BoneAttachment3D children: weapons, hats) to bake along.
+## (BoneAttachment3D children: weapons, hats) to bake along, extra: [file,
+## bone] parts from separate files, palette: flat-coloured surfaces.
 const JOBS := [
 	{name = "grunt", src = "res://assets/chars/mini_dungeon/character-human.glb", height = 0.95, fps = 30.0,
 		clips = [["walk", "walk", true], ["attack", "attack-melee-right", true], ["die", "die", false], ["idle", "idle", true]]},
@@ -23,6 +25,22 @@ const JOBS := [
 		attach = ["2H_Axe", "Barbarian_Hat", "Barbarian_Cape"],
 		clips = [["walk", "Walking_A", true], ["attack", "2H_Melee_Attack_Chop", true],
 			["die", "Death_A", false], ["idle", "2H_Melee_Idle", true]]},
+	# Quaternius Animated Monster Pack bat (flat colours -> palette).
+	{name = "bat", src = "res://assets/chars/bat/Bat.glb", height = 0.9, fps = 24.0, palette = true,
+		clips = [["walk", "Bat_Flying", true], ["attack", "Bat_Attack", true],
+			["die", "Bat_Death", false], ["idle", "Bat_Flying", true]]},
+	# KayKit skeletons: a crossbowman (siege archer) and the boss.
+	{name = "siege", src = "res://assets/chars/skeleton/Skeleton_Rogue.glb", height = 1.15, fps = 18.0,
+		attach = ["Skeleton_Rogue_Hood", "Skeleton_Rogue_Cape"],
+		extra = [["res://assets/chars/skeleton/Skeleton_Crossbow.gltf", "handslot.r"]],
+		clips = [["walk", "Walking_D_Skeletons", true], ["attack", "1H_Ranged_Shoot", true],
+			["die", "Death_C_Skeletons", false], ["idle", "1H_Ranged_Aiming", true]]},
+	{name = "boss", src = "res://assets/chars/skeleton/Skeleton_Warrior.glb", height = 3.4, fps = 15.0,
+		attach = ["Skeleton_Warrior_Helmet"],
+		extra = [["res://assets/chars/skeleton/Skeleton_Axe.gltf", "handslot.r"],
+			["res://assets/chars/skeleton/Skeleton_Shield_Large_A.gltf", "handslot.l"]],
+		clips = [["walk", "Walking_B", true], ["attack", "1H_Melee_Attack_Chop", true],
+			["die", "Death_C_Skeletons", false], ["idle", "Idle_Combat", true]]},
 ]
 
 
@@ -46,52 +64,95 @@ func _bake(job: Dictionary) -> void:
 		if (n as MeshInstance3D).skin != null:
 			mis.push_back(n)
 
-	# Merge every skinned surface into one vertex list.
+	# Extra rigid parts from separate files (KayKit skeleton weapons): put
+	# on their bone like the pack's own weapons. extra: [[path, bone], ...]
+	var skel0: Skeleton3D = inst.find_children("*", "Skeleton3D", true, false)[0]
+	var attach_names: Array = job.get("attach", []).duplicate()
+	for e in job.get("extra", []):
+		var att := BoneAttachment3D.new()
+		skel0.add_child(att)
+		att.bone_name = e[1]
+		var part: Node3D = (load(e[0]) as PackedScene).instantiate()
+		var pmi: MeshInstance3D = part.find_children("*", "MeshInstance3D", true, false)[0]
+		var mi := MeshInstance3D.new()
+		mi.mesh = pmi.mesh
+		mi.name = "extra_%d" % attach_names.size()
+		att.add_child(mi)
+		attach_names.push_back(mi.name)
+		part.free()
+
+	# Merge every skinned surface into one vertex list. Untextured models
+	# (palette = true, Quaternius: one flat colour per surface) get their
+	# colours painted into a small palette texture, each vertex's UV on its
+	# surface's texel, so the VAT shader still just samples a texture.
 	var src_v := PackedVector3Array()
 	var src_n := PackedVector3Array()
 	var uv := PackedVector2Array()
 	var idx := PackedInt32Array()
-	var owner: Array[int] = []  # which MeshInstance each vertex came from
+	var owner: Array[int] = []  # which MeshInstance (or rigid part) each vertex came from
 	var bones := PackedInt32Array()
 	var weights := PackedFloat32Array()
 	var material: Material = null
-	for m in mis.size():
-		var arr := mis[m].mesh.surface_get_arrays(0)
+	# (lambdas capture locals by value: the material found inside add_surface
+	# goes out through this array)
+	var mat_box: Array = [null]
+	var palette: bool = job.get("palette", false)
+	var pal_cols: Array[Color] = []
+	var add_surface := func(mi: MeshInstance3D, sf: int, own: int, rigid_part: bool) -> void:
+		var arr := mi.mesh.surface_get_arrays(sf)
 		var base := src_v.size()
 		var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
 		src_v.append_array(v)
 		src_n.append_array(arr[Mesh.ARRAY_NORMAL])
-		uv.append_array(arr[Mesh.ARRAY_TEX_UV])
-		var b: PackedInt32Array = arr[Mesh.ARRAY_BONES]
-		var w: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS]
-		var per := b.size() / v.size()
-		for i in v.size():
-			owner.push_back(m)
-			for k in 4:
-				bones.push_back(b[i * per + k] if k < per else 0)
-				weights.push_back(w[i * per + k] if k < per else 0.0)
+		var mat := mi.get_active_material(sf)
+		if palette:
+			# glTF colour factors arrive linear; the palette texture is sRGB.
+			var col := (mat as BaseMaterial3D).albedo_color.linear_to_srgb() if mat is BaseMaterial3D else Color.WHITE
+			var k := pal_cols.find(col)
+			if k < 0:
+				k = pal_cols.size()
+				pal_cols.push_back(col)
+			for i in v.size():
+				uv.push_back(Vector2((k + 0.5) / PALETTE_W, 0.5))
+		else:
+			uv.append_array(arr[Mesh.ARRAY_TEX_UV])
+			if mat_box[0] == null:
+				mat_box[0] = mat
+		if rigid_part:
+			for i in v.size():
+				owner.push_back(own)
+				bones.append_array([0, 0, 0, 0])
+				weights.append_array([1.0, 0.0, 0.0, 0.0])
+		else:
+			var b: PackedInt32Array = arr[Mesh.ARRAY_BONES]
+			var w: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS]
+			var per := b.size() / v.size()
+			for i in v.size():
+				owner.push_back(own)
+				for k in 4:
+					bones.push_back(b[i * per + k] if k < per else 0)
+					weights.push_back(w[i * per + k] if k < per else 0.0)
 		for i in (arr[Mesh.ARRAY_INDEX] as PackedInt32Array):
 			idx.push_back(base + i)
-		if material == null:
-			material = mis[m].get_active_material(0)
+	for m in mis.size():
+		for sf in mis[m].mesh.get_surface_count():
+			add_surface.call(mis[m], sf, m, false)
 	# Rigid parts on bones: each its own "owner" following one bone.
 	var rigid: Array = []  # [MeshInstance3D, BoneAttachment3D]
-	for nm in job.get("attach", []):
+	for nm in attach_names:
 		var mi := inst.find_child(nm, true, false) as MeshInstance3D
 		var att := mi.get_parent() as BoneAttachment3D
-		var arr := mi.mesh.surface_get_arrays(0)
-		var base := src_v.size()
-		var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
-		src_v.append_array(v)
-		src_n.append_array(arr[Mesh.ARRAY_NORMAL])
-		uv.append_array(arr[Mesh.ARRAY_TEX_UV])
-		for i in v.size():
-			owner.push_back(mis.size() + rigid.size())
-			bones.append_array([0, 0, 0, 0])
-			weights.append_array([1.0, 0.0, 0.0, 0.0])
-		for i in (arr[Mesh.ARRAY_INDEX] as PackedInt32Array):
-			idx.push_back(base + i)
+		for sf in mi.mesh.get_surface_count():
+			add_surface.call(mi, sf, mis.size() + rigid.size(), true)
 		rigid.push_back([mi, att])
+	material = mat_box[0]
+	if palette:
+		var img := Image.create_empty(PALETTE_W, 1, false, Image.FORMAT_RGBA8)
+		for k in pal_cols.size():
+			img.set_pixel(k, 0, pal_cols[k])
+		var pm := StandardMaterial3D.new()
+		pm.albedo_texture = ImageTexture.create_from_image(img)
+		material = pm
 	var nv := src_v.size()
 	var rows := int(ceil(float(nv) / ROW_W))
 

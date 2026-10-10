@@ -44,10 +44,10 @@ const HERO := {
 ## upgrades (towers I-IV, farms, banks and gates I-III). "spot" says which spot kind it goes on.
 const BUILDINGS := {
 	archer = {name = "Archer Tower", spot = "tower", desc = "Long range, quick single arrows.",
-		levels = [{cost = 15, range = 6.0, interval = 0.8, damage = 2.0},
-			{cost = 25, range = 6.5, interval = 0.65, damage = 3.0},
-			{cost = 40, range = 7.0, interval = 0.5, damage = 4.5},
-			{cost = 60, range = 7.5, interval = 0.4, damage = 6.5}]},
+		levels = [{cost = 15, range = 6.0, interval = 0.8, damage = 2.5},
+			{cost = 25, range = 6.5, interval = 0.65, damage = 3.5},
+			{cost = 40, range = 7.0, interval = 0.5, damage = 5.0},
+			{cost = 60, range = 7.5, interval = 0.4, damage = 7.0}]},
 	ballista = {name = "Ballista", spot = "tower", desc = "Slow heavy bolt that pierces a line.",
 		levels = [{cost = 30, range = 8.0, interval = 1.6, damage = 6.0, pierce = 6},
 			{cost = 40, range = 8.5, interval = 1.4, damage = 9.0, pierce = 8},
@@ -70,18 +70,21 @@ const BUILDINGS := {
 			{cost = 45, range = 5.0, buff = 0.4},
 			{cost = 60, range = 5.5, buff = 0.55},
 			{cost = 80, range = 6.0, buff = 0.7}]},
+	# Each upgrade pays back faster than a new level-1 farm (user, v0.1.18:
+	# "build three level 1s and leave them" was always best): gold per gold
+	# spent 0.24 / 0.29 / 0.31.
 	farm = {name = "Farm", spot = "eco", desc = "A fixed amount of gold after every wave.",
-		levels = [{cost = 20, income = 6}, {cost = 30, income = 12}, {cost = 45, income = 20}]},
-	# Interest instead of a fixed income: BANK_RATE of the gold you hold when
-	# a wave ends. The rate never stacks; each bank only adds to the cap, so
-	# a bank beats a farm only while you sit on ~200+ gold (user, 2026-10-09).
-	bank = {name = "Bank", spot = "eco", desc = "10% interest on the gold you hold after each wave, up to a cap.",
-		levels = [{cost = 30, cap = 10}, {cost = 40, cap = 18}, {cost = 55, cap = 28}]},
+		levels = [{cost = 25, income = 6}, {cost = 35, income = 16}, {cost = 45, income = 30}]},
+	# Interest instead of a fixed income: `rate` of the gold you hold when a
+	# wave ends, up to `cap`. The best bank's rate counts (rates never
+	# stack); every bank adds its cap. Upgrades raise both.
+	bank = {name = "Bank", spot = "eco", desc = "Interest on the gold you hold after each wave, up to a cap.",
+		levels = [{cost = 30, rate = 0.1, cap = 12}, {cost = 40, rate = 0.15, cap = 25},
+			{cost = 55, rate = 0.2, cap = 45}]},
 	gate = {name = "Gate", spot = "gate", desc = "Blocks the lane until broken. Repaired after each wave.",
 		levels = [{cost = 30, hp = 220.0}, {cost = 40, hp = 420.0}, {cost = 60, hp = 700.0}]},
 }
 const TOWER_KINDS := ["archer", "ballista", "mortar", "frost", "banner"]
-const BANK_RATE := 0.1
 
 ## Building spots. kind: tower / gate / eco (farm or bank); gates also
 ## name their lane.
@@ -126,25 +129,50 @@ const SPOT_REACH := 1.45
 const ATTACK_CYCLE := 0.55
 
 ## Enemy types. xp: what a kill near the hero is worth (Perks.XP_RADIUS).
-## dps hits gates and the keep (enemies that reach the keep
-## stand and attack it until killed).
+## dps hits gates and the keep (enemies that reach the keep stand and
+## attack it until killed).
 ## heavy: shoves light enemies out of its way in a gate queue (they never
 ## hold it up). reach: m behind the front rank it can still hit the gate
 ## from (a second giant swings over the first one's shoulder).
+## armor: taken off every hit (never below ARMOR_FLOOR of it): many small
+## hits (archer, Multishot) do little, big ones (ballista, mortar) work.
+## Burning ignores armour.
+## flies: over gates, at fly_h m; mortars and frost can't touch it.
+## ranged: stops this far short of the wall in its way (gate or keep) and
+## shoots it, outside the queue. cycle: s per attack (default
+## ATTACK_CYCLE). boss: fixed HP (no wave scaling), phases (Sim._bosses).
+## intro: shown the first time a wave brings it. big: draws a red HP bar.
 const ENEMIES := [
-	{name = "grunt", hp = 3.0, speed = 1.7, radius = 0.28, gold = 1, xp = 1, dps = 2.0},
-	{name = "armored", hp = 12.0, speed = 1.35, radius = 0.32, gold = 3, xp = 3, dps = 4.0},
-	{name = "brute", hp = 90.0, speed = 0.95, radius = 0.7, gold = 15, xp = 12, dps = 18.0,
-		heavy = true, reach = 1.3},
-	{name = "runner", hp = 2.0, speed = 3.1, radius = 0.25, gold = 1, xp = 1, dps = 1.5},
+	{name = "grunt", plural = "grunts", hp = 3.0, speed = 1.7, radius = 0.28, gold = 1, xp = 1, dps = 2.0},
+	{name = "armored", plural = "armored", hp = 7.0, speed = 1.35, radius = 0.32, gold = 3, xp = 3, dps = 4.0,
+		armor = 1.0, intro = "Armored soldiers shrug off light hits: use ballistas, mortars and big bolts."},
+	{name = "brute", plural = "brutes", hp = 90.0, speed = 0.95, radius = 0.7, gold = 15, xp = 12, dps = 18.0,
+		heavy = true, reach = 1.3, big = true},
+	{name = "runner", plural = "runners", hp = 2.0, speed = 3.1, radius = 0.25, gold = 1, xp = 1, dps = 1.5},
+	{name = "bat", plural = "bats", hp = 4.0, speed = 2.3, radius = 0.35, gold = 2, xp = 2, dps = 2.5,
+		flies = true, fly_h = 2.2,
+		intro = "Bats fly over gates! Archers, ballistas and you can hit them; mortars and frost can't."},
+	{name = "crossbowman", plural = "crossbowmen", hp = 8.0, speed = 1.2, radius = 0.3, gold = 3, xp = 3, dps = 1.6,
+		ranged = 6.5, cycle = 1.1,
+		intro = "Skeleton crossbowmen shoot your gates from range: reach them with ballistas or go hunt them."},
+	{name = "Bone Warlord", plural = "Bone Warlords", hp = 1500.0, speed = 0.7, radius = 1.1, gold = 60, xp = 40,
+		dps = 40.0, heavy = true, reach = 2.0, armor = 2.5, boss = true, big = true,
+		intro = "The Bone Warlord! It calls for help as it weakens, then goes berserk."},
 ]
-enum { GRUNT, ARMORED, BRUTE, RUNNER }
+## A hit on an armoured enemy does at least this share of its damage.
+const ARMOR_FLOOR := 0.4
+## The boss calls BOSS_SUMMON grunts at each of these HP fractions; at the
+## last it also goes berserk (speed and damage x BOSS_RAGE).
+const BOSS_PHASES := [0.66, 0.33]
+const BOSS_SUMMON := 8
+const BOSS_RAGE := 1.4
+enum { GRUNT, ARMORED, BRUTE, RUNNER, BAT, SIEGE, BOSS }
 const WEST := 0
 const CENTRE := 1
 const EAST := 2
 
 const HP_PER_WAVE := 0.25
-const HP_PER_WAVE2 := 0.05
+const HP_PER_WAVE2 := 0.047
 
 ## Waves. Each group: `count` enemies of `type` on `lane`, one every
 ## `every` s, starting `t` s into the wave.
@@ -156,51 +184,77 @@ const WAVES := [
 	[{lane = CENTRE, type = GRUNT, count = 22, every = 0.5, t = 0.0},
 		{lane = WEST, type = ARMORED, count = 6, every = 1.5, t = 3.0},
 		{lane = EAST, type = RUNNER, count = 14, every = 0.4, t = 8.0}],
+	# Bats arrive: a few, alone on the east (the counter is easy to see).
 	[{lane = WEST, type = GRUNT, count = 25, every = 0.4, t = 0.0},
 		{lane = CENTRE, type = GRUNT, count = 25, every = 0.4, t = 2.0},
-		{lane = EAST, type = GRUNT, count = 25, every = 0.4, t = 4.0},
+		{lane = EAST, type = BAT, count = 8, every = 0.8, t = 6.0},
 		{lane = CENTRE, type = BRUTE, count = 1, every = 1.0, t = 10.0},
-		{lane = EAST, type = ARMORED, count = 8, every = 1.2, t = 12.0}],
-	[{lane = WEST, type = GRUNT, count = 40, every = 0.28, t = 0.0},
+		{lane = EAST, type = ARMORED, count = 8, every = 1.2, t = 14.0}],
+	# Crossbowmen arrive behind a centre crowd.
+	[{lane = WEST, type = GRUNT, count = 34, every = 0.3, t = 0.0},
 		{lane = WEST, type = BRUTE, count = 1, every = 1.0, t = 6.0},
-		{lane = CENTRE, type = RUNNER, count = 24, every = 0.3, t = 3.0},
-		{lane = EAST, type = ARMORED, count = 16, every = 0.9, t = 0.0},
+		{lane = CENTRE, type = GRUNT, count = 20, every = 0.4, t = 0.0},
+		{lane = CENTRE, type = SIEGE, count = 3, every = 1.5, t = 6.0},
+		{lane = EAST, type = ARMORED, count = 10, every = 1.0, t = 0.0},
 		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 14.0}],
 	[{lane = WEST, type = GRUNT, count = 35, every = 0.3, t = 0.0},
 		{lane = EAST, type = GRUNT, count = 35, every = 0.3, t = 0.0},
 		{lane = CENTRE, type = ARMORED, count = 12, every = 1.0, t = 2.0},
+		{lane = WEST, type = BAT, count = 12, every = 0.6, t = 6.0},
 		{lane = CENTRE, type = RUNNER, count = 20, every = 0.3, t = 8.0},
+		{lane = EAST, type = SIEGE, count = 5, every = 1.4, t = 10.0},
 		{lane = WEST, type = BRUTE, count = 1, every = 1.0, t = 10.0},
 		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 16.0}],
 	[{lane = WEST, type = GRUNT, count = 45, every = 0.25, t = 0.0},
 		{lane = CENTRE, type = ARMORED, count = 18, every = 0.8, t = 0.0},
 		{lane = EAST, type = RUNNER, count = 30, every = 0.25, t = 4.0},
+		{lane = EAST, type = BAT, count = 14, every = 0.5, t = 10.0},
 		{lane = CENTRE, type = BRUTE, count = 2, every = 6.0, t = 12.0},
+		{lane = WEST, type = SIEGE, count = 6, every = 1.2, t = 14.0},
 		{lane = WEST, type = BRUTE, count = 1, every = 1.0, t = 20.0}],
 	[{lane = WEST, type = GRUNT, count = 30, every = 0.28, t = 0.0},
 		{lane = CENTRE, type = GRUNT, count = 30, every = 0.28, t = 0.0},
 		{lane = EAST, type = GRUNT, count = 30, every = 0.28, t = 0.0},
 		{lane = WEST, type = ARMORED, count = 14, every = 0.9, t = 6.0},
 		{lane = EAST, type = ARMORED, count = 14, every = 0.9, t = 6.0},
+		{lane = CENTRE, type = BAT, count = 16, every = 0.5, t = 8.0},
+		{lane = CENTRE, type = SIEGE, count = 6, every = 1.2, t = 12.0},
 		{lane = EAST, type = BRUTE, count = 2, every = 7.0, t = 10.0},
 		{lane = CENTRE, type = BRUTE, count = 2, every = 7.0, t = 14.0}],
 	[{lane = WEST, type = RUNNER, count = 40, every = 0.22, t = 0.0},
 		{lane = CENTRE, type = GRUNT, count = 50, every = 0.22, t = 0.0},
 		{lane = EAST, type = ARMORED, count = 24, every = 0.7, t = 0.0},
+		{lane = WEST, type = BAT, count = 18, every = 0.45, t = 6.0},
+		{lane = EAST, type = SIEGE, count = 8, every = 1.0, t = 10.0},
 		{lane = WEST, type = BRUTE, count = 2, every = 7.0, t = 8.0},
 		{lane = CENTRE, type = BRUTE, count = 1, every = 1.0, t = 12.0},
 		{lane = EAST, type = BRUTE, count = 2, every = 7.0, t = 16.0}],
-	# The finale: every lane at once, giants on each.
+	# The finale: every lane at once, then the Bone Warlord down the centre.
 	[{lane = WEST, type = GRUNT, count = 40, every = 0.25, t = 0.0},
 		{lane = CENTRE, type = GRUNT, count = 40, every = 0.25, t = 0.0},
 		{lane = EAST, type = GRUNT, count = 40, every = 0.25, t = 0.0},
 		{lane = WEST, type = ARMORED, count = 14, every = 1.0, t = 5.0},
 		{lane = EAST, type = ARMORED, count = 14, every = 1.0, t = 5.0},
-		{lane = CENTRE, type = RUNNER, count = 30, every = 0.25, t = 8.0},
-		{lane = WEST, type = BRUTE, count = 3, every = 8.0, t = 10.0},
-		{lane = CENTRE, type = BRUTE, count = 3, every = 7.0, t = 14.0},
-		{lane = EAST, type = BRUTE, count = 3, every = 8.0, t = 18.0}],
+		{lane = CENTRE, type = BAT, count = 16, every = 0.5, t = 8.0},
+		{lane = WEST, type = SIEGE, count = 5, every = 1.2, t = 12.0},
+		{lane = EAST, type = SIEGE, count = 5, every = 1.2, t = 12.0},
+		{lane = WEST, type = BRUTE, count = 2, every = 8.0, t = 10.0},
+		{lane = EAST, type = BRUTE, count = 2, every = 8.0, t = 18.0},
+		{lane = CENTRE, type = BOSS, count = 1, every = 1.0, t = 22.0}],
 ]
+
+
+## Enemy types wave `w` brings for the first time (for their intro).
+static func new_types(w: int) -> Array:
+	var seen := {}
+	for k in w:
+		for g in WAVES[k]:
+			seen[int(g.type)] = true
+	var out := []
+	for g in WAVES[w]:
+		if not seen.has(int(g.type)) and not int(g.type) in out:
+			out.push_back(int(g.type))
+	return out
 
 
 static func wave_total(w: int) -> int:

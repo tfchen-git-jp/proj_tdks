@@ -95,6 +95,7 @@ var _ring_min: MeshInstance3D  # build popup: a mortar's dead zone
 ## a second tap on it builds.
 var _preview := ""
 var _preview_spot := ""
+var _enemy_bolts: Array[Dictionary] = []  # crossbowmen's bolts in flight (view only)
 var _xp_acc := 0.0  # XP gained since the last "+N XP" pop-up
 var _xp_t := 0.0
 var _lane_labels: Array[Label3D] = []
@@ -235,6 +236,7 @@ func _start(save := {}) -> void:
 	_built.clear()
 	_gate_fx.clear()
 	_flying_pay.clear()
+	_enemy_bolts.clear()
 	_enemy.clear()
 	_drop_mm.clear()  # (v0.1.13 bug: kept the freed batches of the last game:
 	_drop_buf.clear()  # no gold drawn after New game / Play again)
@@ -344,7 +346,8 @@ func _build_scene() -> void:
 	# Enemies: one MultiMesh per type, animated by the VAT shader.
 	for k in Level.ENEMIES.size():
 		var got := Models.enemy(k)
-		var cap := ENEMY_CAP + CORPSE_CAP if k != Level.BRUTE else 60
+		var ed: Dictionary = Level.ENEMIES[k]
+		var cap := 4 if ed.get("boss", false) else (60 if ed.get("big", false) else ENEMY_CAP + CORPSE_CAP)
 		var mm := _multimesh(got[0], cap, got[1], true)
 		var buf := PackedFloat32Array()
 		buf.resize(cap * STRIDE)
@@ -516,13 +519,16 @@ func _demo_anim(delta: float) -> void:
 			var len_s := float(clip[1]) / float(clip[2])
 			var t := fmod(_demo_t, len_s + (1.0 if not clip[3] else 0.0))
 			var frame := minf(t * float(clip[2]), float(clip[1]) - 1.0) if not clip[3] else fmod(t * float(clip[2]), float(clip[1]))
-			var p := Vector3((c - 1.5) * (3.2 if k == Level.BRUTE else 1.6), 0, 9.0 + k * 2.2)
+			var big: bool = Level.ENEMIES[k].get("big", false)
+			var p := Vector3((c - 1.5) * (3.6 if big else 1.6), 0, 9.0 + k * 2.6)
+			if Level.ENEMIES[k].get("flies", false):
+				p.y = 1.0
 			_put(en.buf, n, Transform3D(Basis(Vector3.UP, PI * 0.5), p), Color.WHITE, clip, frame)
 			n += 1
 		en.mm.buffer = en.buf
 		en.mm.visible_instance_count = n
-	cam.rotation_degrees = Vector3(-20, 0, 0)
-	cam.position = Vector3(0, 3.5, 22.5)
+	cam.rotation_degrees = Vector3(-22, 0, 0)
+	cam.position = Vector3(0, 5.5, 32.0)
 
 
 ## --demo=hero: six heroes side by side: aim idle, shooting while running
@@ -816,8 +822,8 @@ func _stats_text(kind: String, level: int) -> String:
 		"farm":
 			return "+%d gold after every wave" % st.income
 		"bank":
-			return "+%d%% of your gold after every wave, up to %d (banks add up their caps)" % [
-				roundi(Level.BANK_RATE * 100), st.cap]
+			return "+%d%% of your gold after every wave, up to %d (the best rate counts; banks add up their caps)" % [
+				roundi(float(st.rate) * 100), st.cap]
 		"gate":
 			return "%d HP, repaired after each wave" % roundi(st.hp)
 	return ""
@@ -829,7 +835,7 @@ func _preview_text(w: int) -> String:
 	for ln in prev.size():
 		var parts := []
 		for k in prev[ln]:
-			parts.push_back("%d %s" % [prev[ln][k], Level.ENEMIES[k].name + "s"])
+			parts.push_back("%d %s" % [prev[ln][k], Level.ENEMIES[k].plural])
 		if not parts.is_empty():
 			lines.push_back("%s: %s" % [Level.LANE_NAMES[ln], ", ".join(parts)])
 	return "\n".join(lines)
@@ -880,6 +886,16 @@ func _apply_events() -> void:
 				sfx.play("arrow_shot", -2.0, 1.3)
 			"xp":
 				_xp_acc += float(e.n)
+			"enemy_shot":
+				if not _fast_forwarding:
+					_enemy_bolts.push_back({from = e.from, to = e.to, t = 0.0, dur = maxf(0.15, (e.from as Vector3).distance_to(e.to) / 16.0)})
+					sfx.play("arrow_shot", -14.0, 0.8)
+			"boss_phase":
+				_shake = 0.5
+				sfx.play("brute_die", 0.0, 0.6)
+				hud.message("The Bone Warlord goes berserk!" if e.berserk else "The Bone Warlord calls for help!", 2.5)
+				if not _fast_forwarding:
+					_flash(e.pos)
 			"vacuum":
 				sfx.play("coin_pay", 0.0, 1.3)
 			"level_up":
@@ -905,7 +921,7 @@ func _apply_events() -> void:
 				if _corpses.size() < CORPSE_CAP:
 					var f: Vector3 = sim.tracks[e.lane].forward(e.d)
 					_corpses.push_back({pos = e.pos, basis = Basis.looking_at(f, Vector3.UP), kind = e.kind, t = 0.0})
-				if e.kind == Level.BRUTE:
+				if Level.ENEMIES[e.kind].get("big", false):
 					_shake = maxf(_shake, 0.25)
 					sfx.play("brute_die")
 				else:
@@ -925,7 +941,11 @@ func _apply_events() -> void:
 				if _persist:
 					Save.save_run(sim.checkpoint)
 				sfx.play("wave_start", -4.0)
-				hud.message("Wave %d!" % (e.wave + 1), 2.0)
+				var intro := ""
+				for k in e.get("new", []):
+					if Level.ENEMIES[k].has("intro"):
+						intro += "\n\nNEW: " + String(Level.ENEMIES[k].intro)
+				hud.message("Wave %d!%s" % [e.wave + 1, intro], 2.0 if intro == "" else 6.0)
 			"wave_cleared":
 				if sim.state == "play" and _persist:
 					Save.save_run(sim.to_save())
@@ -1227,7 +1247,9 @@ func _sync_hero(delta: float) -> void:
 
 func _draw_enemies() -> void:
 	var h := sim.horde
-	var counts := [0, 0, 0, 0]
+	var counts := []
+	counts.resize(Level.ENEMIES.size())
+	counts.fill(0)
 	for i in h.count():
 		var k := h.kind[i]
 		var en: Dictionary = _enemy[k]
@@ -1265,7 +1287,9 @@ func _draw_enemies() -> void:
 		var clip_len := float(clip[1]) / float(clip[2])
 		var frame := minf(c.t * float(clip[2]), float(clip[1]) - 1.0)
 		var sink := maxf(0.0, c.t - clip_len - CORPSE_HOLD) / CORPSE_SINK
-		var p: Vector3 = c.pos - Vector3(0, sink * (1.2 if k == Level.BRUTE else 0.6), 0)
+		var p: Vector3 = c.pos - Vector3(0, sink * (1.2 if Level.ENEMIES[k].get("big", false) else 0.6), 0)
+		if p.y > 0.0:  # a flyer falls to the ground as it dies
+			p.y = (c.pos as Vector3).y * maxf(0.0, 1.0 - c.t / 0.45)
 		_put(en.buf, n, Transform3D((c.basis as Basis).scaled(Vector3.ONE * float(en.scale)), p), Color.WHITE, clip, frame)
 	for k in _enemy.size():
 		_enemy[k].mm.buffer = _enemy[k].buf
@@ -1353,6 +1377,20 @@ func _draw_projectiles() -> void:
 		var basis := Basis.looking_at(dir.normalized(), Vector3.UP).scaled(Vector3.ONE * s)
 		_put12(_arrow_buf, na, Transform3D(basis, at))
 		na += 1
+	var keep_bolts: Array[Dictionary] = []
+	for b in _enemy_bolts:
+		b.t += get_process_delta_time()
+		if b.t >= b.dur:
+			continue
+		keep_bolts.push_back(b)
+		if na >= _arrow_mm.instance_count:
+			continue
+		var s: float = b.t / b.dur
+		var at: Vector3 = (b.from as Vector3).lerp(b.to, s) + Vector3(0, 0.6 * 4.0 * s * (1.0 - s), 0)
+		var dir: Vector3 = (b.to as Vector3) - (b.from as Vector3)
+		_put12(_arrow_buf, na, Transform3D(Basis.looking_at(dir.normalized(), Vector3.UP).scaled(Vector3.ONE * 1.2), at))
+		na += 1
+	_enemy_bolts = keep_bolts
 	_arrow_mm.buffer = _arrow_buf
 	_arrow_mm.visible_instance_count = na
 	_rock_mm.buffer = _rock_buf
@@ -1443,14 +1481,20 @@ func _sync_gates() -> void:
 ## Red HP bars over the giants (not the small fry: too many, too busy).
 func _sync_enemy_bars() -> void:
 	var bars: Array = []
+	var boss: Array = []
 	var h := sim.horde
 	for i in h.count():
-		if h.kind[i] != Level.BRUTE or h.hp[i] <= 0.0:
+		var e: Dictionary = Level.ENEMIES[h.kind[i]]
+		if not e.get("big", false) or h.hp[i] <= 0.0:
 			continue
+		if e.get("boss", false):
+			boss = [String(e.name), h.hp[i] / h.max_hp[i], h.stage[i] >= Level.BOSS_PHASES.size()]
+			continue  # its bar is the big one at the top
 		var top := h.pos[i] + Vector3(0, 2.75, 0)
 		if not cam.is_position_behind(top):
 			bars.push_back([cam.unproject_position(top), h.hp[i] / h.max_hp[i]])
 	hud.set_enemy_bars(bars)
+	hud.set_boss(boss)
 
 
 ## A build spot: dark green pad with a dashed border and its kind written on.

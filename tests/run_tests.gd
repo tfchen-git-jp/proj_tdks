@@ -27,6 +27,7 @@ func _init() -> void:
 	_coins()
 	_save()
 	_perks()
+	_new_enemies()
 	_layout()
 	_full_run()
 	print("ALL PASSED" if _fails == 0 else "%d FAILED" % _fails)
@@ -279,8 +280,9 @@ func _towers() -> void:
 	_ok(lost[0] > 0.0 and absf(lost[1] - lost[0] * 0.5) < lost[0] * 0.02,
 		"a chilled enemy hits the gate slower (%.0f vs %.0f hp)" % [lost[1], lost[0]])
 	var coins_after: int = f.coins
-	_ok(coins_after >= 999 - 25 - 30 - 20 + 6, "the farm paid after the wave (%d)" % coins_after)
-	# Banks: BANK_RATE interest, capped; a second bank adds cap, not rate.
+	var cost := int(Level.stats("frost", 0).cost) + int(Level.stats("banner", 0).cost) + int(Level.stats("farm", 0).cost)
+	_ok(coins_after >= 999 - cost + int(Level.stats("farm", 0).income), "the farm paid after the wave (%d)" % coins_after)
+	# Banks: the best bank's rate, capped by the sum of their caps.
 	var bk = SimS.new(4)
 	bk.coins = 500
 	bk.buy("f_1", "bank")
@@ -295,8 +297,15 @@ func _towers() -> void:
 		bk._spawned.push_back(int(g.count))
 	bk.step(DT, Vector2.ZERO)
 	var got: int = bk.coins - 150
-	_ok(got == mini(floori(150 * Level.BANK_RATE), 2 * int(Level.stats("bank", 0).cap)),
-		"two banks pay 10%% of 150 within their summed cap (+%d)" % got)
+	_ok(got == mini(floori(150 * float(Level.stats("bank", 0).rate)), 2 * int(Level.stats("bank", 0).cap)),
+		"two banks pay their rate on 150 within their summed cap (+%d)" % got)
+	# Farms: an upgrade earns more per gold than another level-1 farm.
+	var f1: Dictionary = Level.stats("farm", 0)
+	for lv in range(1, 3):
+		var fa: Dictionary = Level.stats("farm", lv - 1)
+		var fb: Dictionary = Level.stats("farm", lv)
+		_ok(float(fb.income - fa.income) / float(fb.cost) > float(f1.income) / float(f1.cost),
+			"farm Lv %d pays more per gold than a new farm" % (lv + 1))
 
 
 func _coins() -> void:
@@ -387,6 +396,12 @@ func _perks() -> void:
 	s.phase = "attack"
 	s.wave = 2  # clearing wave 3 also gives a relic
 	s._end_wave()
+	_ok(s.offer.is_empty(), "no offer before the coins are in")
+	for k in 60 * 3:  # the sweep lands, then the picks open
+		s.step(DT, Vector2.ZERO)
+		if not s.offer.is_empty():
+			break
+	_ok(s.drop_pos.is_empty() and not s.offer.is_empty(), "the picks open once every coin is in")
 	_ok(s.offer_relic and s.offer.size() == 3 and s.pending_levels == 2, "after wave 3: the relic first (%s)" % [s.offer])
 	s.hero_pos = Level.START_SPOT
 	for k in 60 * 8:
@@ -454,6 +469,63 @@ func _perks() -> void:
 	var r = SimS.from_save(JSON.parse_string(JSON.stringify(s.to_save())))
 	_ok(r.tier(card) == Perks.MAX_TIER and r.relics == s.relics and r.level == s.level and r.rerolls == s.rerolls
 		and r._card_rng.state == s._card_rng.state, "hero upgrades survive a save")
+
+
+## Armour, flyers, crossbowmen, the boss (v0.1.18).
+func _new_enemies() -> void:
+	# Armour: light hits lose most, heavy hits little; never below the floor.
+	var a = HordeS.new(_lane_tracks(), 31)
+	a.spawn(Level.ARMORED, 1)
+	var hp0: float = a.hp[0]
+	a.damage(0, 2.0)
+	var light: float = hp0 - a.hp[0]
+	hp0 = a.hp[0]
+	a.damage(0, 10.0)
+	var heavy: float = hp0 - a.hp[0]
+	var ar := float(Level.ENEMIES[Level.ARMORED].armor)
+	_ok(is_equal_approx(light, maxf(2.0 - ar, 2.0 * Level.ARMOR_FLOOR)) and is_equal_approx(heavy, 10.0 - ar),
+		"armour: a 2-damage hit does %.1f, a 10-damage hit %.1f" % [light, heavy])
+	# A flyer crosses a standing gate and hits the keep; mortars and frost
+	# can't target it.
+	var f = HordeS.new(_lane_tracks(), 32)
+	f.gate_d[1] = 25.0
+	f.gate_hp[1] = 1e4
+	f.keep_hp = 1e4
+	f.spawn(Level.BAT, 1)
+	for k in 60 * 40:
+		f.step(DT)
+	_ok(f.d[0] > 25.0 and f.blocked[0] == 1 and f.keep_hp < 1e4 and f.gate_hp[1] == 1e4,
+		"a bat flies over the gate and attacks the keep")
+	_ok(f.pos[0].y > 1.5, "it flies (%.1f m up)" % f.pos[0].y)
+	var at: Vector3 = f.pos[0]
+	_ok(f.first_in_range(at, 3.0) == 0 and f.first_in_range(at, 3.0, 0.0, true) == -1
+		and f.within(at, 3.0, true).is_empty(), "ground-only attacks (mortar, frost) can't reach it")
+	# A crossbowman stops out of the queue, short of the gate, and shoots it.
+	var c = HordeS.new(_lane_tracks(), 33)
+	c.gate_d[1] = 25.0
+	c.gate_hp[1] = 1e4
+	c.spawn(Level.SIEGE, 1)
+	var shots := 0
+	for k in 60 * 40:
+		c.step(DT)
+		shots += c.shots.size()
+	var stand: float = 25.0 - c.d[0]
+	_ok(c.blocked[0] == 1 and stand >= float(Level.ENEMIES[Level.SIEGE].ranged) - 0.1 and c.gate_hp[1] < 1e4 and shots > 5,
+		"a crossbowman shoots the gate from %.1f m (%d shots)" % [stand, shots])
+	# The boss calls grunts at each phase and goes berserk at the last.
+	var b = SimS.new(34)
+	b.horde.spawn(Level.BOSS, 1)
+	b.horde.d[0] = 30.0
+	var bmax: float = b.horde.max_hp[0]
+	_ok(bmax == float(Level.ENEMIES[Level.BOSS].hp), "the boss ignores the wave's HP scaling")
+	b.horde.hp[0] = bmax * 0.5
+	b._bosses()
+	_ok(b.horde.count() == 1 + Level.BOSS_SUMMON and b.horde.stage[0] == 1, "at 66%% it calls %d grunts" % Level.BOSS_SUMMON)
+	b.horde.hp[0] = bmax * 0.2
+	b._bosses()
+	_ok(b.horde.stage[0] == 2 and is_equal_approx(b.horde.power[0], Level.BOSS_RAGE) and b.horde.count() == 1 + 2 * Level.BOSS_SUMMON,
+		"at 33% it calls more and goes berserk")
+	_ok(Level.BAT in Level.new_types(3) and Level.new_types(9) == [Level.BOSS], "intros: bats in wave 4, the boss in 10")
 
 
 func _layout() -> void:

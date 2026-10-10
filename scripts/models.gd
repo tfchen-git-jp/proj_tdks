@@ -21,6 +21,9 @@ const ENEMY_VAT := [
 	{name = "armored", tint = Color(1, 1, 1, 0.0), scale = 1.0},
 	{name = "brute", tint = Color(0.85, 0.3, 0.25, 0.35), scale = 1.0},
 	{name = "grunt", tint = Color(0.98, 0.72, 0.12, 0.85), scale = 0.85},  # runner
+	{name = "bat", tint = Color(1, 1, 1, 0.0), scale = 1.0},
+	{name = "siege", tint = Color(1, 1, 1, 0.0), scale = 1.0},
+	{name = "boss", tint = Color(0.45, 0.2, 0.6, 0.45), scale = 1.0},
 ]
 const HEX := "res://assets/props/hexagon/"
 

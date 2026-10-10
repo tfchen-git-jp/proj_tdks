@@ -27,10 +27,40 @@ const RELIC_PRIORITY := ["twin", "thunder", "volley", "wisp", "laststand", "mida
 
 var sim: Sim
 var _step := 0
+## The build order this bot follows: PLAN, or (variant >= 0) PLAN with a
+## random tower kind on each tower spot and farm / bank on each gold plot,
+## the same for every step on that spot (tools/meta.gd).
+var plan: Array = PLAN
+var _rng: RandomNumberGenerator = null  # set: random card / relic picks
 
 
-func _init(s: Sim) -> void:
+func _init(s: Sim, variant := -1) -> void:
 	sim = s
+	if variant < 0:
+		return
+	_rng = RandomNumberGenerator.new()
+	_rng.seed = variant
+	var kinds := {}
+	plan = []
+	for st in PLAN:
+		var id: String = st[0]
+		var kind: String = st[1]
+		if not kinds.has(id):
+			if kind in Level.TOWER_KINDS:
+				kinds[id] = Level.TOWER_KINDS[_rng.randi() % Level.TOWER_KINDS.size()]
+			elif kind in ["farm", "bank"]:
+				kinds[id] = "farm" if _rng.randf() < 0.5 else "bank"
+			else:
+				kinds[id] = kind
+		plan.push_back([id, kinds[id]])
+
+
+## What tower kind / economy building each spot ends up with (stats).
+func layout() -> Dictionary:
+	var out := {}
+	for st in plan:
+		out[st[0]] = st[1]
+	return out
 
 
 func move() -> Vector2:
@@ -48,17 +78,17 @@ func _target() -> Vector3:
 		for k in sim.offer.size():
 			if order.find(sim.offer[k]) < order.find(sim.offer[best]):
 				best = k
-		sim.pick(best)
+		sim.pick(best if _rng == null else _rng.randi() % sim.offer.size())
 	if sim.phase == "build":
 		# Buy the next affordable plan step, walking to its spot first.
-		while _step < PLAN.size() and _done(PLAN[_step]):
+		while _step < plan.size() and _done(plan[_step]):
 			_step += 1
-		if _step < PLAN.size() and sim.coins >= _cost(PLAN[_step]):
-			var spot := _spot(PLAN[_step][0])
+		if _step < plan.size() and sim.coins >= _cost(plan[_step]):
+			var spot := _spot(plan[_step][0])
 			# Built farms are solid: the hero can't reach the middle, only
 			# the popup range (what a player sees).
 			if sim.spot_under_hero().get("id", "") == spot.id:
-				sim.buy(spot.id, PLAN[_step][1])
+				sim.buy(spot.id, plan[_step][1])
 			return spot.pos
 		var coin := _nearest_coin()
 		if coin != Vector3.INF:
@@ -78,7 +108,7 @@ func _target() -> Vector3:
 func _done(step: Array) -> bool:
 	var want := 0
 	for k in _step + 1:
-		if PLAN[k][0] == step[0] and PLAN[k][1] == step[1]:
+		if plan[k][0] == step[0] and plan[k][1] == step[1]:
 			want += 1
 	var b: Dictionary = sim.buildings.get(step[0], {})
 	if b.is_empty():
