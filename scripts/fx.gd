@@ -333,7 +333,7 @@ func level_up(p: Vector3) -> void:
 	sp.direction = Vector3.UP
 	sp.spread = 25.0
 	var label := Label3D.new()
-	label.text = "LEVEL UP!"
+	label.text = Loc.t("LEVEL UP!")
 	label.font_size = 64
 	label.outline_size = 14
 	label.pixel_size = 0.006

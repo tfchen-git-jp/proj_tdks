@@ -105,7 +105,7 @@ func _ready() -> void:
 	_hp_fill.position = Vector2(4, 4)
 	_hp_fill.size = Vector2(212, 20)
 	hp_back.add_child(_hp_fill)
-	var hp_label := _label("KEEP", 18)
+	var hp_label := _label(tr("KEEP"), 18)
 	hp_label.position = Vector2(20, top + 4)
 	_root.add_child(hp_label)
 
@@ -244,7 +244,7 @@ func _ready() -> void:
 	_end_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_end_info)
 	var again := Button.new()
-	again.text = "  Play again  "
+	again.text = "  " + tr("Play again") + "  "
 	again.add_theme_font_size_override("font_size", 44)
 	again.add_theme_stylebox_override("normal", _box(Color(0.2, 0.65, 0.3), 18, Color.WHITE, 4))
 	again.add_theme_stylebox_override("hover", _box(Color(0.25, 0.75, 0.35), 18, Color.WHITE, 4))
@@ -252,7 +252,7 @@ func _ready() -> void:
 	again.pressed.connect(func() -> void: restart.emit())
 	box.add_child(again)
 	var home := Button.new()
-	home.text = "  Main menu  "
+	home.text = "  " + tr("Main menu") + "  "
 	home.add_theme_font_size_override("font_size", 36)
 	home.add_theme_stylebox_override("normal", _box(Color(0.3, 0.32, 0.38), 18, Color(1, 1, 1, 0.8), 3))
 	home.add_theme_stylebox_override("hover", _box(Color(0.38, 0.4, 0.46), 18, Color.WHITE, 3))
@@ -307,10 +307,10 @@ func show_cards(views: Array, relic: bool, left: int, cost: int, can_reroll: boo
 	if key == _cards_key:
 		return
 	_cards_key = key
-	_cards_title.text = "RELIC" if relic else "LEVEL UP!"
+	_cards_title.text = tr("RELIC") if relic else tr("LEVEL UP!")
 	_cards_title.add_theme_color_override("font_color", Color(0.85, 0.6, 1.0) if relic else Color(1.0, 0.85, 0.35))
-	_cards_sub.text = ("Choose one" if left == 0 else "Choose one  -  %d more to come" % left)
-	_cards_reroll.text = "Reroll  (%d gold)" % cost
+	_cards_sub.text = (tr("Choose one") if left == 0 else tr("Choose one  -  %d more to come") % left)
+	_cards_reroll.text = tr("Reroll  (%d gold)") % cost
 	_cards_reroll.disabled = not can_reroll
 	for c in _cards_list.get_children():
 		c.queue_free()
@@ -351,20 +351,20 @@ func _card(v: Dictionary, k: int) -> Button:
 	var head := HBoxContainer.new()
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(head)
-	var name := _label(String(v.name), 34)
+	var name := _label(tr(String(v.name)), 34)
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var elem := UiText.color_of(String(v.name))
 	if elem != "":
 		name.add_theme_color_override("font_color", Color.html(elem))
 	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head.add_child(name)
-	var badge := _label("RELIC" if relic else ("NEW" if tier == 0 else Models.ROMAN[tier]), 30)
+	var badge := _label(tr("RELIC") if relic else (tr("NEW") if tier == 0 else Models.ROMAN[tier]), 30)
 	badge.add_theme_color_override("font_color", Color(0.85, 0.6, 1.0) if relic
 		else (Color(0.6, 1.0, 0.6) if tier == 0 else Models.BADGE_COLORS[tier].lightened(0.2)))
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head.add_child(badge)
 	var desc := UiText.label(24)
-	UiText.set_text(desc, String(v.desc), 26)
+	UiText.set_text(desc, tr(String(v.desc)), 26)
 	desc.modulate = Color(1, 1, 1, 0.92)
 	col.add_child(desc)
 	return b
@@ -504,7 +504,7 @@ func set_boss(b: Array) -> void:
 	_boss.visible = not b.is_empty()
 	if b.is_empty():
 		return
-	_boss_name.text = String(b[0]) + ("  -  BERSERK" if b[2] else "")
+	_boss_name.text = tr(String(b[0])) + ("  -  " + tr("BERSERK") if b[2] else "")
 	_boss_fill.size.x = 512.0 * clampf(float(b[1]), 0.0, 1.0)
 	_boss_fill.color = Color(0.95, 0.25, 0.2) if b[2] else Color(0.7, 0.35, 0.95)
 
@@ -643,7 +643,7 @@ func message(text: String, seconds := 3.0) -> void:
 func show_end(won: bool, info := "") -> void:
 	_touch = -1
 	_update_move()
-	_end_label.text = "VICTORY!" if won else "DEFEAT"
+	_end_label.text = tr("VICTORY!") if won else tr("DEFEAT")
 	_end_info.text = info
 	_end.visible = true
 	minimap.visible = false

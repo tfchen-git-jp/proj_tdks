@@ -15,6 +15,7 @@ extends Node3D
 ##   --cam=gate        camera looks at the first standing gate
 ##   --hero=X,Z        put the hero there (after any --ff)
 ##   --build=S:K[:N],… build kind K on spot S (N levels) for free
+##   --lang=CODE       play in that language (en, zh_TW), not saved
 ##   --ask             press Esc in the game (the leave question)
 ##   --newgame         open the menu, then press New game (restart path)
 ##   --load            start from the saved run (as Continue does)
@@ -123,6 +124,9 @@ func _ready() -> void:
 		_shot_t = float(_args.get("shot-delay", "1.5"))
 	if _args.has("bench"):
 		_bench_t = float(_args.bench)
+	Loc.boot()
+	if _args.has("lang"):  # --lang=zh_TW: this run only (screenshots), not saved
+		Loc.apply(String(_args.lang))
 	_fit_pc_window()
 	confirm = Confirm.new()
 	add_child(confirm)
@@ -150,6 +154,7 @@ func _open_menu() -> void:
 			_start()
 			_close_menu())
 		menu.exit_game.connect(_ask_quit)
+		menu.language_changed.connect(_relocalize)
 		menu.continue_game.connect(func() -> void:
 			var run := Save.load_run()
 			if not run.is_empty():
@@ -161,6 +166,15 @@ func _open_menu() -> void:
 	hud.visible = false
 	hud.hide_menu()
 	_in_menu = true
+
+
+## Language changed in the menu: rebuild the menu and the scene behind it
+## (every label was made in the old language).
+func _relocalize() -> void:
+	menu.queue_free()
+	menu = null
+	_start()
+	_open_menu()
 
 
 func _close_menu() -> void:
@@ -192,10 +206,10 @@ func _back() -> void:
 		if sim.state != "play":  # game over: nothing to lose
 			_leave_to_menu()
 			return
-		var saved := "the start of wave %d" % (sim.checkpoint.wave + 1) if sim.phase == "attack" \
-			else "this build phase (wave %d)" % (sim.wave + 1)
-		confirm.ask("Back to the main menu?\n\nContinue will resume from %s. Anything after that is lost." % saved,
-			_leave_to_menu, Callable(), "Leave", "Keep playing")
+		var saved := tr("the start of wave %d") % (sim.checkpoint.wave + 1) if sim.phase == "attack" \
+			else tr("this build phase (wave %d)") % (sim.wave + 1)
+		confirm.ask(tr("Back to the main menu?\n\nContinue will resume from %s. Anything after that is lost.") % saved,
+			_leave_to_menu, Callable(), tr("Leave"), tr("Keep playing"))
 	elif menu.get("_pages").main.visible:
 		_ask_quit()
 	else:
@@ -203,7 +217,7 @@ func _back() -> void:
 
 
 func _ask_quit() -> void:
-	confirm.ask("Quit RogueShot TD?", func() -> void: get_tree().quit(), Callable(), "Quit", "Cancel")
+	confirm.ask(tr("Quit RogueShot TD?"), func() -> void: get_tree().quit(), Callable(), tr("Quit"), tr("Cancel"))
 
 
 func _leave_to_menu() -> void:
@@ -311,7 +325,7 @@ func _start(save := {}) -> void:
 	_cam_target = _cam_goal()
 	_sync_view(0.0)
 	if not _args.has("ff"):
-		hud.message("Build your defences,\nthen stand on START to begin", 4.0)
+		hud.message(tr("Build your defences,\nthen stand on START to begin"), 4.0)
 
 
 func _build_scene() -> void:
@@ -633,9 +647,9 @@ func _game_over() -> void:
 		Save.clear_run()
 		rank = Save.add_score(cleared, sim.base_hp / Level.BASE_HP, sim.coins, won)
 	var keep := roundi(100.0 * sim.base_hp / Level.BASE_HP)
-	hud.show_end(won, "Waves cleared: %d / %d\nKeep %d%%  +  gold %d\nScore %d%s" % [cleared, Level.WAVES.size(), keep,
-		sim.coins, Save.score_of(sim.base_hp / Level.BASE_HP, sim.coins),
-		"\nNew top-10 entry: #%d" % rank if rank > 0 else ""])
+	hud.show_end(won, tr("Waves cleared: %d / %d\nKeep %d%%  +  gold %d\nScore %d") % [cleared, Level.WAVES.size(), keep,
+		sim.coins, Save.score_of(sim.base_hp / Level.BASE_HP, sim.coins)]
+		+ (tr("\nNew top-10 entry: #%d") % rank if rank > 0 else ""))
 	sfx.play("victory" if won else "defeat")
 
 
@@ -707,8 +721,8 @@ func _sync_menu() -> void:
 			_count_seen = left
 			sfx.play("ui_click", -4.0)
 		hud.show_countdown(left)
-		hud.show_menu("start%d" % left, "Wave %d of %d starts in %d" % [sim.wave + 1, Level.WAVES.size(), left],
-			_preview_text(sim.wave) + "\nWalk off the pad to wait.", [])
+		hud.show_menu("start%d" % left, tr("Wave %d of %d starts in %d") % [sim.wave + 1, Level.WAVES.size(), left],
+			_preview_text(sim.wave) + "\n" + tr("Walk off the pad to wait."), [])
 		return
 	_count_seen = -1
 	hud.show_countdown(0)
@@ -725,33 +739,33 @@ func _sync_menu() -> void:
 		_preview_spot = spot.id
 	var opts := []
 	for o in sim.options(spot):
-		var verb := "Upgrade to Lv %d" % (o.level + 1) if o.upgrade else String(o.name)
+		var verb := tr("Upgrade to Lv %d") % (o.level + 1) if o.upgrade else tr(String(o.name))
 		var ok: bool = o.ok
 		if spot.kind == "tower" and b.is_empty():
 			# Every tower can be previewed, affordable or not.
 			ok = o.ok or o.kind != _preview
 			if o.kind == _preview:
-				verb = "> Build %s (tap again)" % o.name if o.ok else "%s (need more gold)" % o.name
-		opts.push_back({id = o.kind, text = " %s   -   %d gold" % [verb, o.cost], ok = ok,
+				verb = tr("> Build %s (tap again)") % tr(String(o.name)) if o.ok else tr("%s (need more gold)") % tr(String(o.name))
+		opts.push_back({id = o.kind, text = tr(" %s   -   %d gold") % [verb, o.cost], ok = ok,
 			icon = UiText.ICONS + String(o.kind) + ".png"})
 	var title := ""
 	var desc := ""
 	if b.is_empty():
-		title = {tower = "Tower spot", eco = "Economy plot", gate = "Gate spot"}[spot.kind]
-		desc = {tower = "Tap a tower: see its range and role. Tap again: build.",
-			eco = "Farm: fixed gold per wave.\nBank: interest on gold you hold.",
+		title = {tower = tr("Tower spot"), eco = tr("Economy plot"), gate = tr("Gate spot")}[spot.kind]
+		desc = {tower = tr("Tap a tower: see its range and role. Tap again: build."),
+			eco = tr("Farm: fixed gold per wave.\nBank: interest on gold you hold."),
 			gate = Level.info(Level.BUILDINGS.gate)}[spot.kind]
 		if _preview != "":
-			title = String(Level.BUILDINGS[_preview].name)
+			title = tr(String(Level.BUILDINGS[_preview].name))
 			desc = "%s\n%s" % [Level.info(Level.BUILDINGS[_preview]), _stats_text(_preview, 0)]
 	else:
-		title = "%s  Lv %d" % [Level.BUILDINGS[b.kind].name, b.level + 1]
+		title = "%s  Lv %d" % [tr(Level.BUILDINGS[b.kind].name), b.level + 1]
 		var bd: Dictionary = Level.BUILDINGS[b.kind]
-		desc = "%s\nStrong vs: %s\nWeak vs: %s" % [_stats_text(b.kind, b.level), bd.strong, bd.weak]
+		desc = "%s\n%s" % [_stats_text(b.kind, b.level), Level.info(bd, false)]
 		if opts.is_empty():
-			desc += "\nMax level."
+			desc += "\n" + tr("Max level.")
 		elif Level.stats(b.kind, b.level).has("range"):
-			desc += "\nGold ring: Lv %d range" % (b.level + 2)
+			desc += "\n" + tr("Gold ring: Lv %d range") % (b.level + 2)
 	hud.show_menu(spot.id, title, desc, opts)
 	# Rings: the reach of what stands here (or is being previewed), the next
 	# level's reach in gold, a mortar's dead zone in red.
@@ -783,7 +797,7 @@ func _xp_popups(delta: float) -> void:
 	if _fast_forwarding or n <= 0:
 		return
 	var l := Label3D.new()
-	l.text = "+%d XP" % n
+	l.text = tr("+%d XP") % n
 	l.font_size = 52 + mini(n, 12) * 3
 	l.outline_size = 12
 	l.pixel_size = 0.006
@@ -815,21 +829,21 @@ func _stats_text(kind: String, level: int) -> String:
 	var st := Level.stats(kind, level)
 	match kind:
 		"archer":
-			return "Damage %s  |  every %.2fs  |  range %s m" % [st.damage, st.interval, st.range]
+			return tr("Damage %s  |  every %.2fs  |  range %s m") % [st.damage, st.interval, st.range]
 		"ballista":
-			return "Damage %s  |  pierces %d  |  every %.1fs  |  range %s m" % [st.damage, st.pierce, st.interval, st.range]
+			return tr("Damage %s  |  pierces %d  |  every %.1fs  |  range %s m") % [st.damage, st.pierce, st.interval, st.range]
 		"mortar":
-			return "Damage %s, %.1f m splash  |  every %.1fs  |  range %s-%s m" % [st.damage, st.splash, st.interval, st.min_range, st.range]
+			return tr("Damage %s, %.1f m splash  |  every %.1fs  |  range %s-%s m") % [st.damage, st.splash, st.interval, st.min_range, st.range]
 		"frost":
-			return "Slow %d%% for %.1fs  |  every %.1fs  |  range %s m" % [roundi(st.slow * 100), st.slow_time, st.interval, st.range]
+			return tr("Slow %d%% for %.1fs  |  every %.1fs  |  range %s m") % [roundi(st.slow * 100), st.slow_time, st.interval, st.range]
 		"banner":
-			return "+%d%% attack speed  |  range %s m" % [roundi(st.buff * 100), st.range]
+			return tr("+%d%% attack speed  |  range %s m") % [roundi(st.buff * 100), st.range]
 		"farm":
-			return "+%d gold per wave" % st.income
+			return tr("+%d gold per wave") % st.income
 		"bank":
-			return "%d%% interest per wave  |  cap +%d" % [roundi(float(st.rate) * 100), st.cap]
+			return tr("%d%% interest per wave  |  cap +%d") % [roundi(float(st.rate) * 100), st.cap]
 		"gate":
-			return "%d HP  |  rebuilt after each wave" % roundi(st.hp)
+			return tr("%d HP  |  rebuilt after each wave") % roundi(st.hp)
 	return ""
 
 
@@ -839,9 +853,9 @@ func _preview_text(w: int) -> String:
 	for ln in prev.size():
 		var parts := []
 		for k in prev[ln]:
-			parts.push_back("%d %s" % [prev[ln][k], Level.ENEMIES[k].plural if prev[ln][k] != 1 else Level.ENEMIES[k].name])
+			parts.push_back(Level.count_text(k, prev[ln][k]))
 		if not parts.is_empty():
-			lines.push_back("%s: %s" % [Level.LANE_NAMES[ln], ", ".join(parts)])
+			lines.push_back(tr("%s: %s") % [tr(Level.LANE_NAMES[ln]), tr(", ").join(parts)])
 	return "\n".join(lines)
 
 
@@ -897,7 +911,7 @@ func _apply_events() -> void:
 			"boss_phase":
 				_shake = 0.5
 				sfx.play("brute_die", 0.0, 0.6)
-				hud.message("Berserk!" if e.berserk else "Grunts summoned!", 2.0)
+				hud.message(tr("Berserk!") if e.berserk else tr("Grunts summoned!"), 2.0)
 				if not _fast_forwarding:
 					_flash(e.pos)
 			"vacuum":
@@ -910,8 +924,8 @@ func _apply_events() -> void:
 					for sp in Level.SPOTS:
 						if sp.id in opened and sp.kind == "gate":
 							gates += 1
-					hud.message("Lv %d: %s" % [e.level, "new gates and spots!" if gates > 0 else
-						"%d new spot%s!" % [opened.size(), "" if opened.size() == 1 else "s"]], 2.5)
+					hud.message(tr("Lv %d: %s") % [e.level, tr("new gates and spots!") if gates > 0 else
+						(tr("1 new spot!") if opened.size() == 1 else tr("%d new spots!") % opened.size())], 2.5)
 				if not _fast_forwarding:
 					fx.level_up(_hero.position)
 			"perk":
@@ -948,16 +962,16 @@ func _apply_events() -> void:
 			"gate_broken":
 				_shake = 0.4
 				sfx.play("gate_break")
-				hud.message("The %s gate fell!" % Level.LANE_NAMES[e.lane].to_lower(), 2.0)
+				hud.message(tr("The %s gate fell!") % tr(Level.LANE_NAMES[e.lane]).to_lower(), 2.0)
 			"wave_start":
 				if _persist:
 					Save.save_run(sim.checkpoint)
 				sfx.play("wave_start", -4.0)
-				hud.message("Wave %d!" % (e.wave + 1), 2.0)
+				hud.message(tr("Wave %d!") % (e.wave + 1), 2.0)
 				var intro := []
 				for k in e.get("new", []):
 					var en: Dictionary = Level.ENEMIES[k]
-					intro.push_back("NEW: %s\n%s" % [String(en.name).capitalize(), Level.info(en)])
+					intro.push_back(tr("NEW: %s") % Level.ename(k) + "\n" + Level.info(en))
 				if not intro.is_empty() and e.wave > 0:
 					hud.show_intro("\n\n".join(intro), 7.0)
 			"wave_cleared":
@@ -965,14 +979,14 @@ func _apply_events() -> void:
 					Save.save_run(sim.to_save())
 				if sim.state == "play":
 					sfx.play("wave_clear")
-					var extra := "\n+%d gold from farms" % e.income if e.income > 0 else ""
+					var extra := "\n" + tr("+%d gold from farms") % e.income if e.income > 0 else ""
 					if int(e.get("interest", 0)) > 0:
-						extra += "\n+%d gold interest" % e.interest
+						extra += "\n" + tr("+%d gold interest") % e.interest
 					if "laststand" in sim.relics:
-						extra += "\nLast Stand: the keep recovers"
+						extra += "\n" + tr("Last Stand: the keep recovers")
 						if not _fast_forwarding:
 							_flash(Level.KEEP_POS)
-					hud.message("Wave %d cleared!%s" % [e.wave + 1, extra], 3.0)
+					hud.message(tr("Wave %d cleared!") % (e.wave + 1) + extra, 3.0)
 			"base_hit":
 				sfx.play("base_hit", -3.0)
 				_shake = maxf(_shake, 0.15)
@@ -1210,7 +1224,7 @@ func _lane_preview(node: Node3D, counts: Dictionary) -> void:
 		icon.position = at + Vector3(-0.45, 0, 0)
 		node.add_child(icon)
 		var l := Label3D.new()
-		l.text = "%d %s" % [counts[k], Level.ENEMIES[k].plural if counts[k] != 1 else Level.ENEMIES[k].name]
+		l.text = Level.count_text(k, counts[k])
 		l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		l.font_size = 64
 		l.outline_size = 16
@@ -1230,8 +1244,8 @@ func _sync_phase() -> void:
 	var building := sim.phase == "build" and sim.state == "play"
 	if sim.state == "play":
 		var left := sim.horde.count()
-		hud.set_phase("WAVE %d/%d  -  %s" % [mini(sim.wave + 1, Level.WAVES.size()), Level.WAVES.size(),
-			"BUILD" if building else "ATTACK  (%d)" % left])
+		hud.set_phase(tr("WAVE %d/%d  -  %s") % [mini(sim.wave + 1, Level.WAVES.size()), Level.WAVES.size(),
+			tr("BUILD PHASE") if building else tr("COMBAT PHASE  (%d)") % left])
 	var key := "%s%d" % [sim.phase, sim.wave]
 	if key == _phase_seen:
 		return
@@ -1578,7 +1592,7 @@ func _make_pad(spot: Dictionary) -> Dictionary:
 	base.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	node.add_child(base)
 	var label := Label3D.new()
-	var kind_text: String = {tower = "TOWER", eco = "GOLD", gate = "GATE"}[spot.kind]
+	var kind_text: String = {tower = tr("TOWER"), eco = tr("GOLD"), gate = tr("GATE")}[spot.kind]
 	label.text = kind_text
 	label.font_size = 48
 	label.outline_size = 12
@@ -1676,7 +1690,7 @@ func _make_start_pad() -> Node3D:
 	flag.position = Vector3(0.55, 0, -0.55)
 	node.add_child(flag)
 	var label := Label3D.new()
-	label.text = "START"
+	label.text = tr("START")
 	label.font_size = 44
 	label.outline_size = 12
 	label.pixel_size = 0.009

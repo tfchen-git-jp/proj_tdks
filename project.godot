@@ -4,7 +4,10 @@ config_version=5
 [application]
 
 config/name="RogueShot TD"
-config/version="0.1.23"
+config/name_localized={
+"zh_TW": "俠盜塔防"
+}
+config/version="0.1.25"
 config/description="RogueShot Tower Defense: a walk-and-build tower defense."
 run/main_scene="res://scenes/main.tscn"
 config/quit_on_go_back=false
@@ -35,3 +38,7 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
 anti_aliasing/quality/msaa_3d=1
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://locale/zh_TW.po")

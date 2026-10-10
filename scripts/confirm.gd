@@ -36,10 +36,10 @@ func _ready() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 30)
 	box.add_child(row)
-	_no = _button("No", Color(0.3, 0.32, 0.38))
+	_no = _button(tr("No"), Color(0.3, 0.32, 0.38))
 	_no.pressed.connect(answer.bind(false))
 	row.add_child(_no)
-	_yes = _button("Yes", Color(0.6, 0.22, 0.2))
+	_yes = _button(tr("Yes"), Color(0.6, 0.22, 0.2))
 	_yes.pressed.connect(answer.bind(true))
 	row.add_child(_yes)
 

@@ -22,3 +22,6 @@ assets_in/
 
 __pycache__/
 *.blend1
+
+# Font tool cache (12 MB source font, tools/make_font.py)
+tools/.cache/

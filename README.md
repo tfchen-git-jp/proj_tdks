@@ -31,6 +31,8 @@ packs. Not published anywhere.
   wave, pick 1 of 3 cards per level (drawing one you own raises its tier;
   reroll for gold), plus a relic after waves 3, 6 and 9: lightning, a spirit
   wisp, twin crossbow...
+- **Languages:** English and Traditional Chinese (繁體中文); switch from
+  the title menu.
 - **Saves and scores:** the game saves at every wave; Continue from the menu.
   The top 10 rank by waves cleared, then keep HP and gold left.
 
@@ -80,6 +82,8 @@ and the Bone Warlord boss in wave 10. They get tougher every wave.
 - Sound effects: Kenney and OpenGameArt contributors, CC0; the wave horn is
   "Scary Echoey Horn Esque Sound" by Kat (CC-BY 4.0). Full list in
   [assets/sfx/CREDITS.txt](assets/sfx/CREDITS.txt).
+- Font: [Noto Sans TC](https://fonts.google.com/noto/specimen/Noto+Sans+TC)
+  (SIL Open Font License, `assets/fonts/OFL.txt`).
 - Music: "RPG City" by phantasticbeats via [Pixabay](https://pixabay.com)
   (Pixabay Content License; included for the game only).
 - Engine: [Godot Engine](https://godotengine.org) (MIT).

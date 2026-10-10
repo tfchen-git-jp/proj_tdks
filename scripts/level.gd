@@ -265,12 +265,28 @@ const WAVES := [
 ]
 
 
-## The three info lines of a building or enemy. Ours (buildings) lead with
-## what they beat; theirs (enemies) with what beats them (user).
-static func info(e: Dictionary) -> String:
-	if e.has("spot"):
-		return "%s\nStrong vs: %s\nWeak vs: %s" % [e.desc, e.strong, e.weak]
-	return "%s\nWeak vs: %s\nStrong vs: %s" % [e.desc, e.weak, e.strong]
+## The three info lines of a building or enemy, translated (Loc). Ours
+## (buildings) lead with what they beat; theirs (enemies) with what beats
+## them (user). with_desc false: only the Strong / Weak lines.
+static func info(e: Dictionary, with_desc := true) -> String:
+	var lines := [Loc.t(e.desc)] if with_desc else []
+	var order := [["Strong vs:", e.strong], ["Weak vs:", e.weak]] if e.has("spot") else [["Weak vs:", e.weak], ["Strong vs:", e.strong]]
+	for o in order:
+		var label := Loc.tc(o[0], "building" if e.has("spot") else "enemy")
+		# A full-width colon (Chinese) takes no space after it.
+		lines.push_back(label + ("" if label.ends_with("：") else " ") + Loc.t(String(o[1])))
+	return "\n".join(lines)
+
+
+## Enemy type k's name for a heading ("Bat", 蝙蝠).
+static func ename(k: int) -> String:
+	return Loc.t(String(ENEMIES[k].name)).capitalize()
+
+
+## "25 grunts" / "1 brute" (Chinese: one word, the count after it).
+static func count_text(k: int, n: int) -> String:
+	var e: Dictionary = ENEMIES[k]
+	return Loc.fmt(Loc.t("%d %s"), [n, Loc.t(String(e.plural if n != 1 else e.name))])
 
 
 ## Enemy types wave `w` brings for the first time (for their intro).

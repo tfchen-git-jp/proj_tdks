@@ -1,0 +1,810 @@
+# RogueShot TD -- Traditional Chinese (Taiwan). Written by tools/gen_zh_tw.py: edit that, not this.
+msgid ""
+msgstr ""
+"Language: zh_TW\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "RogueShot"
+msgstr "俠盜塔防"
+
+msgid "TOWER DEFENSE"
+msgstr "RogueShot Tower Defense"
+
+msgid "New game"
+msgstr "新遊戲"
+
+msgid "Continue"
+msgstr "繼續"
+
+msgid "Continue  (wave %d)"
+msgstr "繼續（第 %d 波）"
+
+msgid "Scores"
+msgstr "排行榜"
+
+msgid "Guide"
+msgstr "指南"
+
+msgid "Credits"
+msgstr "製作群"
+
+msgid "Exit"
+msgstr "離開"
+
+msgid "Back"
+msgstr "返回"
+
+msgid "Language: %s"
+msgstr "語言：%s"
+
+msgid "Top 10"
+msgstr "前十名"
+
+msgid "Most waves cleared, then score:\nkeep HP % x 10 + gold left"
+msgstr "通過波數多者優先，其次比分數：\n主堡生命 % x 10 + 剩餘黃金"
+
+msgid "No games finished yet."
+msgstr "還沒有完成的遊戲。"
+
+msgid "WIN"
+msgstr "勝利"
+
+msgid "wave %d"
+msgstr "第 %d 波"
+
+msgid "%d pts"
+msgstr "%d 分"
+
+msgid "BUILDINGS"
+msgstr "建築"
+
+msgid "ENEMIES"
+msgstr "敵人"
+
+msgid "Yes"
+msgstr "是"
+
+msgid "No"
+msgstr "否"
+
+msgid "Quit RogueShot TD?"
+msgstr "要離開俠盜塔防遊戲嗎？"
+
+msgid "Quit"
+msgstr "離開"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Leave"
+msgstr "離開"
+
+msgid "Keep playing"
+msgstr "繼續玩"
+
+msgid "Back to the main menu?\n\nContinue will resume from %s. Anything after that is lost."
+msgstr "要回到主選單嗎？\n\n「繼續」將從%s重新開始，之後的進度會遺失。"
+
+msgid "the start of wave %d"
+msgstr "第 %d 波開始時"
+
+msgid "this build phase (wave %d)"
+msgstr "目前的建造階段（第 %d 波）"
+
+msgid "Main menu"
+msgstr "主選單"
+
+msgid "Play again"
+msgstr "再玩一次"
+
+msgid "VICTORY!"
+msgstr "勝利！"
+
+msgid "DEFEAT"
+msgstr "失敗"
+
+msgid "Waves cleared: %d / %d\nKeep %d%%  +  gold %d\nScore %d"
+msgstr "通過波數：%d／%d\n主堡 %d%%  +  黃金 %d\n分數 %d"
+
+msgid "\nNew top-10 entry: #%d"
+msgstr "\n新紀錄：第 %d 名"
+
+msgid "RogueShot Tower Defense\nMade with Godot Engine 4.7 (godotengine.org), by directing Claude.\n\n3D MODELS (CC0)\nKay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian), Skeletons (crossbowmen, Bone Warlord), Medieval Hexagon (archer tower, windmill, market, keep, flag, gate), Dungeon Remastered (coins), Forest Nature (rocks)\nKenney (kenney.nl): Tower Defense Kit, Mini Dungeon, Mini Arena, Nature Kit\nQuaternius (quaternius.com): Animated Monsters (bat)\n\nSOUND (CC0 unless noted)\nKenney: RPG Audio, Impact Sounds, Interface Sounds, Casino Audio, Sci-fi Sounds, Music Jingles\nOpenGameArt: artisticdude (bow, freeze spell), Vehicle / Jan Schupke (Tinysized SFX), bart (ice spells), rubberduck (creature SFX), Joth (chunky explosion), qubodup (dull explosion), fvcalderan (fanfare), 0new4y (game-over trumpet)\nWave horn: \"Scary Echoey Horn Esque Sound\" by Kat, CC-BY 4.0 (opengameart.org)\n\nMUSIC\n\"RPG City\" by phantasticbeats (Pixabay)\n\nThanks for playing!"
+msgstr "俠盜塔防遊戲\n以 Godot Engine 4.7（godotengine.org）製作，由 Claude 協力開發。\n\n3D 模型（CC0）\nKay Lousberg（kaylousberg.com）：KayKit Adventurers（英雄、巨人）、Skeletons（骷髏弩手、骷髏戰閥）、Medieval Hexagon（弓箭塔、風車、市集、主堡、旗幟、城門）、Dungeon Remastered（金幣）、Forest Nature（岩石）\nKenney（kenney.nl）：Tower Defense Kit、Mini Dungeon、Mini Arena、Nature Kit\nQuaternius（quaternius.com）：Animated Monsters（魔蝠）\n\n音效（除另註明外皆為 CC0）\nKenney：RPG Audio、Impact Sounds、Interface Sounds、Casino Audio、Sci-fi Sounds、Music Jingles\nOpenGameArt：artisticdude（弓、冰凍法術）、Vehicle / Jan Schupke（Tinysized SFX）、bart（冰系法術）、rubberduck（生物音效）、Joth（爆炸）、qubodup（悶響爆炸）、fvcalderan（號角曲）、0new4y（失敗號角）\n波次號角：Kat〈Scary Echoey Horn Esque Sound〉，CC-BY 4.0（opengameart.org）\n\n音樂\nphantasticbeats〈RPG City〉（Pixabay）\n\n感謝遊玩！"
+
+msgid "KEEP"
+msgstr "主堡"
+
+msgid "WAVE %d/%d  -  %s"
+msgstr "第 %d/%d 波  -  %s"
+
+msgid "BUILD PHASE"
+msgstr "建造階段"
+
+msgid "COMBAT PHASE  (%d)"
+msgstr "戰鬥階段（%d）"
+
+msgid "Build your defences,\nthen stand on START to begin"
+msgstr "建立防線，\n然後站上「開戰」開始"
+
+msgid "Wave %d!"
+msgstr "第 %d 波！"
+
+msgid "Wave %d cleared!"
+msgstr "第 %d 波結束！"
+
+msgid "+%d gold from farms"
+msgstr "農場 +%d 黃金"
+
+msgid "+%d gold interest"
+msgstr "利息 +%d 黃金"
+
+msgid "Last Stand: the keep recovers"
+msgstr "背水一戰：主堡恢復生命"
+
+msgid "The %s gate fell!"
+msgstr "%s城門被攻破了！"
+
+msgid "Berserk!"
+msgstr "狂暴！"
+
+msgid "BERSERK"
+msgstr "狂暴"
+
+msgid "Grunts summoned!"
+msgstr "召喚了雜兵！"
+
+msgid "Lv %d: %s"
+msgstr "Lv %d：%s"
+
+msgid "new gates and spots!"
+msgstr "新的城門與建造點！"
+
+msgid "1 new spot!"
+msgstr "1 個新的建造點！"
+
+msgid "%d new spots!"
+msgstr "%d 個新的建造點！"
+
+msgid "NEW: %s"
+msgstr "新敵人：%s"
+
+msgid "Wave %d of %d starts in %d"
+msgstr "第 %d 波（共 %d 波）將在 %d 秒後開始"
+
+msgid "Walk off the pad to wait."
+msgstr "離開平台即可暫緩。"
+
+msgid "%s: %s"
+msgstr "%s：%s"
+
+msgid ", "
+msgstr "、"
+
+msgid "%d %s"
+msgstr "{1} ×{0}"
+
+msgid "West"
+msgstr "左路"
+
+msgid "Centre"
+msgstr "中路"
+
+msgid "East"
+msgstr "右路"
+
+msgid "LEVEL UP!"
+msgstr "等級提升！"
+
+msgid "RELIC"
+msgstr "聖物"
+
+msgid "NEW"
+msgstr "新"
+
+msgid "Choose one"
+msgstr "三選一"
+
+msgid "Choose one  -  %d more to come"
+msgstr "三選一  -  還有 %d 次"
+
+msgid "+%d XP"
+msgstr "+%d 經驗"
+
+msgid "Reroll  (%d gold)"
+msgstr "重骰（%d 黃金）"
+
+msgid "TOWER"
+msgstr "塔"
+
+msgid "GATE"
+msgstr "門"
+
+msgid "GOLD"
+msgstr "資源"
+
+msgid "START"
+msgstr "開戰"
+
+msgid "Tower spot"
+msgstr "塔點"
+
+msgid "Gate spot"
+msgstr "城門點"
+
+msgid "Economy plot"
+msgstr "資源點"
+
+msgid "Tap a tower: see its range and role. Tap again: build."
+msgstr "點一下：查看射程與定位。再點一下：建造。"
+
+msgid "Farm: fixed gold per wave.\nBank: interest on gold you hold."
+msgstr "農場：每波固定黃金。\n銀行：依持有黃金計算利息。"
+
+msgid "Upgrade to Lv %d"
+msgstr "升級至 Lv %d"
+
+msgid "> Build %s (tap again)"
+msgstr "> 建造%s（再點一下）"
+
+msgid "%s (need more gold)"
+msgstr "%s（黃金不足）"
+
+msgid " %s   -   %d gold"
+msgstr " %s   -   %d 黃金"
+
+msgid "Max level."
+msgstr "已達最高等級。"
+
+msgid "Gold ring: Lv %d range"
+msgstr "金色圓圈：Lv %d 射程"
+
+msgid "Damage %s  |  every %.2fs  |  range %s m"
+msgstr "傷害 %s  |  每 %.2f 秒  |  射程 %s 公尺"
+
+msgid "Damage %s  |  pierces %d  |  every %.1fs  |  range %s m"
+msgstr "傷害 %s  |  貫穿 %d  |  每 %.1f 秒  |  射程 %s 公尺"
+
+msgid "Damage %s, %.1f m splash  |  every %.1fs  |  range %s-%s m"
+msgstr "傷害 %s，%.1f 公尺濺射  |  每 %.1f 秒  |  射程 %s-%s 公尺"
+
+msgid "Slow %d%% for %.1fs  |  every %.1fs  |  range %s m"
+msgstr "緩速 %d%% 持續 %.1f 秒  |  每 %.1f 秒  |  射程 %s 公尺"
+
+msgid "+%d%% attack speed  |  range %s m"
+msgstr "攻擊速度 +%d%%  |  射程 %s 公尺"
+
+msgid "+%d gold per wave"
+msgstr "每波 +%d 黃金"
+
+msgid "%d%% interest per wave  |  cap +%d"
+msgstr "每波 %d%% 利息  |  上限 +%d"
+
+msgid "%d HP  |  rebuilt after each wave"
+msgstr "%d 生命  |  每波結束後重建"
+
+msgctxt "building"
+msgid "Strong vs:"
+msgstr "克制："
+
+msgctxt "building"
+msgid "Weak vs:"
+msgstr "被克制："
+
+msgctxt "enemy"
+msgid "Weak vs:"
+msgstr "弱點："
+
+msgctxt "enemy"
+msgid "Strong vs:"
+msgstr "強項："
+
+msgid "Archer Tower"
+msgstr "弓箭塔"
+
+msgid "Ballista"
+msgstr "弩砲塔"
+
+msgid "Mortar"
+msgstr "臼砲塔"
+
+msgid "Frost Crystal"
+msgstr "冰晶塔"
+
+msgid "War Banner"
+msgstr "戰旗塔"
+
+msgid "Farm"
+msgstr "農場"
+
+msgid "Bank"
+msgstr "銀行"
+
+msgid "Gate"
+msgstr "城門"
+
+msgid "Fast single shots at one target."
+msgstr "快速單發，射擊單一目標。"
+
+msgid "Heavy bolt that pierces every enemy in a line."
+msgstr "重型弩箭，貫穿一整排敵人。"
+
+msgid "Lobbed boulders that splash a whole group."
+msgstr "拋射巨石，濺射整群敵人。"
+
+msgid "Pulses slow walking and attacks of all nearby."
+msgstr "脈衝緩速周圍所有敵人的移動與攻擊。"
+
+msgid "No attack: towers and hero nearby attack faster."
+msgstr "不會攻擊：使附近的防禦塔與英雄攻擊更快。"
+
+msgid "Fixed gold after every wave."
+msgstr "每波結束後獲得固定黃金。"
+
+msgid "Interest on the gold you hold after each wave."
+msgstr "每波結束後，依持有的黃金獲得利息。"
+
+msgid "Blocks its lane until broken; rebuilt each wave."
+msgstr "擋住所在道路直到被攻破；每波重建。"
+
+msgid "armored, giants, the boss"
+msgstr "裝甲兵、巨人、頭目"
+
+msgid "grunts, runners, bats"
+msgstr "雜兵、疾行兵、魔蝠"
+
+msgid "scattered enemies (long reload)"
+msgstr "分散的敵人（裝填較久）"
+
+msgid "armored, giants, the boss, crossbowmen"
+msgstr "裝甲兵、巨人、頭目、骷髏弩手"
+
+msgid "bats, anything within 2.5 m"
+msgstr "魔蝠、2.5 公尺內的敵人"
+
+msgid "crowds, gate queues"
+msgstr "密集敵群、城門前的隊伍"
+
+msgid "bats; it deals little damage"
+msgstr "魔蝠；本身傷害很低"
+
+msgid "gate queues, giants, runners"
+msgstr "城門前的隊伍、巨人、疾行兵"
+
+msgid "standing alone"
+msgstr "孤立放置"
+
+msgid "tower clusters"
+msgstr "防禦塔群"
+
+msgid "nothing to defend with now"
+msgstr "當下無法協助防守"
+
+msgid "early builds; upgrades pay best"
+msgstr "提早建造；升級最划算"
+
+msgid "spending: no gold, no interest"
+msgstr "花光黃金：沒有黃金就沒有利息"
+
+msgid "saving up for big upgrades"
+msgstr "存錢準備大升級"
+
+msgid "bats (fly over), crossbowmen (shoot from range)"
+msgstr "魔蝠（飛越）、骷髏弩手（遠距射擊）"
+
+msgid "holding crowds inside tower range"
+msgstr "把敵群擋在塔的射程內"
+
+msgid "grunt"
+msgstr "雜兵"
+
+msgid "grunts"
+msgstr "雜兵"
+
+msgid "armored"
+msgstr "裝甲兵"
+
+msgid "brute"
+msgstr "巨人"
+
+msgid "brutes"
+msgstr "巨人"
+
+msgid "runner"
+msgstr "疾行兵"
+
+msgid "runners"
+msgstr "疾行兵"
+
+msgid "bat"
+msgstr "魔蝠"
+
+msgid "bats"
+msgstr "魔蝠"
+
+msgid "crossbowman"
+msgstr "骷髏弩手"
+
+msgid "crossbowmen"
+msgstr "骷髏弩手"
+
+msgid "Bone Warlord"
+msgstr "骷髏戰閥"
+
+msgid "Bone Warlords"
+msgstr "骷髏戰閥"
+
+msgid "Basic foot soldier, comes in big crowds."
+msgstr "基本步兵，成群出現。"
+
+msgid "mortars, archers"
+msgstr "臼砲塔、弓箭塔"
+
+msgid "nothing, but there are many"
+msgstr "沒有，但數量很多"
+
+msgid "Armor shrugs off small hits."
+msgstr "護甲能抵擋小傷害。"
+
+msgid "ballistas, mortars, fire"
+msgstr "弩砲塔、臼砲塔、火焰"
+
+msgid "archers, Multishot"
+msgstr "弓箭塔、多重射擊"
+
+msgid "Giant: shoves past others and smashes gates."
+msgstr "巨人：推開其他敵人，猛砸城門。"
+
+msgid "ballistas, frost, Giant Slayer"
+msgstr "弩砲塔、冰晶塔、巨人殺手"
+
+msgid "gates"
+msgstr "城門"
+
+msgid "Fast and fragile."
+msgstr "速度快但脆弱。"
+
+msgid "archers, frost"
+msgstr "弓箭塔、冰晶塔"
+
+msgid "mortars (outruns the shells)"
+msgstr "臼砲塔（跑得比砲彈快）"
+
+msgid "Flies over gates, straight to the keep."
+msgstr "飛越城門，直撲主堡。"
+
+msgid "archers, ballistas, the hero"
+msgstr "弓箭塔、弩砲塔、英雄"
+
+msgid "gates, mortars, frost (can't reach it)"
+msgstr "城門、臼砲塔、冰晶塔（無法觸及）"
+
+msgid "Shoots gates from 6 m away, outside the queue."
+msgstr "在 6 公尺外射擊城門，不必排隊。"
+
+msgid "ballistas, the hero"
+msgstr "弩砲塔、英雄"
+
+msgid "Armored boss: calls grunts, goes berserk when hurt."
+msgstr "重甲頭目：召喚雜兵，受傷後會狂暴。"
+
+msgid "ballistas, Giant Slayer, fire"
+msgstr "弩砲塔、巨人殺手、火焰"
+
+msgid "light hits, gates"
+msgstr "小傷害、城門"
+
+msgid "archers"
+msgstr "弓箭塔"
+
+msgid "ballistas"
+msgstr "弩砲塔"
+
+msgid "mortars"
+msgstr "臼砲塔"
+
+msgid "frost"
+msgstr "冰晶塔"
+
+msgid "the boss"
+msgstr "頭目"
+
+msgid "giants"
+msgstr "巨人"
+
+msgid "the hero"
+msgstr "英雄"
+
+msgid "fire"
+msgstr "火焰"
+
+msgid "Burn"
+msgstr "燃燒"
+
+msgid "burn"
+msgstr "燃燒"
+
+msgid "ablaze"
+msgstr "點燃"
+
+msgid "Chill"
+msgstr "冰凍"
+
+msgid "chill"
+msgstr "冰凍"
+
+msgid "Slow"
+msgstr "緩速"
+
+msgid "slow"
+msgstr "緩速"
+
+msgid "Lightning"
+msgstr "閃電"
+
+msgid "lightning"
+msgstr "閃電"
+
+msgid "critical"
+msgstr "爆擊"
+
+msgid "interest"
+msgstr "利息"
+
+msgid "gold"
+msgstr "黃金"
+
+msgid "Gold"
+msgstr "黃金"
+
+msgid "ingot"
+msgstr "金條"
+
+msgid "Armor"
+msgstr "護甲"
+
+msgid "armor"
+msgstr "護甲"
+
+msgid "armour"
+msgstr "護甲"
+
+msgid "Sharpened Bolts"
+msgstr "磨尖箭矢"
+
+msgid "Quick Draw"
+msgstr "快速上弦"
+
+msgid "Long Shot"
+msgstr "長程射擊"
+
+msgid "Multishot"
+msgstr "多重射擊"
+
+msgid "Piercing Bolts"
+msgstr "穿透弩箭"
+
+msgid "Ricochet"
+msgstr "彈跳彈"
+
+msgid "Explosive Tips"
+msgstr "爆裂箭簇"
+
+msgid "Fire Bolts"
+msgstr "烈焰箭"
+
+msgid "Frost Bolts"
+msgstr "寒冰箭"
+
+msgid "Keen Eye"
+msgstr "銳眼"
+
+msgid "Giant Slayer"
+msgstr "巨人殺手"
+
+msgid "Swift Boots"
+msgstr "迅捷之靴"
+
+msgid "Scholar"
+msgstr "學者"
+
+msgid "Rally"
+msgstr "鼓舞"
+
+msgid "Spotter"
+msgstr "觀測手"
+
+msgid "Engineer"
+msgstr "工程師"
+
+msgid "Bounty"
+msgstr "賞金"
+
+msgid "+20% bolt damage"
+msgstr "弩箭傷害 +20%"
+
+msgid "+40% bolt damage"
+msgstr "弩箭傷害 +40%"
+
+msgid "+60% bolt damage"
+msgstr "弩箭傷害 +60%"
+
+msgid "+10% attack speed"
+msgstr "攻擊速度 +10%"
+
+msgid "+20% attack speed"
+msgstr "攻擊速度 +20%"
+
+msgid "+35% attack speed"
+msgstr "攻擊速度 +35%"
+
+msgid "+1 m range"
+msgstr "射程 +1 公尺"
+
+msgid "+2 m range"
+msgstr "射程 +2 公尺"
+
+msgid "+3 m range"
+msgstr "射程 +3 公尺"
+
+msgid "+1 bolt (40% damage) at another enemy"
+msgstr "多 1 支弩箭（40% 傷害）射向另一個敵人"
+
+msgid "+2 bolts (40% damage) at other enemies"
+msgstr "多 2 支弩箭（40% 傷害）射向其他敵人"
+
+msgid "+3 bolts (40% damage) at other enemies"
+msgstr "多 3 支弩箭（40% 傷害）射向其他敵人"
+
+msgid "Bolts fly straight through 1 more enemy"
+msgstr "弩箭直線穿透多 1 個敵人"
+
+msgid "...through 2 more enemies"
+msgstr "……穿透多 2 個敵人"
+
+msgid "...through 3 more enemies"
+msgstr "……穿透多 3 個敵人"
+
+msgid "Bolts bounce to 1 nearby enemy (-40% each bounce)"
+msgstr "弩箭彈向附近 1 個敵人（每次彈射 -40%）"
+
+msgid "Bounce to 2 nearby enemies"
+msgstr "彈向附近 2 個敵人"
+
+msgid "Bounce to 3 nearby enemies"
+msgstr "彈向附近 3 個敵人"
+
+msgid "Hits explode: half damage within 0.9 m"
+msgstr "命中時爆炸：0.9 公尺內造成一半傷害"
+
+msgid "Blast radius 1.2 m"
+msgstr "爆炸半徑 1.2 公尺"
+
+msgid "Blast radius 1.5 m"
+msgstr "爆炸半徑 1.5 公尺"
+
+msgid "Set enemies ablaze: 40% of bolt damage per second for 3 s"
+msgstr "點燃敵人：每秒造成弩箭傷害 40%，持續 3 秒"
+
+msgid "Burn 60% per second"
+msgstr "每秒燃燒 60%"
+
+msgid "Burn 90% per second"
+msgstr "每秒燃燒 90%"
+
+msgid "Hits chill: -20% walking and attack speed for 2 s"
+msgstr "命中時冰凍：移動與攻擊速度 -20%，持續 2 秒"
+
+msgid "Chill -30%"
+msgstr "冰凍 -30%"
+
+msgid "Chill -40%"
+msgstr "冰凍 -40%"
+
+msgid "10% chance of a 2.5x critical hit"
+msgstr "10% 機率造成 2.5 倍爆擊"
+
+msgid "20% critical chance"
+msgstr "爆擊機率 20%"
+
+msgid "30% critical chance"
+msgstr "爆擊機率 30%"
+
+msgid "+40% damage to giants"
+msgstr "對巨人傷害 +40%"
+
+msgid "+80% damage to giants"
+msgstr "對巨人傷害 +80%"
+
+msgid "+120% damage to giants"
+msgstr "對巨人傷害 +120%"
+
+msgid "+10% move speed"
+msgstr "移動速度 +10%"
+
+msgid "+20% move speed"
+msgstr "移動速度 +20%"
+
+msgid "+30% move speed"
+msgstr "移動速度 +30%"
+
+msgid "+20% XP"
+msgstr "經驗值 +20%"
+
+msgid "+40% XP"
+msgstr "經驗值 +40%"
+
+msgid "+60% XP"
+msgstr "經驗值 +60%"
+
+msgid "Towers within 5 m of you attack 10% faster"
+msgstr "你周圍 5 公尺內的防禦塔攻擊速度 +10%"
+
+msgid "...20% faster"
+msgstr "……+20%"
+
+msgid "...30% faster"
+msgstr "……+30%"
+
+msgid "Towers within 5 m of you: +1 m range"
+msgstr "你周圍 5 公尺內的防禦塔：射程 +1 公尺"
+
+msgid "...+2 m range"
+msgstr "……射程 +2 公尺"
+
+msgid "...+3 m range"
+msgstr "……射程 +3 公尺"
+
+msgid "Gates within 6 m of you take 20% less damage"
+msgstr "你周圍 6 公尺內的城門受到的傷害 -20%"
+
+msgid "...35% less"
+msgstr "……-35%"
+
+msgid "...50% less"
+msgstr "……-50%"
+
+msgid "Kills near you drop +1 gold (up to 10 a wave)"
+msgstr "在你附近擊殺額外掉落 1 黃金（每波最多 10）"
+
+msgid "...up to 20 a wave"
+msgstr "……每波最多 20"
+
+msgid "...up to 30 a wave"
+msgstr "……每波最多 30"
+
+msgid "Twin Crossbow"
+msgstr "雙聯弩"
+
+msgid "Volley"
+msgstr "箭雨"
+
+msgid "Thunderstrike"
+msgstr "天雷擊"
+
+msgid "Spirit Wisp"
+msgstr "追射妖精"
+
+msgid "Midas Touch"
+msgstr "點金術"
+
+msgid "Last Stand"
+msgstr "背水一戰"
+
+msgid "Every shot fires a second, half-damage volley right after the first."
+msgstr "每次射擊後，緊接著再射出一輪一半傷害的弩箭。"
+
+msgid "Every 6th shot also looses a bolt at each of the 4 nearest enemies."
+msgstr "每第 6 次射擊，額外向最近的 4 個敵人各射一箭。"
+
+msgid "Every 8 s lightning strikes the toughest enemy near you and chains through 4 more."
+msgstr "每 8 秒，閃電擊中你附近最強的敵人，並連鎖到另外 4 個。"
+
+msgid "A wisp circles you and shoots magic bolts at enemies."
+msgstr "追射妖精繞著你飛行，向敵人發射魔法彈。"
+
+msgid "Every 40th kill near you drops a gold ingot (20)."
+msgstr "在你附近每擊殺 40 個敵人，掉落一塊金條（20）。"
+
+msgid "The keep regains 10% of its HP after every wave."
+msgstr "每波結束後，主堡恢復 10% 生命。"

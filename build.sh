@@ -3,7 +3,7 @@
 # ~/proj_trts/GODOT-BLENDER-WSL-PLAYBOOK.md.
 #   ./build.sh import            headless import (reimports assets)
 #   ./build.sh check             import + parse-check every script
-#   ./build.sh test              check + headless unit tests (tests/run_tests.gd)
+#   ./build.sh test              check + headless unit tests (tests/run_tests.gd) + tools/loc_check.py
 #   ./build.sh sim [ARGS]        headless balance run: the bot plays level 1
 #   ./build.sh shot NAME [ARGS]  windowed WSL run (Compatibility, D3D12 GPU) -> renders/NAME.png
 #   ./build.sh export            Windows .exe -> /mnt/d/wsl_scratch/proj_tdks/
@@ -80,7 +80,10 @@ t_test() {
   info "unit tests"
   timeout 120 "$GODOT" --headless --path "$ROOT" --script res://tests/run_tests.gd > "$LOGS/test.log" 2>&1
   grep -E "^(PASS|FAIL|ok|RESULT)|SCRIPT ERROR" "$LOGS/test.log" | tail -40
-  grep -q "^ALL PASSED" "$LOGS/test.log" && grn "tests passed" || { red "tests FAILED"; return 1; }
+  grep -q "^ALL PASSED" "$LOGS/test.log" || { red "tests FAILED"; return 1; }
+  info "localization (tools/loc_check.py)"
+  python3 "$ROOT/tools/loc_check.py" > "$LOGS/loc.log" 2>&1 || { red "localization FAILED"; grep -vE "^zh|^\(" "$LOGS/loc.log" | head -20; return 1; }
+  grn "tests passed"
 }
 
 t_sim() {

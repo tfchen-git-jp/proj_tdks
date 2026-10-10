@@ -6,6 +6,7 @@ extends CanvasLayer
 signal new_game
 signal continue_game
 signal exit_game
+signal language_changed
 
 const TITLE_GOLD := Color(1.0, 0.82, 0.3)
 
@@ -43,7 +44,7 @@ func show_page(name: String) -> void:
 	if name == "main":
 		var run := Save.load_run()
 		_continue.disabled = run.is_empty()
-		_continue.text = "Continue  (wave %d)" % (int(run.wave) + 1) if not run.is_empty() else "Continue"
+		_continue.text = tr("Continue  (wave %d)") % (int(run.wave) + 1) if not run.is_empty() else tr("Continue")
 	if name == "scores":
 		_fill_scores()
 
@@ -52,29 +53,36 @@ func show_page(name: String) -> void:
 
 func _main_page() -> Control:
 	var box := _column(36)
-	var title := _label("RogueShot", 104)
+	var title := _label(tr("RogueShot"), 104)
 	title.add_theme_color_override("font_color", TITLE_GOLD)
 	box.add_child(title)
-	var sub := _label("TOWER DEFENSE", 38)
+	var sub := _label(tr("TOWER DEFENSE"), 38)
 	sub.modulate = Color(1, 1, 1, 0.85)
 	box.add_child(sub)
 	box.add_child(_gap(40))
-	box.add_child(_button("New game", Color(0.2, 0.6, 0.3), func() -> void: new_game.emit()))
-	_continue = _button("Continue", Color(0.2, 0.45, 0.65), func() -> void: continue_game.emit())
+	box.add_child(_button(tr("New game"), Color(0.2, 0.6, 0.3), func() -> void: new_game.emit()))
+	_continue = _button(tr("Continue"), Color(0.2, 0.45, 0.65), func() -> void: continue_game.emit())
 	box.add_child(_continue)
-	box.add_child(_button("Scores", Color(0.45, 0.38, 0.2), func() -> void: show_page("scores")))
-	box.add_child(_button("Guide", Color(0.25, 0.4, 0.4), func() -> void: show_page("guide")))
-	box.add_child(_button("Credits", Color(0.35, 0.35, 0.4), func() -> void: show_page("credits")))
-	box.add_child(_button("Exit", Color(0.5, 0.2, 0.2), func() -> void: exit_game.emit()))
+	box.add_child(_button(tr("Scores"), Color(0.45, 0.38, 0.2), func() -> void: show_page("scores")))
+	box.add_child(_button(tr("Guide"), Color(0.25, 0.4, 0.4), func() -> void: show_page("guide")))
+	box.add_child(_button(tr("Credits"), Color(0.35, 0.35, 0.4), func() -> void: show_page("credits")))
+	# Each tap: the next language, at once (the menu is rebuilt in it).
+	var lang := _button(tr("Language: %s") % Loc.NAMES[Loc.code()], Color(0.3, 0.3, 0.45),
+		func() -> void:
+			Loc.cycle()
+			language_changed.emit())
+	lang.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	box.add_child(lang)
+	box.add_child(_button(tr("Exit"), Color(0.5, 0.2, 0.2), func() -> void: exit_game.emit()))
 	return _centered(box)
 
 
 func _scores_page() -> Control:
 	var box := _column(24)
-	var title := _label("Top 10", 72)
+	var title := _label(tr("Top 10"), 72)
 	title.add_theme_color_override("font_color", TITLE_GOLD)
 	box.add_child(title)
-	var hint := _label("Most waves cleared, then score:\nkeep HP % x 10 + gold left", 24)
+	var hint := _label(tr("Most waves cleared, then score:\nkeep HP % x 10 + gold left"), 24)
 	hint.modulate = Color(1, 1, 1, 0.7)
 	box.add_child(hint)
 	_scores_box = GridContainer.new()
@@ -83,7 +91,7 @@ func _scores_page() -> Control:
 	_scores_box.add_theme_constant_override("v_separation", 10)
 	box.add_child(_scores_box)
 	box.add_child(_gap(20))
-	box.add_child(_button("Back", Color(0.35, 0.35, 0.4), func() -> void: show_page("main")))
+	box.add_child(_button(tr("Back"), Color(0.35, 0.35, 0.4), func() -> void: show_page("main")))
 	return _centered(box)
 
 
@@ -93,12 +101,12 @@ func _fill_scores() -> void:
 	var list := Save.scores()
 	_scores_box.columns = 1 if list.is_empty() else 5
 	if list.is_empty():
-		_scores_box.add_child(_label("No games finished yet.", 30))
+		_scores_box.add_child(_label(tr("No games finished yet."), 30))
 		return
 	for i in list.size():
 		var e: Dictionary = list[i]
-		var cells := ["%d." % (i + 1), "WIN" if e.won else "", "wave %d" % int(e.waves),
-			"%d pts" % int(e.get("score", e.get("gold", 0))), String(e.date)]
+		var cells := ["%d." % (i + 1), tr("WIN") if e.won else "", tr("wave %d") % int(e.waves),
+			tr("%d pts") % int(e.get("score", e.get("gold", 0))), String(e.date)]
 		for c in cells.size():
 			var cell := _label(cells[c], 28)
 			cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if c in [0, 3] else HORIZONTAL_ALIGNMENT_LEFT
@@ -110,7 +118,7 @@ func _fill_scores() -> void:
 ## Every building and enemy: name, then its three info lines.
 func _guide_page() -> Control:
 	var box := _column(16)
-	var title := _label("Guide", 72)
+	var title := _label(tr("Guide"), 72)
 	title.add_theme_color_override("font_color", TITLE_GOLD)
 	box.add_child(title)
 	var scroll := ScrollContainer.new()
@@ -119,12 +127,12 @@ func _guide_page() -> Control:
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 14)
 	scroll.add_child(list)
-	var entries := [["BUILDINGS", null]]
+	var entries := [[tr("BUILDINGS"), null]]
 	for k in Level.BUILDINGS:
-		entries.push_back([String(Level.BUILDINGS[k].name), Level.BUILDINGS[k]])
-	entries.push_back(["ENEMIES", null])
-	for e in Level.ENEMIES:
-		entries.push_back([String(e.name).capitalize(), e])
+		entries.push_back([tr(String(Level.BUILDINGS[k].name)), Level.BUILDINGS[k]])
+	entries.push_back([tr("ENEMIES"), null])
+	for k in Level.ENEMIES.size():
+		entries.push_back([Level.ename(k), Level.ENEMIES[k]])
 	for it in entries:
 		if it[1] == null:
 			var head := _label(it[0], 34)
@@ -143,7 +151,7 @@ func _guide_page() -> Control:
 		body.modulate = Color(1, 1, 1, 0.9)
 		list.add_child(body)
 	box.add_child(scroll)
-	box.add_child(_button("Back", Color(0.35, 0.35, 0.4), func() -> void: show_page("main")))
+	box.add_child(_button(tr("Back"), Color(0.35, 0.35, 0.4), func() -> void: show_page("main")))
 	return _centered(box)
 
 
@@ -158,19 +166,19 @@ func _icon_of(e: Dictionary) -> String:
 
 func _credits_page() -> Control:
 	var box := _column(20)
-	var title := _label("Credits", 72)
+	var title := _label(tr("Credits"), 72)
 	title.add_theme_color_override("font_color", TITLE_GOLD)
 	box.add_child(title)
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(620, 820)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var text := _label(CREDITS, 24)
+	var text := _label(tr(CREDITS), 24)
 	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD
 	text.custom_minimum_size = Vector2(600, 0)
 	scroll.add_child(text)
 	box.add_child(scroll)
-	box.add_child(_button("Back", Color(0.35, 0.35, 0.4), func() -> void: show_page("main")))
+	box.add_child(_button(tr("Back"), Color(0.35, 0.35, 0.4), func() -> void: show_page("main")))
 	return _centered(box)
 
 
