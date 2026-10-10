@@ -43,29 +43,34 @@ const HERO := {
 ## Buildings. Each has levels; level 0 is what you build, the rest are
 ## upgrades (towers I-IV, farms, banks and gates I-III). "spot" says which spot kind it goes on.
 const BUILDINGS := {
-	archer = {name = "Archer Tower", spot = "tower", desc = "Long range, quick single arrows.",
+	archer = {name = "Archer Tower", spot = "tower", desc = "Fast single shots at one target.",
+		weak = "armored, giants, the boss", strong = "grunts, runners, bats",
 		levels = [{cost = 15, range = 6.0, interval = 0.8, damage = 2.5},
 			{cost = 25, range = 6.5, interval = 0.65, damage = 3.5},
 			{cost = 40, range = 7.0, interval = 0.5, damage = 5.0},
 			{cost = 60, range = 7.5, interval = 0.4, damage = 7.0}]},
-	ballista = {name = "Ballista", spot = "tower", desc = "Slow heavy bolt that pierces a line.",
+	ballista = {name = "Ballista", spot = "tower", desc = "Heavy bolt that pierces every enemy in a line.",
+		weak = "scattered enemies (long reload)", strong = "armored, giants, the boss, crossbowmen",
 		levels = [{cost = 30, range = 8.0, interval = 1.6, damage = 6.0, pierce = 6},
 			{cost = 40, range = 8.5, interval = 1.4, damage = 9.0, pierce = 8},
 			{cost = 60, range = 9.0, interval = 1.2, damage = 13.0, pierce = 10},
 			{cost = 85, range = 9.5, interval = 1.0, damage = 18.0, pierce = 12}]},
-	mortar = {name = "Mortar", spot = "tower", desc = "Lobs boulders that hit a group. Can't hit up close.",
+	mortar = {name = "Mortar", spot = "tower", desc = "Lobbed boulders that splash a whole group.",
+		weak = "bats, anything within 2.5 m", strong = "crowds, gate queues",
 		levels = [{cost = 35, range = 7.0, min_range = 2.5, interval = 2.4, damage = 6.0, splash = 1.3},
 			{cost = 45, range = 7.5, min_range = 2.5, interval = 2.1, damage = 9.0, splash = 1.5},
 			{cost = 65, range = 8.0, min_range = 2.5, interval = 1.8, damage = 13.0, splash = 1.7},
 			{cost = 90, range = 8.5, min_range = 2.5, interval = 1.5, damage = 18.0, splash = 1.9}]},
 	# Slow pulses, long chill (user, 2026-10-09: was a 1 s pulse). Chilled
 	# enemies walk AND attack slower.
-	frost = {name = "Frost Crystal", spot = "tower", desc = "Chills everything near it: slower walking and attacks, light damage.",
+	frost = {name = "Frost Crystal", spot = "tower", desc = "Pulses slow walking and attacks of all nearby.",
+		weak = "bats; it deals little damage", strong = "gate queues, giants, runners",
 		levels = [{cost = 25, range = 3.8, interval = 2.5, damage = 1.0, slow = 0.35, slow_time = 3.5},
 			{cost = 35, range = 4.2, interval = 2.5, damage = 1.8, slow = 0.45, slow_time = 4.0},
 			{cost = 50, range = 4.6, interval = 2.5, damage = 2.8, slow = 0.55, slow_time = 4.5},
 			{cost = 70, range = 5.0, interval = 2.5, damage = 4.0, slow = 0.62, slow_time = 5.0}]},
-	banner = {name = "War Banner", spot = "tower", desc = "No attack. Towers AND the hero inside its ring attack faster.",
+	banner = {name = "War Banner", spot = "tower", desc = "No attack: towers and hero nearby attack faster.",
+		weak = "standing alone", strong = "tower clusters",
 		levels = [{cost = 30, range = 4.5, buff = 0.25},
 			{cost = 45, range = 5.0, buff = 0.4},
 			{cost = 60, range = 5.5, buff = 0.55},
@@ -73,15 +78,18 @@ const BUILDINGS := {
 	# Each upgrade pays back faster than a new level-1 farm (user, v0.1.18:
 	# "build three level 1s and leave them" was always best): gold per gold
 	# spent 0.24 / 0.29 / 0.31.
-	farm = {name = "Farm", spot = "eco", desc = "A fixed amount of gold after every wave.",
+	farm = {name = "Farm", spot = "eco", desc = "Fixed gold after every wave.",
+		weak = "nothing to defend with now", strong = "early builds; upgrades pay best",
 		levels = [{cost = 25, income = 6}, {cost = 35, income = 16}, {cost = 45, income = 30}]},
 	# Interest instead of a fixed income: `rate` of the gold you hold when a
 	# wave ends, up to `cap`. The best bank's rate counts (rates never
 	# stack); every bank adds its cap. Upgrades raise both.
-	bank = {name = "Bank", spot = "eco", desc = "Interest on the gold you hold after each wave, up to a cap.",
+	bank = {name = "Bank", spot = "eco", desc = "Interest on the gold you hold after each wave.",
+		weak = "spending: no gold, no interest", strong = "saving up for big upgrades",
 		levels = [{cost = 30, rate = 0.1, cap = 12}, {cost = 40, rate = 0.15, cap = 25},
 			{cost = 55, rate = 0.2, cap = 45}]},
-	gate = {name = "Gate", spot = "gate", desc = "Blocks the lane until broken. Repaired after each wave.",
+	gate = {name = "Gate", spot = "gate", desc = "Blocks its lane until broken; rebuilt each wave.",
+		weak = "bats (fly over), crossbowmen (shoot from range)", strong = "holding crowds inside tower range",
 		levels = [{cost = 30, hp = 220.0}, {cost = 40, hp = 420.0}, {cost = 60, hp = 700.0}]},
 }
 const TOWER_KINDS := ["archer", "ballista", "mortar", "frost", "banner"]
@@ -141,23 +149,28 @@ const ATTACK_CYCLE := 0.55
 ## ranged: stops this far short of the wall in its way (gate or keep) and
 ## shoots it, outside the queue. cycle: s per attack (default
 ## ATTACK_CYCLE). boss: fixed HP (no wave scaling), phases (Sim._bosses).
-## intro: shown the first time a wave brings it. big: draws a red HP bar.
+## desc / weak / strong: the three info lines (popup, intro, guide). big:
+## draws a red HP bar.
 const ENEMIES := [
-	{name = "grunt", plural = "grunts", hp = 3.0, speed = 1.7, radius = 0.28, gold = 1, xp = 1, dps = 2.0},
+	{name = "grunt", plural = "grunts", hp = 3.0, speed = 1.7, radius = 0.28, gold = 1, xp = 1, dps = 2.0,
+		desc = "Basic foot soldier, comes in big crowds.", weak = "mortars, archers", strong = "nothing, but there are many"},
 	{name = "armored", plural = "armored", hp = 7.0, speed = 1.35, radius = 0.32, gold = 3, xp = 3, dps = 4.0,
-		armor = 1.0, intro = "Armored soldiers shrug off light hits: use ballistas, mortars and big bolts."},
+		armor = 1.0,
+		desc = "Armor shrugs off small hits.", weak = "ballistas, mortars, fire", strong = "archers, Multishot"},
 	{name = "brute", plural = "brutes", hp = 90.0, speed = 0.95, radius = 0.7, gold = 15, xp = 12, dps = 18.0,
-		heavy = true, reach = 1.3, big = true},
-	{name = "runner", plural = "runners", hp = 2.0, speed = 3.1, radius = 0.25, gold = 1, xp = 1, dps = 1.5},
+		heavy = true, reach = 1.3, big = true,
+		desc = "Giant: shoves past others and smashes gates.", weak = "ballistas, frost, Giant Slayer", strong = "gates"},
+	{name = "runner", plural = "runners", hp = 2.0, speed = 3.1, radius = 0.25, gold = 1, xp = 1, dps = 1.5,
+		desc = "Fast and fragile.", weak = "archers, frost", strong = "mortars (outruns the shells)"},
 	{name = "bat", plural = "bats", hp = 4.0, speed = 2.3, radius = 0.35, gold = 2, xp = 2, dps = 2.5,
 		flies = true, fly_h = 2.2,
-		intro = "Bats fly over gates! Archers, ballistas and you can hit them; mortars and frost can't."},
+		desc = "Flies over gates, straight to the keep.", weak = "archers, ballistas, the hero", strong = "gates, mortars, frost (can't reach it)"},
 	{name = "crossbowman", plural = "crossbowmen", hp = 8.0, speed = 1.2, radius = 0.3, gold = 3, xp = 3, dps = 1.6,
 		ranged = 6.5, cycle = 1.1,
-		intro = "Skeleton crossbowmen shoot your gates from range: reach them with ballistas or go hunt them."},
+		desc = "Shoots gates from 6 m away, outside the queue.", weak = "ballistas, the hero", strong = "gates"},
 	{name = "Bone Warlord", plural = "Bone Warlords", hp = 1500.0, speed = 0.7, radius = 1.1, gold = 60, xp = 40,
 		dps = 40.0, heavy = true, reach = 2.0, armor = 2.5, boss = true, big = true,
-		intro = "The Bone Warlord! It calls for help as it weakens, then goes berserk."},
+		desc = "Armored boss: calls grunts, goes berserk when hurt.", weak = "ballistas, Giant Slayer, fire", strong = "light hits, gates"},
 ]
 ## A hit on an armoured enemy does at least this share of its damage.
 const ARMOR_FLOOR := 0.4
@@ -242,6 +255,14 @@ const WAVES := [
 		{lane = EAST, type = BRUTE, count = 2, every = 8.0, t = 18.0},
 		{lane = CENTRE, type = BOSS, count = 1, every = 1.0, t = 22.0}],
 ]
+
+
+## The three info lines of a building or enemy. Ours (buildings) lead with
+## what they beat; theirs (enemies) with what beats them (user).
+static func info(e: Dictionary) -> String:
+	if e.has("spot"):
+		return "%s\nStrong vs: %s\nWeak vs: %s" % [e.desc, e.strong, e.weak]
+	return "%s\nWeak vs: %s\nStrong vs: %s" % [e.desc, e.weak, e.strong]
 
 
 ## Enemy types wave `w` brings for the first time (for their intro).

@@ -27,6 +27,8 @@ var _count_pop := 0.0
 var _msg_t := 0.0
 var _end: Control
 var _boss: Control
+var _intro: RichTextLabel
+var _intro_t := 0.0
 var _boss_fill: ColorRect
 var _boss_name: Label
 var _top := 0.0  # status-bar inset
@@ -55,7 +57,7 @@ var minimap: Minimap
 var _phase_label: Label
 var _menu: PanelContainer
 var _menu_title: Label
-var _menu_desc: Label
+var _menu_desc: RichTextLabel
 var _menu_list: VBoxContainer
 var _menu_key := ""
 
@@ -165,7 +167,12 @@ func _ready() -> void:
 
 	# Build popup, bottom of the screen (shown while standing on a spot).
 	_menu = PanelContainer.new()
-	_menu.add_theme_stylebox_override("panel", _box(Color(0.08, 0.09, 0.11, 0.9), 22, Color(1, 1, 1, 0.8), 3))
+	var mstyle := _box(Color(0.08, 0.09, 0.11, 0.9), 22, Color(1, 1, 1, 0.8), 3)
+	mstyle.content_margin_left = 18
+	mstyle.content_margin_right = 18
+	mstyle.content_margin_top = 10
+	mstyle.content_margin_bottom = 20  # the last button kept off the border
+	_menu.add_theme_stylebox_override("panel", mstyle)
 	_menu.anchor_left = 0.0
 	_menu.anchor_right = 1.0
 	_menu.anchor_top = 1.0
@@ -182,10 +189,8 @@ func _ready() -> void:
 	_menu_title = _label("", 34)
 	_menu_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mbox.add_child(_menu_title)
-	_menu_desc = _label("", 22)
-	_menu_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_menu_desc.autowrap_mode = TextServer.AUTOWRAP_WORD
-	_menu_desc.modulate = Color(1, 1, 1, 0.8)
+	_menu_desc = UiText.label(22, true)
+	_menu_desc.modulate = Color(1, 1, 1, 0.92)
 	mbox.add_child(_menu_desc)
 	_menu_list = VBoxContainer.new()
 	_menu_list.add_theme_constant_override("separation", 8)
@@ -348,6 +353,9 @@ func _card(v: Dictionary, k: int) -> Button:
 	col.add_child(head)
 	var name := _label(String(v.name), 34)
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var elem := UiText.color_of(String(v.name))
+	if elem != "":
+		name.add_theme_color_override("font_color", Color.html(elem))
 	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head.add_child(name)
 	var badge := _label("RELIC" if relic else ("NEW" if tier == 0 else Models.ROMAN[tier]), 30)
@@ -355,10 +363,9 @@ func _card(v: Dictionary, k: int) -> Button:
 		else (Color(0.6, 1.0, 0.6) if tier == 0 else Models.BADGE_COLORS[tier].lightened(0.2)))
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head.add_child(badge)
-	var desc := _label(String(v.desc), 24)
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD
-	desc.modulate = Color(1, 1, 1, 0.9)
-	desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var desc := UiText.label(24)
+	UiText.set_text(desc, String(v.desc), 26)
+	desc.modulate = Color(1, 1, 1, 0.92)
 	col.add_child(desc)
 	return b
 
@@ -547,7 +554,7 @@ func show_menu(key: String, title: String, desc: String, options: Array) -> void
 	var opened := _menu_key == ""
 	_menu_key = full_key
 	_menu_title.text = title
-	_menu_desc.text = desc
+	UiText.set_text(_menu_desc, desc, 24)
 	_menu_desc.visible = desc != ""
 	for c in _menu_list.get_children():
 		c.queue_free()
@@ -562,6 +569,10 @@ func show_menu(key: String, title: String, desc: String, options: Array) -> void
 		b.add_theme_stylebox_override("hover", _box(Color(0.24, 0.6, 0.36), 14, Color.WHITE, 2))
 		b.add_theme_stylebox_override("pressed", _box(Color(0.15, 0.4, 0.24), 14, Color.WHITE, 2))
 		b.add_theme_stylebox_override("disabled", _box(Color(0.22, 0.22, 0.24), 14, Color(1, 1, 1, 0.3), 2))
+		if o.has("icon") and ResourceLoader.exists(String(o.icon)):
+			b.icon = load(String(o.icon))
+			b.expand_icon = true
+			b.add_theme_constant_override("icon_max_width", 52)
 		var id := String(o.id)
 		b.pressed.connect(func() -> void: menu_pick.emit(id))
 		_menu_list.add_child(b)
@@ -601,6 +612,29 @@ func show_countdown(n: int) -> void:
 	_count_pop = 1.0
 
 
+## New enemy types: a compact card under the wave line for `seconds`.
+func show_intro(text: String, seconds: float) -> void:
+	if _intro == null:
+		_intro = UiText.label(24)
+		var ist := _box(Color(0.06, 0.05, 0.1, 0.8), 14, Color(1.0, 0.75, 0.3, 0.8), 2)
+		ist.content_margin_left = 18
+		ist.content_margin_top = 12
+		ist.content_margin_bottom = 12
+		_intro.add_theme_stylebox_override("normal", ist)
+		_intro.anchor_left = 0.0
+		_intro.anchor_right = 1.0
+		_intro.offset_left = 30
+		_intro.offset_right = -30
+		_intro.offset_top = _top + 215
+		_intro.autowrap_mode = TextServer.AUTOWRAP_WORD
+		_intro.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_root.add_child(_intro)
+	UiText.set_text(_intro, text, 34)
+	_intro_t = seconds
+	_intro.modulate.a = 1.0
+	_intro.visible = true
+
+
 func message(text: String, seconds := 3.0) -> void:
 	_msg.text = text
 	_msg_t = seconds
@@ -627,6 +661,10 @@ func _process(delta: float) -> void:
 		_count.pivot_offset = _count.size * 0.5
 		_count.scale = Vector2.ONE * (1.0 + 0.3 * k)
 		_count.modulate = Color(1.0, 0.92, 0.55, 0.45 + 0.4 * k)
+	if _intro != null and _intro.visible:
+		_intro_t -= delta
+		_intro.modulate.a = clampf(_intro_t / 0.5, 0.0, 1.0)
+		_intro.visible = _intro_t > 0.0
 	if _msg_t > 0.0:
 		_msg_t -= delta
 		_msg.modulate.a = clampf(_msg_t / 0.4, 0.0, 1.0)

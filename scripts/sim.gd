@@ -45,7 +45,7 @@ var _hero_cd := 0.0
 ## Hero upgrades (Perks). Kills near the hero give xp; each level banks a
 ## pick, offered after the wave (and a relic after Perks.RELIC_WAVES).
 var xp := 0.0
-var level := 0  # level-ups so far
+var level := 1  # the hero's level (starts at 1; each level-up banks a pick)
 var pending_levels := 0  # level-ups not yet offered
 var pending_relics := 0
 var perks := {}  # card id -> tier owned (1..MAX_TIER)
@@ -103,7 +103,9 @@ func step(dt: float, move: Vector2) -> void:
 	events = _pending
 	_pending = []
 	time += dt
-	_hero_move(dt, move if state == "play" else Vector2.ZERO)
+	# The hero holds still (and no menu opens) while the end-of-wave coin
+	# sweep flies in.
+	_hero_move(dt, move if state == "play" and not sweeping() else Vector2.ZERO)
 	if state != "play":
 		return
 	if phase == "build":
@@ -146,8 +148,13 @@ func step(dt: float, move: Vector2) -> void:
 
 # --- phases ----------------------------------------------------------------
 
+## End of a wave: coins still flying to the hero.
+func sweeping() -> bool:
+	return phase == "build" and not drop_pos.is_empty()
+
+
 func at_start_spot() -> bool:
-	return phase == "build" and hero_pos.distance_to(Level.START_SPOT) < Level.SPOT_REACH
+	return phase == "build" and not sweeping() and hero_pos.distance_to(Level.START_SPOT) < Level.SPOT_REACH
 
 
 func start_wave() -> bool:
@@ -403,7 +410,7 @@ func wisp_pos() -> Vector3:
 
 # --- save / load ----------------------------------------------------------------
 
-const SAVE_VERSION := 2  # 2: hero upgrades
+const SAVE_VERSION := 3  # 2: hero upgrades; 3: hero level counts from 1
 
 
 ## The run as plain data (build phase only: no enemies or shots in flight).
@@ -439,7 +446,7 @@ static func from_save(d: Dictionary) -> Sim:
 	s._rng.state = int(d.rng)
 	s.horde._rng.state = int(d.hrng)
 	s.xp = float(d.xp)
-	s.level = int(d.level)
+	s.level = int(d.level) + (1 if int(d.v) < 3 else 0)  # v2 counted level-ups from 0
 	s.pending_levels = int(d.pending_levels)
 	s.pending_relics = int(d.pending_relics)
 	# Cards / relics retired since the save (Magnet, v0.1.17) are dropped;
@@ -480,7 +487,7 @@ static func from_save(d: Dictionary) -> Sim:
 
 ## The spot the hero stands at (build phase only), or {}.
 func spot_under_hero() -> Dictionary:
-	if phase != "build" or state != "play":
+	if phase != "build" or state != "play" or sweeping():
 		return {}
 	for s in Level.SPOTS:
 		if hero_pos.distance_to(s.pos) < Level.SPOT_REACH:
@@ -904,7 +911,9 @@ func _drops_from_deaths() -> void:
 					pieces.push_back(20)
 					events.push_back({type = "midas", pos = death.pos})
 		for v in pieces:
+			# On the ground under the body (a bat dies in the air).
 			var p: Vector3 = death.pos + Vector3(_rng.randf_range(-spread, spread), 0.0, _rng.randf_range(-spread, spread))
+			p.y = 0.0
 			if drop_pos.size() >= DROP_CAP:
 				drop_val[_rng.randi() % drop_val.size()] += v
 				continue

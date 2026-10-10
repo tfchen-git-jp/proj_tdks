@@ -10,7 +10,7 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.1.18)
+## The game today (v0.1.22)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
@@ -19,7 +19,9 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   the whole body, crossbow turned Models.HERO_CARRY_PITCH in the hand).
   Walks over dropped gold to collect it (magnet radius); when a wave ends
   every coin left flies to the hero (Sim._vacuum; user + tester: gold is
-  only spent in the build phase, so sweeping by hand was pointless).
+  only spent in the build phase, so sweeping by hand was pointless); the
+  hero holds still and no popup opens until the sweep lands
+  (Sim.sweeping). Coins drop on the ground, also under a dying bat.
 - **Phases:** BUILD (no enemies; walk onto a spot and its popup appears;
   stand on the red START pad by the keep: it shows the next wave per lane
   and counts down Level.START_COUNTDOWN (5 s, full-screen digit); walking
@@ -28,7 +30,9 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   (queueing like at a gate) until killed; keep HP Level.BASE_HP (600).
 - **Hero upgrades (rogue-like, scripts/perks.gd):** kills within
   Sim.xp_radius() of the hero give xp (ENEMIES `xp`), whoever kills: 8 m,
-  or hero range + 2 m with Long Shot (up to 11 m). Each gain floats as
+  or hero range + 2 m with Long Shot (up to 11 m). The hero starts at
+  level 1 (Sim.level; Perks.xp_needed(level) = 10 + 12 (level - 1); save
+  v3, v2 saves counted from 0 and are converted on load). Each gain floats as
   "+N XP" over the hero (no pop-up = out of range).
   Level-ups are banked during a wave; after it the picker (hud.show_cards,
   modal) offers 3 cards per level, a relic first after waves 3/6/9; the
@@ -80,8 +84,20 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   wave scaling, armour 2.5; at 66% / 33% HP calls 8 grunts, at 33% goes
   berserk x1.4; HP bar at the top of the HUD). Armour: each hit loses
   `armor`, never below Level.ARMOR_FLOOR (40%) of it; burning ignores it.
-  A new type's `intro` shows with the wave that first brings it
-  (Level.new_types). HP x Level.wave_hp(w) = 1 +
+  Every building and enemy has `desc` (~10 words) / `weak` / `strong`,
+  shown as three lines (Level.info) in the build popup, the tower preview,
+  the "NEW:" card when a wave first brings a type (hud.show_intro,
+  Level.new_types) and the menu's Guide page. User rule (2026-10-10):
+  UI text short and precise, no story-telling sentences. Buildings list
+  "Strong vs" first, enemies "Weak vs" first (player's point of view).
+  UiText.fmt (scripts/ui_text.gd) puts each unit / building's icon
+  (assets/icons, rendered by tools/make_icons.gd: re-run after changing
+  a model) in front of its name and colours Strong (green) / Weak (red)
+  and elements: fire orange-red, frost / slow ice blue, lightning yellow,
+  gold gold, armour steel. Card titles take their element's colour. Build
+  popup buttons carry the building's icon; lane-entrance previews are
+  icon + count rows (main._lane_preview). Leaving a spot forgets a
+  previewed (tapped once) tower. HP x Level.wave_hp(w) = 1 +
   0.25 w + 0.047 w^2 (Horde.max_hp keeps it for the bars); gold per kill
   doesn't grow. Drops: coins (1), coin stacks (5), ingots (20)
   (Sim.gold_pieces). They walk in from beyond the map and are untargetable
@@ -217,13 +233,13 @@ full bot win), `sim [--seed=N] [--idle] [--nopicks]` (balance timeline,
 ~5 s), `shot
 NAME ARGS` (WSL screenshot; refuses to launch unless all scripts parse),
 `export` + `native ARGS` (Windows exe), `apk`, `install`, `adb ARGS`,
-`logcat`. Bakers: `tools/bake_vat.gd`, `tools/bake_terrain.gd` (re-run
+`logcat`. Bakers: `tools/bake_vat.gd`, `tools/make_icons.gd` (GPU), `tools/bake_terrain.gd` (re-run
 after changing Level.LANES; a test checks the stored hash). Probes:
 `tools/inspect.gd`, `tools/hero_probe.gd`.
 Game args (after `--`): `--auto --ff=SEC --speed=X (0 = freeze) --seed=N
 --shot=PATH --shot-delay=S --bench=S --zoom=X --cam=X,Z|gate --hero=X,Z
 --noshadow --mute --notree --drops --ff-idle --build=S:K[:N],... --load
---page=scores|credits --play --newgame --perks=ID[:T],... --offer[=cards]
+--page=scores|credits|guide --play --newgame --perks=ID[:T],... --offer[=cards]
 --preview=KIND
 --lightning --ask --demo=anim|hero|clips --clips=A,B
 --bowrot=X,Y,Z` (main.gd header explains each). `--demo=clips` (raw
@@ -320,6 +336,11 @@ Windows build, never in WSL.
   to 2 m outside the walkable area and marked (user: enemies "in range"
   at the bottom of the centre lane weren't shot); score = keep % x 10 +
   gold for ties on waves.
+- v0.1.22: icons on build buttons and lane previews, hero level from 1.
+- v0.1.21: inline unit icons, element colours, sweep holds the hero,
+  popup bottom margin.
+- v0.1.19: UI text pass (summary / weak vs / strong vs everywhere, Guide
+  page, compact stat lines).
 - v0.1.18: armour, bats, crossbowmen, Bone Warlord boss; farm / bank
   rework; picks wait for the coin sweep; meta-analysis tools. Bake gotcha:
   GDScript lambdas capture locals by value (the baked material came out

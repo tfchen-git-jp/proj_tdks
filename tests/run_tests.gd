@@ -340,6 +340,30 @@ func _coins() -> void:
 	_ok(v.phase == "build" and v.drop_pos.is_empty() and v.coins == c0 + 15,
 		"after the wave every coin is swept to the hero (+%d)" % (v.coins - c0))
 	_ok(saved == c0 + 15, "a save banks the coins still lying around")
+	# While the sweep flies in the hero can't move or open a spot.
+	var w = SimS.new(8)
+	w.hero_pos = Level.SPOTS[0].pos
+	var q := Vector3(0, 0, 30)
+	w.drop_pos.push_back(q)
+	w.drop_val.push_back(1)
+	w.drop_fly.push_back(0.0)
+	w.drop_from.push_back(q)
+	w.drop_dur.push_back(2.0)
+	var at0: Vector3 = w.hero_pos
+	w.step(DT, Vector2(1, 0))
+	_ok(w.hero_pos == at0 and w.spot_under_hero().is_empty(), "during the sweep the hero holds still, no popup")
+	for k in 60 * 3:
+		w.step(DT, Vector2.ZERO)
+	w.step(DT, Vector2(1, 0))
+	_ok(w.hero_pos != at0, "after it he walks again")
+	# A bat's coins land on the ground.
+	var bt = SimS.new(9)
+	bt.horde.spawn(Level.BAT, 1)
+	bt.horde.d[0] = 30.0
+	bt.horde.step(DT)
+	bt.horde.damage(0, 1e6)
+	bt._drops_from_deaths()
+	_ok(bt.drop_pos.size() > 0 and bt.drop_pos[0].y == 0.0, "a bat's coins drop to the ground")
 
 
 ## A run survives to_save() -> JSON -> from_save(), and the score order is
@@ -387,12 +411,13 @@ func _perks() -> void:
 	s.horde.damage(near, 1e6)
 	s._drops_from_deaths()
 	var got: int = int(Level.ENEMIES[Level.BRUTE].xp)
-	_ok(s.xp + Perks.xp_needed(0) * s.level == got or s.level >= 1, "only the kill near the hero gives XP (%d)" % got)
+	_ok(s.level == 2 and is_equal_approx(s.xp, got - Perks.xp_needed(1)), "only the kill near the hero gives XP (%d)" % got)
+	_ok(SimS.new(1).level == 1, "the hero starts at level 1")
 	s.xp = 0
-	s.level = 0
+	s.level = 1
 	s.pending_levels = 0
-	s._gain_xp(Perks.xp_needed(0) + Perks.xp_needed(1))
-	_ok(s.level == 2 and s.pending_levels == 2 and s.offer.is_empty(), "two level-ups banked, nothing offered mid-wave")
+	s._gain_xp(Perks.xp_needed(1) + Perks.xp_needed(2))
+	_ok(s.level == 3 and s.pending_levels == 2 and s.offer.is_empty(), "two level-ups banked, nothing offered mid-wave")
 	s.phase = "attack"
 	s.wave = 2  # clearing wave 3 also gives a relic
 	s._end_wave()
@@ -466,6 +491,10 @@ func _perks() -> void:
 	_ok(hurt == Perks.THUNDER_CHAIN and t.events.size() == 1 and t.events[0].points.size() == Perks.THUNDER_CHAIN + 1,
 		"lightning strikes and chains through %d enemies" % hurt)
 	# Upgrades survive a save.
+	var old: Dictionary = JSON.parse_string(JSON.stringify(s.to_save()))
+	old.v = 2
+	old.level = s.level - 1
+	_ok(SimS.from_save(old).level == s.level, "a v2 save's level (from 0) is converted")
 	var r = SimS.from_save(JSON.parse_string(JSON.stringify(s.to_save())))
 	_ok(r.tier(card) == Perks.MAX_TIER and r.relics == s.relics and r.level == s.level and r.rerolls == s.rerolls
 		and r._card_rng.state == s._card_rng.state, "hero upgrades survive a save")

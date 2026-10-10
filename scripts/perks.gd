@@ -10,7 +10,8 @@ extends RefCounted
 ## (Long Shot): Sim.xp_radius().
 const XP_RADIUS := 8.0
 const XP_PAST_RANGE := 2.0
-## XP for the next level: XP_BASE + XP_STEP * levels so far.
+## XP to go from `level` to the next: XP_BASE + XP_STEP * (level - 1);
+## the hero starts at level 1.
 const XP_BASE := 10
 const XP_STEP := 12
 ## A relic is offered after clearing these waves (1-based).
@@ -94,7 +95,7 @@ const FROST_TIME := 2.0
 
 
 static func xp_needed(level: int) -> int:
-	return XP_BASE + XP_STEP * level
+	return XP_BASE + XP_STEP * (level - 1)
 
 
 ## Card id or relic id -> what the offer shows: {id, relic, name, tier

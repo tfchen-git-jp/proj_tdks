@@ -23,6 +23,7 @@ func _ready() -> void:
 	_pages.main = _main_page()
 	_pages.scores = _scores_page()
 	_pages.credits = _credits_page()
+	_pages.guide = _guide_page()
 	for p in _pages.values():
 		add_child(p)
 	var ver := _label("v" + String(ProjectSettings.get_setting("application/config/version")), 20)
@@ -62,6 +63,7 @@ func _main_page() -> Control:
 	_continue = _button("Continue", Color(0.2, 0.45, 0.65), func() -> void: continue_game.emit())
 	box.add_child(_continue)
 	box.add_child(_button("Scores", Color(0.45, 0.38, 0.2), func() -> void: show_page("scores")))
+	box.add_child(_button("Guide", Color(0.25, 0.4, 0.4), func() -> void: show_page("guide")))
 	box.add_child(_button("Credits", Color(0.35, 0.35, 0.4), func() -> void: show_page("credits")))
 	box.add_child(_button("Exit", Color(0.5, 0.2, 0.2), func() -> void: exit_game.emit()))
 	return _centered(box)
@@ -103,6 +105,55 @@ func _fill_scores() -> void:
 			if i == 0:
 				cell.add_theme_color_override("font_color", TITLE_GOLD)
 			_scores_box.add_child(cell)
+
+
+## Every building and enemy: name, then its three info lines.
+func _guide_page() -> Control:
+	var box := _column(16)
+	var title := _label("Guide", 72)
+	title.add_theme_color_override("font_color", TITLE_GOLD)
+	box.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(640, 860)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation", 14)
+	scroll.add_child(list)
+	var entries := [["BUILDINGS", null]]
+	for k in Level.BUILDINGS:
+		entries.push_back([String(Level.BUILDINGS[k].name), Level.BUILDINGS[k]])
+	entries.push_back(["ENEMIES", null])
+	for e in Level.ENEMIES:
+		entries.push_back([String(e.name).capitalize(), e])
+	for it in entries:
+		if it[1] == null:
+			var head := _label(it[0], 34)
+			head.add_theme_color_override("font_color", TITLE_GOLD)
+			list.add_child(head)
+			continue
+		# Name with its own icon, then the three info lines.
+		var name := UiText.label(30)
+		var icon_key: String = _icon_of(it[1])
+		name.text = ("[img=44x44]%s%s.png[/img] " % [UiText.ICONS, icon_key] if icon_key != "" else "") + String(it[0])
+		name.custom_minimum_size = Vector2(620, 0)
+		list.add_child(name)
+		var body := UiText.label(22)
+		UiText.set_text(body, Level.info(it[1]), 26)
+		body.custom_minimum_size = Vector2(620, 0)
+		body.modulate = Color(1, 1, 1, 0.9)
+		list.add_child(body)
+	box.add_child(scroll)
+	box.add_child(_button("Back", Color(0.35, 0.35, 0.4), func() -> void: show_page("main")))
+	return _centered(box)
+
+
+## Icon file name (assets/icons) of a building or enemy entry.
+func _icon_of(e: Dictionary) -> String:
+	for k in Level.BUILDINGS:
+		if Level.BUILDINGS[k] == e:
+			return k
+	var i := Level.ENEMIES.find(e)
+	return String(Models.ENEMY_VAT[i].name) if i != Level.RUNNER else "runner"
 
 
 func _credits_page() -> Control:

@@ -98,7 +98,9 @@ var _preview_spot := ""
 var _enemy_bolts: Array[Dictionary] = []  # crossbowmen's bolts in flight (view only)
 var _xp_acc := 0.0  # XP gained since the last "+N XP" pop-up
 var _xp_t := 0.0
-var _lane_labels: Array[Label3D] = []
+## Per lane, at its entrance: the next wave's enemies, one icon + count
+## row per type (rebuilt each build phase, _lane_preview).
+var _lane_labels: Array[Node3D] = []
 var _cam_target := Vector3.ZERO
 var _shake := 0.0
 var _phase_seen := ""
@@ -389,14 +391,7 @@ func _build_scene() -> void:
 	_ring_min.visible = false
 	add_child(_ring_min)
 	for ln in Level.LANES.size():
-		var l := Label3D.new()
-		l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		l.font_size = 64
-		l.outline_size = 16
-		l.pixel_size = 0.01
-		l.modulate = Color(1, 0.85, 0.8)
-		l.outline_modulate = Color(0.25, 0.02, 0.02)
-		l.no_depth_test = true
+		var l := Node3D.new()
 		var t: Track = sim.tracks[ln]
 		l.position = t.point(sim.horde.entry[ln] + 1.0) + Vector3(0, 1.6, 0)
 		add_child(l)
@@ -718,6 +713,8 @@ func _sync_menu() -> void:
 	if spot.is_empty():
 		hud.hide_menu()
 		_hide_rings()
+		_preview = ""  # back on a spot = its plain menu again
+		_preview_spot = ""
 		return
 	var b: Dictionary = sim.buildings.get(spot.id, {})
 	if _preview_spot != spot.id:
@@ -732,23 +729,26 @@ func _sync_menu() -> void:
 			ok = o.ok or o.kind != _preview
 			if o.kind == _preview:
 				verb = "> Build %s (tap again)" % o.name if o.ok else "%s (need more gold)" % o.name
-		opts.push_back({id = o.kind, text = "  %s   -   %d gold" % [verb, o.cost], ok = ok})
+		opts.push_back({id = o.kind, text = " %s   -   %d gold" % [verb, o.cost], ok = ok,
+			icon = UiText.ICONS + String(o.kind) + ".png"})
 	var title := ""
 	var desc := ""
 	if b.is_empty():
 		title = {tower = "Tower spot", eco = "Economy plot", gate = "Gate spot"}[spot.kind]
-		desc = {tower = "Tap a tower to see its range, tap again to build.",
-			eco = "Farm: steady gold. Bank: interest on the gold you save.",
-			gate = String(Level.BUILDINGS.gate.desc)}[spot.kind]
+		desc = {tower = "Tap a tower: see its range and role. Tap again: build.",
+			eco = "Farm: fixed gold per wave.\nBank: interest on gold you hold.",
+			gate = Level.info(Level.BUILDINGS.gate)}[spot.kind]
 		if _preview != "":
-			desc = "%s: %s" % [Level.BUILDINGS[_preview].name, _stats_text(_preview, 0)]
+			title = String(Level.BUILDINGS[_preview].name)
+			desc = "%s\n%s" % [Level.info(Level.BUILDINGS[_preview]), _stats_text(_preview, 0)]
 	else:
 		title = "%s  Lv %d" % [Level.BUILDINGS[b.kind].name, b.level + 1]
-		desc = _stats_text(b.kind, b.level)
+		var bd: Dictionary = Level.BUILDINGS[b.kind]
+		desc = "%s\nStrong vs: %s\nWeak vs: %s" % [_stats_text(b.kind, b.level), bd.strong, bd.weak]
 		if opts.is_empty():
-			desc += "\nFully upgraded."
+			desc += "\nMax level."
 		elif Level.stats(b.kind, b.level).has("range"):
-			desc += "\nGold ring: Lv %d's reach" % (b.level + 2)
+			desc += "\nGold ring: Lv %d range" % (b.level + 2)
 	hud.show_menu(spot.id, title, desc, opts)
 	# Rings: the reach of what stands here (or is being previewed), the next
 	# level's reach in gold, a mortar's dead zone in red.
@@ -811,21 +811,22 @@ func _show_ring(ring: MeshInstance3D, at: Vector3, r: float) -> void:
 func _stats_text(kind: String, level: int) -> String:
 	var st := Level.stats(kind, level)
 	match kind:
-		"archer", "ballista":
-			return "Damage %s, every %.2fs, range %s" % [st.damage, st.interval, st.range]
+		"archer":
+			return "Damage %s  |  every %.2fs  |  range %s m" % [st.damage, st.interval, st.range]
+		"ballista":
+			return "Damage %s  |  pierces %d  |  every %.1fs  |  range %s m" % [st.damage, st.pierce, st.interval, st.range]
 		"mortar":
-			return "Damage %s in %.1fm, every %.1fs, range %s-%s" % [st.damage, st.splash, st.interval, st.min_range, st.range]
+			return "Damage %s, %.1f m splash  |  every %.1fs  |  range %s-%s m" % [st.damage, st.splash, st.interval, st.min_range, st.range]
 		"frost":
-			return "Slows walking and attacks %d%% for %.1fs, pulse every %.1fs, range %s" % [roundi(st.slow * 100), st.slow_time, st.interval, st.range]
+			return "Slow %d%% for %.1fs  |  every %.1fs  |  range %s m" % [roundi(st.slow * 100), st.slow_time, st.interval, st.range]
 		"banner":
-			return "+%d%% attack speed for towers and the hero within %sm" % [roundi(st.buff * 100), st.range]
+			return "+%d%% attack speed  |  range %s m" % [roundi(st.buff * 100), st.range]
 		"farm":
-			return "+%d gold after every wave" % st.income
+			return "+%d gold per wave" % st.income
 		"bank":
-			return "+%d%% of your gold after every wave, up to %d (the best rate counts; banks add up their caps)" % [
-				roundi(float(st.rate) * 100), st.cap]
+			return "%d%% interest per wave  |  cap +%d" % [roundi(float(st.rate) * 100), st.cap]
 		"gate":
-			return "%d HP, repaired after each wave" % roundi(st.hp)
+			return "%d HP  |  rebuilt after each wave" % roundi(st.hp)
 	return ""
 
 
@@ -835,7 +836,7 @@ func _preview_text(w: int) -> String:
 	for ln in prev.size():
 		var parts := []
 		for k in prev[ln]:
-			parts.push_back("%d %s" % [prev[ln][k], Level.ENEMIES[k].plural])
+			parts.push_back("%d %s" % [prev[ln][k], Level.ENEMIES[k].plural if prev[ln][k] != 1 else Level.ENEMIES[k].name])
 		if not parts.is_empty():
 			lines.push_back("%s: %s" % [Level.LANE_NAMES[ln], ", ".join(parts)])
 	return "\n".join(lines)
@@ -893,7 +894,7 @@ func _apply_events() -> void:
 			"boss_phase":
 				_shake = 0.5
 				sfx.play("brute_die", 0.0, 0.6)
-				hud.message("The Bone Warlord goes berserk!" if e.berserk else "The Bone Warlord calls for help!", 2.5)
+				hud.message("Berserk!" if e.berserk else "Grunts summoned!", 2.0)
 				if not _fast_forwarding:
 					_flash(e.pos)
 			"vacuum":
@@ -941,11 +942,13 @@ func _apply_events() -> void:
 				if _persist:
 					Save.save_run(sim.checkpoint)
 				sfx.play("wave_start", -4.0)
-				var intro := ""
+				hud.message("Wave %d!" % (e.wave + 1), 2.0)
+				var intro := []
 				for k in e.get("new", []):
-					if Level.ENEMIES[k].has("intro"):
-						intro += "\n\nNEW: " + String(Level.ENEMIES[k].intro)
-				hud.message("Wave %d!%s" % [e.wave + 1, intro], 2.0 if intro == "" else 6.0)
+					var en: Dictionary = Level.ENEMIES[k]
+					intro.push_back("NEW: %s\n%s" % [String(en.name).capitalize(), Level.info(en)])
+				if not intro.is_empty() and e.wave > 0:
+					hud.show_intro("\n\n".join(intro), 7.0)
 			"wave_cleared":
 				if sim.state == "play" and _persist:
 					Save.save_run(sim.to_save())
@@ -1174,6 +1177,42 @@ func _cam_goal() -> Vector3:
 		clampf(p.z + 1.0 + lift, -9.0, 27.0 + lift))
 
 
+## Rows of [icon] "20 grunts" facing the camera, stacked down the screen.
+const LANE_ROW := 0.8  # m between rows
+const CAM_UP := Vector3(0, 0.559, -0.829)  # screen up in the world (pitch 56)
+
+
+func _lane_preview(node: Node3D, counts: Dictionary) -> void:
+	for c in node.get_children():
+		c.queue_free()
+	node.visible = not counts.is_empty()
+	var row := 0
+	for k in counts:
+		var at := -CAM_UP * (row * LANE_ROW) + Vector3(0, 0, 0.02 * row)
+		var icon := Sprite3D.new()
+		icon.texture = load(UiText.ICONS + (String(Models.ENEMY_VAT[k].name) if k != Level.RUNNER else "runner") + ".png")
+		icon.pixel_size = 0.0058
+		icon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		icon.no_depth_test = true
+		icon.render_priority = 1
+		icon.position = at + Vector3(-0.45, 0, 0)
+		node.add_child(icon)
+		var l := Label3D.new()
+		l.text = "%d %s" % [counts[k], Level.ENEMIES[k].plural if counts[k] != 1 else Level.ENEMIES[k].name]
+		l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		l.font_size = 64
+		l.outline_size = 16
+		l.pixel_size = 0.01
+		l.modulate = Color(1, 0.85, 0.8)
+		l.outline_modulate = Color(0.25, 0.02, 0.02)
+		l.no_depth_test = true
+		l.render_priority = 2
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		l.position = at + Vector3(-0.02, 0, 0)
+		node.add_child(l)
+		row += 1
+
+
 ## Phase line, lane previews and pads that only show while building.
 func _sync_phase() -> void:
 	var building := sim.phase == "build" and sim.state == "play"
@@ -1189,11 +1228,7 @@ func _sync_phase() -> void:
 	if building and sim.wave < Level.WAVES.size():
 		var prev := Level.wave_preview(sim.wave)
 		for ln in _lane_labels.size():
-			var parts := []
-			for k in prev[ln]:
-				parts.push_back("%d %s" % [prev[ln][k], Level.ENEMIES[k].name])
-			_lane_labels[ln].text = "\n".join(parts)
-			_lane_labels[ln].visible = not parts.is_empty()
+			_lane_preview(_lane_labels[ln], prev[ln])
 	else:
 		for l in _lane_labels:
 			l.visible = false

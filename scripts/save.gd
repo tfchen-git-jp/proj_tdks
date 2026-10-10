@@ -22,7 +22,8 @@ static func save_run(d: Dictionary) -> void:
 
 static func load_run() -> Dictionary:
 	var v: Variant = _read(RUN)
-	return v if v is Dictionary and int((v as Dictionary).get("v", 0)) == Sim.SAVE_VERSION else {}
+	# Older formats still load when Sim.from_save can convert them (v2+).
+	return v if v is Dictionary and int((v as Dictionary).get("v", 0)) in [2, Sim.SAVE_VERSION] else {}
 
 
 static func clear_run() -> void:
