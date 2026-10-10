@@ -121,3 +121,30 @@ summoning / commanding.
 6. DONE (v0.1.11-0.1.16): 10 waves, bot balance (loses ~1 run in 6),
    score + top 10. TODO: more levels / maps, then permanent unlocks and
    difficulty mutators.
+
+## Roadmap (agreed 2026-10-10; batch 1 done in v0.1.18)
+
+1. DONE: armour, flyers (bats), ranged siege (crossbowmen), wave-10 boss.
+2. Endless mode (after wave 10, ever-tougher waves; score = wave
+   reached) + 2-3 mutators chosen before a run ("enemies +30% speed",
+   "no gates", "keep 50% HP"), each adding a score bonus.
+3. Card evolutions (two maxed cards fuse, e.g. Fire Bolts III + Explosive
+   Tips III -> Inferno; Ricochet III + Multishot III -> Storm of Bolts)
+   + 4-5 new relics, some changing towers ("archers shoot fire arrows",
+   "gates reflect damage", "frost pulses deal damage").
+4. Tower specialisations at level IV (pick one of two, e.g. archer ->
+   Sniper or Rapid) + selling a building (60-70% refund).
+5. A second map (the user designs it; Claude adds a level file format and
+   checks: spot placement, start lines, a bot test run).
+
+Smaller ideas noted along the way:
+- Gate-set synergy: a bonus while all three gates of a set stand (user).
+- Japanese localization after TC (user); same picking-page process.
+- Balance leads from tools/meta_report.py: banner and frost weak, ballista
+  strong; Rally / Engineer cards weak; maybe count slow / buff as
+  contributions in the report.
+- Quality of life: 2x speed button, per-wave summary, first-run tips,
+  settings (volume, FPS counter, vibration).
+- Later: a hero weapon choice before a run (crossbow / longbow / staff)
+  and one active hero skill; permanent unlocks once there are 50+ waves
+  or several maps.

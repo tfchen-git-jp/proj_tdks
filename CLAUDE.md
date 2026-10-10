@@ -168,8 +168,9 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 
 ## Next (docs/DESIGN.md "Build order")
 
-- Endless mode + mutators; card evolutions + tower-changing relics;
-  tower specialisations + selling (agreed order, 2026-10-10).
+- docs/DESIGN.md "Roadmap": batch 2 endless mode + mutators, 3 card
+  evolutions + new relics, 4 tower specialisations + selling, 5 second
+  map; plus gate-set synergy, Japanese, QoL (agreed order, 2026-10-10).
 - Balance leads from the meta report: banner and frost are weak, ballista
   strong; Rally / Engineer cards weak.
 - More levels / maps (the user designs them); then permanent unlocks and
