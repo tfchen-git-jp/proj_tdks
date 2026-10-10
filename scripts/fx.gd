@@ -23,7 +23,7 @@ var _flame_mm: MultiMesh
 var _flame_buf := PackedFloat32Array()
 var _wisp: Node3D
 var _aura: MeshInstance3D
-var _gate_rings := {}  # lane -> MeshInstance3D
+var _gate_rings := {}  # gate slot -> MeshInstance3D
 var _last := {}  # effect name -> msec (rate limits)
 var _ring_maker: Callable  # main._ring(r, colour, width)
 
@@ -169,7 +169,7 @@ func draw(sim: Sim, hero_at: Vector3, alpha: float, dt_step: float) -> void:
 	for b in sim.buildings.values():
 		if b.kind != "gate":
 			continue
-		var ln := int(b.spot.lane)
+		var ln := int(b.spot.slot)
 		if not _gate_rings.has(ln):
 			var r: MeshInstance3D = _ring_maker.call(2.1, Color(0.4, 0.75, 1.0, 0.55), 0.06)
 			add_child(r)
@@ -177,7 +177,7 @@ func draw(sim: Sim, hero_at: Vector3, alpha: float, dt_step: float) -> void:
 		var ring: MeshInstance3D = _gate_rings[ln]
 		ring.visible = h.gate_armor[ln] > 0.0 and not b.broken
 		if ring.visible:
-			ring.position = sim.tracks[ln].point(h.gate_d[ln]) + Vector3(0, 0.06, 0)
+			ring.position = sim.tracks[h.gate_lane[ln]].point(h.gate_d[ln]) + Vector3(0, 0.06, 0)
 			var s := 1.0 + 0.05 * sin(sim.time * 5.0)
 			ring.scale = Vector3(s, 1, s)
 

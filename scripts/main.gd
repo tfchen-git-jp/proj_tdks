@@ -254,12 +254,15 @@ func _start(save := {}) -> void:
 		_fast_forwarding = false
 	if _args.has("build"):  # spot:kind[:levels],... built for free
 		var keep_coins := sim.coins
+		var keep_level := sim.level
+		sim.level = 99  # every spot open while building for the shot
 		for item in String(_args.build).split(","):
 			var f := item.split(":")
 			for k in (int(f[2]) if f.size() > 2 else 1):
 				sim.coins = 9999
 				sim.buy(f[0], f[1])
 		sim.coins = keep_coins
+		sim.level = keep_level
 		sim.step(DT, Vector2.ZERO)
 		_apply_events()
 	if _args.has("perks"):  # card[:tier] or relic, comma separated
@@ -901,6 +904,14 @@ func _apply_events() -> void:
 				sfx.play("coin_pay", 0.0, 1.3)
 			"level_up":
 				sfx.play("upgrade", 0.0, 1.2)
+				var opened: Array = e.get("opened", [])
+				if not opened.is_empty():
+					var gates := 0
+					for sp in Level.SPOTS:
+						if sp.id in opened and sp.kind == "gate":
+							gates += 1
+					hud.message("Lv %d: %s" % [e.level, "new gates and spots!" if gates > 0 else
+						"%d new spot%s!" % [opened.size(), "" if opened.size() == 1 else "s"]], 2.5)
 				if not _fast_forwarding:
 					fx.level_up(_hero.position)
 			"perk":
@@ -988,16 +999,17 @@ func _on_built(e: Dictionary) -> void:
 	root.add_child(got[0])
 	if e.kind == "gate":
 		var ln := int(spot.lane)
-		var gd: float = sim.horde.gate_d[ln]
+		var g := int(spot.slot)
+		var gd: float = sim.tracks[ln].closest_d(spot.pos)
 		var r: Vector3 = sim.tracks[ln].right(gd)
 		root.transform = Transform3D(Basis(r, Vector3.UP, r.cross(Vector3.UP)), sim.tracks[ln].point(gd))
-		if not _gate_fx.has(ln):
+		if not _gate_fx.has(g):
 			var dust := _dust()
 			dust.position = Vector3(0, 0.3, 0.6)
-			_gate_fx[ln] = {dust = dust, prev = 1.0}
+			_gate_fx[g] = {dust = dust, prev = 1.0}
 		else:
-			(_gate_fx[ln].dust as Node).get_parent().remove_child(_gate_fx[ln].dust)
-		root.add_child(_gate_fx[ln].dust)
+			(_gate_fx[g].dust as Node).get_parent().remove_child(_gate_fx[g].dust)
+		root.add_child(_gate_fx[g].dust)
 	else:
 		root.position = spot.pos
 	add_child(root)
@@ -1161,9 +1173,9 @@ func _sync_view(delta: float) -> void:
 
 func _cam_goal() -> Vector3:
 	if _args.get("cam") == "gate":
-		for ln in Level.LANES.size():
-			if sim.horde.gate_d[ln] >= 0.0:
-				return sim.tracks[ln].point(sim.horde.gate_d[ln] - 1.5)
+		for g in Level.GATE_SLOTS:
+			if sim.horde.gate_d[g] >= 0.0:
+				return sim.tracks[sim.horde.gate_lane[g]].point(sim.horde.gate_d[g] - 1.5)
 	if _args.has("cam") and _args.cam != "gate":
 		var xz := String(_args.cam).split(",")
 		return Vector3(float(xz[0]), 0.0, float(xz[1]))
@@ -1232,11 +1244,20 @@ func _sync_phase() -> void:
 	else:
 		for l in _lane_labels:
 			l.visible = false
-	for id in _pads:
+	for spot in Level.SPOTS:
+		var id: String = spot.id
 		var b: Dictionary = sim.buildings.get(id, {})
-		_pads[id].node.visible = building and (b.is_empty() or b.kind == "gate")
-		if _pads[id].ghost:
-			_pads[id].ghost.visible = building and b.is_empty()
+		var pad: Dictionary = _pads[id]
+		var open := sim.unlocked(spot)
+		pad.node.visible = building and (b.is_empty() or b.kind == "gate")
+		if pad.open != open:  # locked: dim, "Lv N" in place of its kind
+			pad.open = open
+			(pad.node as Node3D).scale = Vector3.ONE if open else Vector3(0.8, 1, 0.8)
+			(pad.label as Label3D).text = pad.kind_text if open else "Lv %d" % int(spot.lv)
+			(pad.label as Label3D).modulate = Color.WHITE if open else Color(1, 1, 1, 0.45)
+			(pad.base as MeshInstance3D).transparency = 0.0 if open else 0.6
+		if pad.ghost:
+			pad.ghost.visible = building and b.is_empty() and open
 
 
 func _sync_hero(delta: float) -> void:
@@ -1487,8 +1508,8 @@ func _sync_gates() -> void:
 		if bv.kind != "gate":
 			continue
 		var b: Dictionary = sim.buildings[id]
-		var ln := int(b.spot.lane)
-		var fx: Dictionary = _gate_fx[ln]
+		var slot := int(b.spot.slot)
+		var fx: Dictionary = _gate_fx[slot]
 		if b.broken != bv.broken:
 			bv.broken = b.broken
 			var root: Node3D = bv.root
@@ -1500,7 +1521,7 @@ func _sync_gates() -> void:
 		if b.broken:
 			fx.dust.emitting = false
 			continue
-		var frac := sim.gate_hp_frac(ln)
+		var frac := sim.gate_hp_frac(slot)
 		var hit: bool = frac < float(fx.prev) - 0.00001
 		fx.prev = frac
 		fx.dust.emitting = hit
@@ -1557,7 +1578,8 @@ func _make_pad(spot: Dictionary) -> Dictionary:
 	base.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	node.add_child(base)
 	var label := Label3D.new()
-	label.text = {tower = "TOWER", eco = "GOLD", gate = "GATE"}[spot.kind]
+	var kind_text: String = {tower = "TOWER", eco = "GOLD", gate = "GATE"}[spot.kind]
+	label.text = kind_text
 	label.font_size = 48
 	label.outline_size = 12
 	label.pixel_size = 0.009
@@ -1568,7 +1590,7 @@ func _make_pad(spot: Dictionary) -> Dictionary:
 	var ghost: Node3D = null
 	if spot.kind == "gate":
 		ghost = _ghost_gate(spot)
-	return {node = node, label = label, ghost = ghost}
+	return {node = node, label = label, ghost = ghost, base = base, kind_text = kind_text, open = true}
 
 
 ## See-through gate standing across its lane where it would be built, with

@@ -24,6 +24,10 @@ keeps the decisions, the original analysis and what is left to build.
   choices.
 - **Enemies attack only walls** (gates, then the keep), never the hero or
   towers: no building HP, no hero death.
+- **Spots unlock with the hero's level** (5 tower + 1 gold at level 1,
+  1-2 more per level); gates come in two sets of three (one per lane),
+  the inner set at level 3, the outer one nearer the lane mouths at
+  level 8. Idea for later: synergy when a whole gate set stands.
 - Economy plots take a farm (fixed income) or a bank (interest on held
   gold, capped).
 - **Hero upgrades** (rogue-like): XP from kills near the hero, whoever

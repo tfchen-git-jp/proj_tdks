@@ -32,11 +32,14 @@ var pos := PackedVector3Array()
 var prev_pos := PackedVector3Array()
 var prev_phase := PackedFloat32Array()
 
-## Per lane, set by the game: gate road distance (-1 = none) and its HP.
-var gate_d := PackedFloat32Array([-1.0, -1.0, -1.0])
-var gate_hp := PackedFloat32Array([0.0, 0.0, 0.0])
-## Per lane, set by the game: fraction of gate damage blocked (Engineer).
-var gate_armor := PackedFloat32Array([0.0, 0.0, 0.0])
+## Per gate slot (Level.SPOTS `slot`), set by the game: its lane, road
+## distance (-1 = none) and HP. An enemy is held by the first standing
+## gate ahead of it on its lane. Slots 0-2 are lanes 0-2 (tests use them).
+var gate_lane := PackedInt32Array([0, 1, 2, 0, 1, 2])
+var gate_d := PackedFloat32Array([-1.0, -1.0, -1.0, -1.0, -1.0, -1.0])
+var gate_hp := PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+## Per gate slot, set by the game: fraction of damage blocked (Engineer).
+var gate_armor := PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 ## The keep: every lane ends at it. Enemies that get there stop and attack
 ## it like a gate (queueing the same way) until killed; one HP pool.
 var keep_hp := 1e9
@@ -200,8 +203,9 @@ func step(dt: float) -> void:
 		blocked[i] = 0
 		var stop := d[i] + 1e9
 		var rng_r := float(Level.ENEMIES[kind[i]].get("ranged", 0.0))
-		if _at_gate(i):
-			stop = gate_d[lane[i]] - (gap[i] if rng_r <= 0.0 else rng_r + gap[i])
+		var g := gate_of(i)
+		if g >= 0:
+			stop = gate_d[g] - (gap[i] if rng_r <= 0.0 else rng_r + gap[i])
 		else:
 			stop = tracks[lane[i]].length - (_keep_gap(i) if rng_r <= 0.0 else rng_r + gap[i])
 		if nd >= stop:
@@ -210,10 +214,11 @@ func step(dt: float) -> void:
 		d[i] = nd
 	# 2. Near a standing gate and at the keep, queue: nobody overlaps the one
 	# ahead of them in their lane, so the back ranks wait and step up.
+	for g in gate_d.size():
+		if gate_d[g] >= 0.0 and gate_hp[g] > 0.0:
+			_queue(gate_lane[g], gate_d[g], g, prev, dt)
 	for ln in tracks.size():
-		if gate_d[ln] >= 0.0 and gate_hp[ln] > 0.0:
-			_queue(ln, gate_d[ln], false, prev, dt)
-		_queue(ln, tracks[ln].length + KEEP_REACH, true, prev, dt)
+		_queue(ln, tracks[ln].length + KEEP_REACH, -1, prev, dt)
 	# 3. Gate / keep damage, animation phase, positions.
 	shots.clear()
 	for i in n:
@@ -223,8 +228,9 @@ func step(dt: float) -> void:
 		# Frost slows attacks as much as walking (swing and damage).
 		if blocked[i] == 1:
 			var dmg := float(e.dps) * power[i] * (1.0 - slow[i]) * dt
-			if _at_gate(i):
-				gate_hp[lane[i]] -= dmg * (1.0 - gate_armor[lane[i]])
+			var g := gate_of(i)
+			if g >= 0:
+				gate_hp[g] -= dmg * (1.0 - gate_armor[g])
 			else:
 				keep_hp -= dmg
 		if blocked[i] == 0:
@@ -241,17 +247,28 @@ func step(dt: float) -> void:
 	_compact()
 
 
-## Is enemy i in front of (blocked by) its lane's standing gate? Flyers
-## never are.
+## The gate slot holding enemy i up: the nearest standing gate ahead of it
+## on its lane, or -1 (none, or it flies).
+func gate_of(i: int) -> int:
+	if Level.ENEMIES[kind[i]].get("flies", false):
+		return -1
+	var best := -1
+	for g in gate_d.size():
+		if gate_lane[g] == lane[i] and gate_d[g] >= 0.0 and gate_hp[g] > 0.0 and d[i] < gate_d[g] \
+				and (best < 0 or gate_d[g] < gate_d[best]):
+			best = g
+	return best
+
+
 func _at_gate(i: int) -> bool:
-	var ln := lane[i]
-	return gate_d[ln] >= 0.0 and gate_hp[ln] > 0.0 and d[i] < gate_d[ln] and not Level.ENEMIES[kind[i]].get("flies", false)
+	return gate_of(i) >= 0
 
 
 ## Where enemy i's attacks land: its gate, or the keep.
 func _wall_point(i: int) -> Vector3:
-	if _at_gate(i):
-		return tracks[lane[i]].point(gate_d[lane[i]]) + Vector3(0, 1.0, 0)
+	var g := gate_of(i)
+	if g >= 0:
+		return tracks[lane[i]].point(gate_d[g]) + Vector3(0, 1.0, 0)
 	return Level.KEEP_POS + Vector3(0, 1.5, 0)
 
 
@@ -267,18 +284,19 @@ func _keep_gap(i: int) -> float:
 	return float(Level.ENEMIES[kind[i]].radius) * 0.8 - KEEP_REACH
 
 
-## Front-to-back over the enemies close behind wall `wd` (lane `ln`'s gate,
-## or the keep at the lane's end when `keep`): each may
+## Front-to-back over the enemies close behind wall `gd` (gate slot `slot`
+## on lane `ln`, or the keep at the lane's end when slot < 0): each may
 ## come no closer than its spacing to any enemy ahead that overlaps its
 ## lane position. Never pushes anyone backwards (from `prev`).
 ## Heavy enemies (giants) don't wait for light ones: the light ones just
 ## ahead of or beside a giant sidestep out of its path, and it walks
 ## through to the gate. Giants queue behind each other as usual, and one
 ## held within its reach of the gate hits it anyway.
-func _queue(ln: int, gd: float, keep: bool, prev: PackedFloat32Array, dt: float) -> void:
+func _queue(ln: int, gd: float, slot: int, prev: PackedFloat32Array, dt: float) -> void:
+	var keep := slot < 0
 	var near: Array = []
 	for i in count():
-		if hp[i] > 0.0 and lane[i] == ln and d[i] <= gd and gd - d[i] < QUEUE_ZONE and _at_gate(i) != keep and queues(i):
+		if hp[i] > 0.0 and lane[i] == ln and d[i] <= gd and gd - d[i] < QUEUE_ZONE and gate_of(i) == slot and queues(i):
 			near.push_back(Vector2(d[i], i))
 	near.sort()
 	near.reverse()  # front (largest d) first

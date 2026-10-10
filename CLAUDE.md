@@ -10,7 +10,7 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.1.22)
+## The game today (v0.1.23)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
@@ -56,10 +56,19 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   %APPDATA%/Godot/app_userdata/RogueShot TD/, phone
   /data/user/0/com.tfc.rogueshottd/files/.
 - **Map:** three lanes (west, centre, east) converging on the keep at the
-  top. 28 spots: 22 tower, 3 gate (one per lane, each with a tower spot
-  beside it), 3 economy ("GOLD": farm or bank). Unbuilt gate pads show a
-  see-through gate across the lane they block. Lane labels at each
-  entrance preview the next wave.
+  top. 30 spots: 21 tower, 6 gate, 3 economy ("GOLD": farm or bank).
+  Spots unlock with the hero's level (Level.SPOTS `lv`; Sim.unlocked; user
+  2026-10-10): Lv 1 = 5 tower + 1 gold spot near the keep, then 1-2 tower
+  spots per level up to Lv 10, gold plots at 4 and 7. Gates come in two
+  sets of three, one per lane, unlocked together: inner set (Lv 3, side by
+  side across the middle, z ~9) and outer set (Lv 8, z ~21, nearer the
+  lane mouths); later: synergy for a full set (user idea). Locked pads
+  show "Lv N", smaller and dimmed; a level-up names what opened. Horde
+  gates are 6 slots (`slot` 0-2 inner, 3-5 outer); an enemy is held by
+  the nearest standing gate ahead on its lane (Horde.gate_of). The popup
+  belongs to the NEAREST spot in reach (spots can sit close). Unbuilt
+  gate pads show a see-through gate. Lane-entrance previews show the
+  next wave.
 - **Buildings** (Level.BUILDINGS; towers 4 levels, farm / bank / gate 3;
   a bronze/silver/gold/ruby I-IV badge faces the camera on each): Archer
   (cheap, single target), Ballista (bolt piercing a line), Mortar (lobbed
@@ -98,7 +107,7 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   popup buttons carry the building's icon; lane-entrance previews are
   icon + count rows (main._lane_preview). Leaving a spot forgets a
   previewed (tapped once) tower. HP x Level.wave_hp(w) = 1 +
-  0.25 w + 0.047 w^2 (Horde.max_hp keeps it for the bars); gold per kill
+  0.25 w + 0.064 w^2 (Horde.max_hp keeps it for the bars); gold per kill
   doesn't grow. Drops: coins (1), coin stacks (5), ingots (20)
   (Sim.gold_pieces). They walk in from beyond the map and are untargetable
   until their lane's start line (red dashes on the road,
@@ -113,13 +122,14 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 - **Sound:** 32 SFX (assets/sfx) + looping BGM (assets/music, -16 dB).
 - **PC build:** the exported exe sizes its window to 90% of the screen
   height (main._fit_pc_window); editor/WSL runs keep 450x1000.
-- **Balance (v0.1.18, tools/meta_report.py):** the standard bot (Bot.PLAN,
-  Bot.CARD_PRIORITY) wins ~88% of 96 seeds (keep ~64% left; losses in
-  waves 8-10), hero ~51% of all damage (archer 14, ballista 18, mortar
-  16, frost 1). Random builds (Bot variant: random tower per spot, farm /
+- **Balance (v0.1.23, tools/meta_report.py):** the standard bot (Bot.PLAN,
+  Bot.CARD_PRIORITY; skips locked spots and comes back) wins ~91% of 96
+  seeds (keep ~63% left; losses spread over waves 6-10), hero ~48% of all
+  damage (archer 13, ballista 17, mortar 20, frost 2). v0.1.18 figures: Random builds (Bot variant: random tower per spot, farm /
   bank, random picks) win ~12%: most die in waves 5-6; ballista-heavy
   builds win most, banner-heavy ones least, frost and the Rally /
-  Engineer cards rank low. Enemy HP x(1 + 0.25w + 0.047w^2). The user
+  Engineer cards rank low. Enemy HP x(1 + 0.25w + 0.064w^2) since v0.1.23
+  (the second gate set added a lot of defence). The user
   found v0.1.15 "feels good".
 
 ## Next (docs/DESIGN.md "Build order")
@@ -336,6 +346,9 @@ Windows build, never in WSL.
   to 2 m outside the walkable area and marked (user: enemies "in range"
   at the bottom of the centre lane weren't shot); score = keep % x 10 +
   gold for ties on waves.
+- v0.1.23: spots unlock by hero level; two gate sets (inner Lv 3, outer
+  Lv 8), gates by slot; popup = nearest spot (the bot got stuck between a
+  gate pad and a tower spot otherwise).
 - v0.1.22: icons on build buttons and lane previews, hero level from 1.
 - v0.1.21: inline unit icons, element colours, sweep holds the hero,
   popup bottom margin.

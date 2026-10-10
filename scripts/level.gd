@@ -96,39 +96,47 @@ const TOWER_KINDS := ["archer", "ballista", "mortar", "frost", "banner"]
 
 ## Building spots. kind: tower / gate / eco (farm or bank); gates also
 ## name their lane.
+## lv: the hero level that unlocks the spot (user, 2026-10-10: few spots
+## at first, 1-2 more per level). Gates come in sets, one per lane, all
+## unlocked together; `slot` is the gate's Horde slot (0-2 the inner set
+## near the middle of the map, 3-5 the outer set nearer the lane mouths).
 const SPOTS := [
-	{id = "w_mid", kind = "tower", pos = Vector3(-6.0, 0, 20.0)},
-	{id = "w_out", kind = "tower", pos = Vector3(-13.6, 0, 9.5)},
-	{id = "w_in", kind = "tower", pos = Vector3(-4.6, 0, 3.6)},
-	{id = "c_far", kind = "tower", pos = Vector3(0.9, 0, 28.5)},
-	{id = "e_mid", kind = "tower", pos = Vector3(1.6, 0, 12.6)},
-	{id = "e_in", kind = "tower", pos = Vector3(1.1, 0, 2.6)},
-	{id = "k_west", kind = "tower", pos = Vector3(-4.6, 0, -8.6)},
-	{id = "k_east", kind = "tower", pos = Vector3(3.6, 0, -7.2)},
-	# One tower spot covering each gate's queue (user, 2026-10-10).
-	{id = "gw_t", kind = "tower", pos = Vector3(-13.6, 0, 23.6)},
-	{id = "gc_t", kind = "tower", pos = Vector3(-5.2, 0, 15.6)},
-	{id = "ge_t", kind = "tower", pos = Vector3(1.5, 0, 22.2)},
-	# Twice the tower spots (user, 2026-10-09: room for banner clusters):
-	# found by a grid search for 2.3-3.4 m off a road, farthest from the rest.
-	{id = "x_w1", kind = "tower", pos = Vector3(-8.2, 0, 29.6)},
-	{id = "x_w2", kind = "tower", pos = Vector3(-11.2, 0, 2.6)},
-	{id = "x_e1", kind = "tower", pos = Vector3(5.8, 0, -1.4)},
-	{id = "x_w3", kind = "tower", pos = Vector3(-13.2, 0, 15.1)},
-	{id = "x_c1", kind = "tower", pos = Vector3(-5.2, 0, 25.1)},
-	{id = "x_w4", kind = "tower", pos = Vector3(-3.7, 0, -1.4)},
-	{id = "x_c2", kind = "tower", pos = Vector3(0.3, 0, 7.6)},
-	{id = "x_e2", kind = "tower", pos = Vector3(2.3, 0, 17.6)},
-	{id = "x_c3", kind = "tower", pos = Vector3(-4.7, 0, 8.1)},
-	{id = "x_w5", kind = "tower", pos = Vector3(-10.7, 0, 6.6)},
-	{id = "x_w6", kind = "tower", pos = Vector3(-13.7, 0, 27.6)},
-	{id = "g_west", kind = "gate", lane = 0, pos = Vector3(-14.0, 0, 21.0)},
-	{id = "g_centre", kind = "gate", lane = 1, pos = Vector3(-5.6, 0, 12.4)},
-	{id = "g_east", kind = "gate", lane = 2, pos = Vector3(6.5, 0, 20.2)},
-	{id = "f_1", kind = "eco", pos = Vector3(-7.5, 0, -11.0)},
-	{id = "f_2", kind = "eco", pos = Vector3(-10.5, 0, -4.5)},
-	{id = "f_3", kind = "eco", pos = Vector3(5.2, 0, -10.4)},
+	# Level 1: around the keep.
+	{id = "k_west", kind = "tower", lv = 1, pos = Vector3(-4.6, 0, -8.6)},
+	{id = "k_east", kind = "tower", lv = 1, pos = Vector3(3.6, 0, -7.2)},
+	{id = "w_in", kind = "tower", lv = 1, pos = Vector3(-4.6, 0, 3.6)},
+	{id = "e_in", kind = "tower", lv = 1, pos = Vector3(1.1, 0, 2.6)},
+	{id = "x_w4", kind = "tower", lv = 1, pos = Vector3(-3.7, 0, -1.4)},
+	{id = "f_1", kind = "eco", lv = 1, pos = Vector3(-7.5, 0, -11.0)},
+	{id = "x_e1", kind = "tower", lv = 2, pos = Vector3(5.8, 0, -1.4)},
+	{id = "x_c2", kind = "tower", lv = 2, pos = Vector3(0.3, 0, 7.6)},
+	# Level 3: the inner gates, side by side across the middle of the map.
+	{id = "g_w1", kind = "gate", lane = 0, slot = 0, lv = 3, pos = Vector3(-11.4, 0, 8.7)},
+	{id = "g_c1", kind = "gate", lane = 1, slot = 1, lv = 3, pos = Vector3(-5.0, 0, 9.2)},
+	{id = "g_e1", kind = "gate", lane = 2, slot = 2, lv = 3, pos = Vector3(2.0, 0, 9.8)},
+	{id = "e_mid", kind = "tower", lv = 3, pos = Vector3(1.6, 0, 12.6)},
+	{id = "w_out", kind = "tower", lv = 3, pos = Vector3(-13.6, 0, 9.5)},
+	{id = "x_w2", kind = "tower", lv = 4, pos = Vector3(-11.2, 0, 2.6)},
+	{id = "x_w5", kind = "tower", lv = 4, pos = Vector3(-10.9, 0, 5.8)},
+	{id = "f_2", kind = "eco", lv = 4, pos = Vector3(-10.5, 0, -4.5)},
+	{id = "gc_t", kind = "tower", lv = 5, pos = Vector3(-5.2, 0, 15.6)},
+	{id = "x_e2", kind = "tower", lv = 5, pos = Vector3(2.3, 0, 17.6)},
+	{id = "w_mid", kind = "tower", lv = 6, pos = Vector3(-6.0, 0, 20.0)},
+	{id = "x_w3", kind = "tower", lv = 6, pos = Vector3(-13.2, 0, 15.1)},
+	{id = "ge_t", kind = "tower", lv = 7, pos = Vector3(1.5, 0, 22.2)},
+	{id = "f_3", kind = "eco", lv = 7, pos = Vector3(5.2, 0, -10.4)},
+	# Level 8: the outer gates, nearer the lane mouths.
+	{id = "g_w2", kind = "gate", lane = 0, slot = 3, lv = 8, pos = Vector3(-14.0, 0, 21.0)},
+	{id = "g_c2", kind = "gate", lane = 1, slot = 4, lv = 8, pos = Vector3(-3.9, 0, 20.7)},
+	{id = "g_e2", kind = "gate", lane = 2, slot = 5, lv = 8, pos = Vector3(6.5, 0, 20.2)},
+	{id = "gw_t", kind = "tower", lv = 8, pos = Vector3(-13.6, 0, 23.6)},
+	{id = "x_c1", kind = "tower", lv = 8, pos = Vector3(-5.2, 0, 25.1)},
+	{id = "c_far", kind = "tower", lv = 9, pos = Vector3(0.9, 0, 28.5)},
+	{id = "x_w1", kind = "tower", lv = 9, pos = Vector3(-8.2, 0, 29.6)},
+	{id = "x_w6", kind = "tower", lv = 10, pos = Vector3(-13.7, 0, 27.6)},
 ]
+## Gate slots in Horde (one standing gate per slot).
+const GATE_SLOTS := 6
 const PAD_SIZE := 1.5
 ## How near a spot's centre the hero must stand for its build menu.
 const SPOT_REACH := 1.45
@@ -185,7 +193,7 @@ const CENTRE := 1
 const EAST := 2
 
 const HP_PER_WAVE := 0.25
-const HP_PER_WAVE2 := 0.047
+const HP_PER_WAVE2 := 0.064
 
 ## Waves. Each group: `count` enemies of `type` on `lane`, one every
 ## `every` s, starting `t` s into the wave.
@@ -210,9 +218,9 @@ const WAVES := [
 		{lane = CENTRE, type = SIEGE, count = 3, every = 1.5, t = 6.0},
 		{lane = EAST, type = ARMORED, count = 10, every = 1.0, t = 0.0},
 		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 14.0}],
-	[{lane = WEST, type = GRUNT, count = 35, every = 0.3, t = 0.0},
-		{lane = EAST, type = GRUNT, count = 35, every = 0.3, t = 0.0},
-		{lane = CENTRE, type = ARMORED, count = 12, every = 1.0, t = 2.0},
+	[{lane = WEST, type = GRUNT, count = 30, every = 0.32, t = 0.0},
+		{lane = EAST, type = GRUNT, count = 30, every = 0.32, t = 0.0},
+		{lane = CENTRE, type = ARMORED, count = 10, every = 1.0, t = 2.0},
 		{lane = WEST, type = BAT, count = 12, every = 0.6, t = 6.0},
 		{lane = CENTRE, type = RUNNER, count = 20, every = 0.3, t = 8.0},
 		{lane = EAST, type = SIEGE, count = 5, every = 1.4, t = 10.0},

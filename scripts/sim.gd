@@ -379,19 +379,23 @@ func _gain_xp(n: float) -> void:
 		xp -= Perks.xp_needed(level)
 		level += 1
 		pending_levels += 1
-		events.push_back({type = "level_up", level = level})
+		var opened := []
+		for sp in Level.SPOTS:
+			if int(sp.get("lv", 1)) == level:
+				opened.push_back(sp.id)
+		events.push_back({type = "level_up", level = level, opened = opened})
 
 
 ## Engineer: gates near the hero shrug off part of the damage.
 func _engineer() -> void:
 	var armor := pv("engineer", 0.0)
-	for ln in horde.gate_armor.size():
-		horde.gate_armor[ln] = 0.0
+	for g in horde.gate_armor.size():
+		horde.gate_armor[g] = 0.0
 	if armor <= 0.0:
 		return
 	for b in buildings.values():
 		if b.kind == "gate" and not b.broken and _flat_dist(b.pos, hero_pos) <= Perks.ENGINEER_R:
-			horde.gate_armor[int(b.spot.lane)] = armor
+			horde.gate_armor[int(b.spot.slot)] = armor
 
 
 ## Rally / Spotter: is a tower at p inside the hero's aura?
@@ -489,10 +493,15 @@ static func from_save(d: Dictionary) -> Sim:
 func spot_under_hero() -> Dictionary:
 	if phase != "build" or state != "play" or sweeping():
 		return {}
+	# The nearest one: spots can sit close together (a gate pad by a tower).
+	var best := {}
+	var best_d := Level.SPOT_REACH
 	for s in Level.SPOTS:
-		if hero_pos.distance_to(s.pos) < Level.SPOT_REACH:
-			return s
-	return {}
+		var dd := hero_pos.distance_to(s.pos)
+		if dd < best_d and unlocked(s):
+			best = s
+			best_d = dd
+	return best
 
 
 ## What can be done at a spot: [{kind, level, cost, name, desc, upgrade, ok}].
@@ -525,7 +534,7 @@ func buy(spot_id: String, kind: String) -> bool:
 	for s in Level.SPOTS:
 		if s.id == spot_id:
 			spot = s
-	if spot.is_empty() or Level.BUILDINGS[kind].spot != spot.kind:
+	if spot.is_empty() or Level.BUILDINGS[kind].spot != spot.kind or not unlocked(spot):
 		return false
 	var b: Dictionary = buildings.get(spot_id, {})
 	var level := 0
@@ -549,27 +558,35 @@ func buy(spot_id: String, kind: String) -> bool:
 
 
 func _raise_gate(b: Dictionary) -> void:
+	var g := int(b.spot.slot)
 	var ln := int(b.spot.lane)
-	horde.gate_d[ln] = tracks[ln].closest_d(b.spot.pos)
-	horde.gate_hp[ln] = float(Level.stats("gate", b.level).hp)
+	horde.gate_lane[g] = ln
+	horde.gate_d[g] = tracks[ln].closest_d(b.spot.pos)
+	horde.gate_hp[g] = float(Level.stats("gate", b.level).hp)
 
 
-func gate_hp_frac(ln: int) -> float:
+## HP fraction of the gate in `slot` (0 if none stands there).
+func gate_hp_frac(slot: int) -> float:
 	for b in buildings.values():
-		if b.kind == "gate" and int(b.spot.lane) == ln and not b.broken:
-			return clampf(horde.gate_hp[ln] / float(Level.stats("gate", b.level).hp), 0.0, 1.0)
+		if b.kind == "gate" and int(b.spot.slot) == slot and not b.broken:
+			return clampf(horde.gate_hp[slot] / float(Level.stats("gate", b.level).hp), 0.0, 1.0)
 	return 0.0
+
+
+## Can the hero build on `spot` yet (its `lv` reached, or already built)?
+func unlocked(spot: Dictionary) -> bool:
+	return level >= int(spot.get("lv", 1)) or buildings.has(spot.id)
 
 
 func _gates() -> void:
 	for b in buildings.values():
 		if b.kind != "gate" or b.broken:
 			continue
-		var ln := int(b.spot.lane)
-		if horde.gate_hp[ln] <= 0.0:
+		var g := int(b.spot.slot)
+		if horde.gate_hp[g] <= 0.0:
 			b.broken = true
-			horde.gate_d[ln] = -1.0
-			events.push_back({type = "gate_broken", lane = ln, spot = b.spot})
+			horde.gate_d[g] = -1.0
+			events.push_back({type = "gate_broken", lane = int(b.spot.lane), spot = b.spot})
 
 
 ## Solid things as [centre, radius]: the keep and every building but gates.

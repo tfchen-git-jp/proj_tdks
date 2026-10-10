@@ -26,6 +26,7 @@ func _init() -> void:
 	_towers()
 	_coins()
 	_save()
+	_unlocks()
 	_perks()
 	_new_enemies()
 	_layout()
@@ -230,6 +231,7 @@ func _towers() -> void:
 	# An archer tower beside the centre lane kills a lone grunt with arrows.
 	var s = SimS.new(7)
 	s.coins = 999
+	s.level = 20  # every spot open
 	s.buy("e_mid", "archer")
 	s.start_wave()
 	var arrows := 0
@@ -246,11 +248,12 @@ func _towers() -> void:
 	_ok(s.horde.killed > 0, "towers kill (%d)" % s.horde.killed)
 	# Frost slows, banner buffs, farms pay.
 	var f = SimS.new(8)
+	f.level = 20
 	f.coins = 999
 	f.buy("e_mid", "frost")
 	f.buy("e_in", "banner")
 	f.buy("f_1", "farm")
-	_ok(f.banner_buff(Level.SPOTS[5].pos) > 0.0, "a banner buffs its own spot")
+	_ok(f.banner_buff(f.buildings.e_in.pos) > 0.0, "a banner buffs its own spot")
 	_ok(f.banner_buff(Level.KEEP_POS + Vector3(0, 0, 40)) == 0.0, "but not far away")
 	f.start_wave()
 	var slowed := false
@@ -284,6 +287,7 @@ func _towers() -> void:
 	_ok(coins_after >= 999 - cost + int(Level.stats("farm", 0).income), "the farm paid after the wave (%d)" % coins_after)
 	# Banks: the best bank's rate, capped by the sum of their caps.
 	var bk = SimS.new(4)
+	bk.level = 20
 	bk.coins = 500
 	bk.buy("f_1", "bank")
 	bk.buy("f_2", "bank")
@@ -370,10 +374,11 @@ func _coins() -> void:
 ## waves cleared first, then gold.
 func _save() -> void:
 	var a = SimS.new(11)
+	a.level = 20
 	a.coins = 400
 	a.buy("k_east", "archer")
 	a.buy("k_east", "archer")
-	a.buy("g_centre", "gate")
+	a.buy("g_c1", "gate")
 	a.buy("f_1", "bank")
 	a.wave = 4
 	a.base_hp = 321.0
@@ -389,6 +394,53 @@ func _save() -> void:
 	list.sort_custom(Save.better)
 	_ok(list[0].waves == 10 and list[0].score == 1000 and list[1].score == 600 and list[2].waves == 8,
 		"scores: waves first, then keep % x 10 + gold")
+
+
+## Spots open with the hero's level; gates come in sets (one per lane) and
+## two gates on a lane hold enemies at the outer one first.
+func _unlocks() -> void:
+	var s = SimS.new(12)
+	var open := 0
+	for sp in Level.SPOTS:
+		if s.unlocked(sp):
+			open += 1
+			_ok(sp.kind != "gate", "no gate spot at level 1 (%s)" % sp.id)
+	_ok(open == 6, "level 1 opens 6 spots (%d)" % open)
+	s.coins = 999
+	s.hero_pos = Vector3(1.6, 0, 12.6)  # e_mid, level 3
+	_ok(s.spot_under_hero().is_empty() and not s.buy("e_mid", "archer"), "a locked spot has no menu and can't be built")
+	s.level = 3
+	_ok(s.spot_under_hero().get("id", "") == "e_mid" and s.buy("e_mid", "archer"), "at its level it opens")
+	var sets := {}
+	for sp in Level.SPOTS:
+		if sp.kind == "gate":
+			sets[int(sp.lv)] = int(sets.get(int(sp.lv), 0)) + 1
+	_ok(sets.size() == 2 and sets.values() == [3, 3], "gates open in two sets of three (%s)" % sets)
+	var per_level := {}
+	for sp in Level.SPOTS:
+		if sp.kind == "tower":
+			per_level[int(sp.lv)] = int(per_level.get(int(sp.lv), 0)) + 1
+	var gaps := 0
+	for lv in range(2, 11):
+		if int(per_level.get(lv, 0)) < 1 or int(per_level.get(lv, 0)) > 2:
+			gaps += 1
+	_ok(gaps == 0, "levels 2-10 each open 1-2 tower spots (%s)" % per_level)
+	# Two gates on the centre lane: enemies stop at the outer one first.
+	var h = HordeS.new(_lane_tracks(), 13)
+	h.gate_lane[4] = 1
+	h.gate_d[1] = 30.0
+	h.gate_hp[1] = 1e4
+	h.gate_d[4] = 20.0
+	h.gate_hp[4] = 1e4
+	h.spawn(Level.GRUNT, 1)
+	for k in 60 * 25:
+		h.step(DT)
+	_ok(h.d[0] < 20.0 and h.gate_hp[4] < 1e4 and h.gate_hp[1] == 1e4, "the outer gate holds them first")
+	h.gate_hp[4] = 0.0
+	h.gate_d[4] = -1.0
+	for k in 60 * 15:
+		h.step(DT)
+	_ok(h.d[0] > 20.0 and h.d[0] < 30.0 and h.gate_hp[1] < 1e4, "when it falls they move on to the inner one")
 
 
 ## Put a fresh enemy `d` m along lane `ln` (past the start line).

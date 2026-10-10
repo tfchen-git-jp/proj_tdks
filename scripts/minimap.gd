@@ -68,7 +68,7 @@ func _draw() -> void:
 			"gate":
 				if not b.broken:
 					var t: Track = sim.tracks[int(b.spot.lane)]
-					var gd: float = sim.horde.gate_d[int(b.spot.lane)]
+					var gd: float = sim.horde.gate_d[int(b.spot.slot)]
 					var r := t.right(gd)
 					var c := t.point(gd)
 					draw_line(_to(c - r * 1.6), _to(c + r * 1.6), GATE, 4.0)

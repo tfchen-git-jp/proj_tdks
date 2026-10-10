@@ -8,13 +8,13 @@ extends RefCounted
 ## [spot id, building] in order; a repeated pair upgrades it.
 const PLAN := [
 	["k_east", "archer"], ["k_west", "archer"], ["e_in", "archer"], ["f_1", "farm"],
-	["w_in", "archer"], ["e_mid", "frost"], ["g_centre", "gate"], ["w_mid", "mortar"],
-	["k_east", "archer"], ["k_west", "archer"], ["f_3", "farm"], ["c_far", "ballista"],
-	["g_east", "gate"], ["g_west", "gate"], ["w_out", "archer"],
+	["w_in", "archer"], ["e_mid", "frost"], ["g_c1", "gate"], ["w_mid", "mortar"],
+	["k_east", "archer"], ["k_west", "archer"], ["f_3", "farm"], ["x_e2", "ballista"],
+	["g_e1", "gate"], ["g_w1", "gate"], ["w_out", "archer"],
 	["e_in", "archer"], ["w_in", "archer"], ["w_mid", "mortar"], ["f_1", "farm"],
 	["e_mid", "frost"], ["c_far", "ballista"], ["k_east", "archer"], ["k_west", "archer"],
-	["f_2", "farm"], ["gc_t", "mortar"], ["g_centre", "gate"], ["ge_t", "archer"], ["gw_t", "archer"],
-	["g_east", "gate"], ["g_west", "gate"], ["w_mid", "mortar"], ["c_far", "ballista"],
+	["f_2", "farm"], ["gc_t", "mortar"], ["g_c2", "gate"], ["ge_t", "archer"], ["gw_t", "archer"],
+	["g_e2", "gate"], ["g_w2", "gate"], ["w_mid", "mortar"], ["c_far", "ballista"],
 	["gc_t", "mortar"], ["ge_t", "archer"], ["gw_t", "archer"], ["e_in", "archer"], ["w_in", "archer"],
 	["e_mid", "frost"], ["w_out", "archer"], ["e_in", "archer"], ["w_in", "archer"],
 	["c_far", "ballista"], ["w_mid", "mortar"], ["gc_t", "mortar"],
@@ -80,15 +80,19 @@ func _target() -> Vector3:
 				best = k
 		sim.pick(best if _rng == null else _rng.randi() % sim.offer.size())
 	if sim.phase == "build":
-		# Buy the next affordable plan step, walking to its spot first.
-		while _step < plan.size() and _done(plan[_step]):
+		# Buy the next affordable plan step on an unlocked spot (locked ones
+		# wait for a later level), walking to its spot first.
+		while _step < plan.size() and _done(_step):
 			_step += 1
-		if _step < plan.size() and sim.coins >= _cost(plan[_step]):
-			var spot := _spot(plan[_step][0])
+		var k := _step
+		while k < plan.size() and (_done(k) or not sim.unlocked(_spot(plan[k][0]))):
+			k += 1
+		if k < plan.size() and sim.coins >= _cost(plan[k]):
+			var spot := _spot(plan[k][0])
 			# Built farms are solid: the hero can't reach the middle, only
 			# the popup range (what a player sees).
 			if sim.spot_under_hero().get("id", "") == spot.id:
-				sim.buy(spot.id, plan[_step][1])
+				sim.buy(spot.id, plan[k][1])
 			return spot.pos
 		var coin := _nearest_coin()
 		if coin != Vector3.INF:
@@ -104,10 +108,11 @@ func _target() -> Vector3:
 	return Level.HERO_START
 
 
-## Has this plan step happened (built, or upgraded to its repeat count)?
-func _done(step: Array) -> bool:
+## Has plan step `idx` happened (built, or upgraded to its repeat count)?
+func _done(idx: int) -> bool:
+	var step: Array = plan[idx]
 	var want := 0
-	for k in _step + 1:
+	for k in idx + 1:
 		if plan[k][0] == step[0] and plan[k][1] == step[1]:
 			want += 1
 	var b: Dictionary = sim.buildings.get(step[0], {})
