@@ -41,6 +41,7 @@ var _cards_list: VBoxContainer
 var _cards_reroll: Button
 var _cards_key := ""
 var _end_info: Label
+var _end_stats: VBoxContainer
 var _end_label: Label
 var _joy: Control
 var _touch := -1
@@ -232,7 +233,7 @@ func _ready() -> void:
 	var box := VBoxContainer.new()
 	box.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 40)
+	box.add_theme_constant_override("separation", 24)
 	box.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	box.grow_vertical = Control.GROW_DIRECTION_BOTH
 	_end.add_child(box)
@@ -243,6 +244,18 @@ func _ready() -> void:
 	_end_info = _label("", 32)
 	_end_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_end_info)
+	var sbox := PanelContainer.new()
+	var sst := _box(Color(0.06, 0.07, 0.1, 0.85), 14, Color(1, 1, 1, 0.4), 2)
+	sst.content_margin_left = 20
+	sst.content_margin_right = 20
+	sst.content_margin_top = 12
+	sst.content_margin_bottom = 12
+	sbox.add_theme_stylebox_override("panel", sst)
+	box.add_child(sbox)
+	sbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_end_stats = VBoxContainer.new()
+	_end_stats.add_theme_constant_override("separation", 6)
+	sbox.add_child(_end_stats)
 	var again := Button.new()
 	again.text = "  " + tr("Play again") + "  "
 	again.add_theme_font_size_override("font_size", 44)
@@ -484,7 +497,7 @@ func set_boss(b: Array) -> void:
 	if _boss == null:
 		_boss = Control.new()
 		_boss.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-		_boss.position = Vector2(-260, _top + 104)
+		_boss.position = Vector2(-260, _top + 124)
 		_boss.size = Vector2(520, 60)
 		_boss.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_root.add_child(_boss)
@@ -502,6 +515,7 @@ func set_boss(b: Array) -> void:
 		_boss_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_boss.add_child(_boss_name)
 	_boss.visible = not b.is_empty()
+	_msg.offset_top = _top + (200 if _boss.visible else 150)
 	if b.is_empty():
 		return
 	_boss_name.text = tr(String(b[0])) + ("  -  " + tr("BERSERK") if b[2] else "")
@@ -640,11 +654,54 @@ func message(text: String, seconds := 3.0) -> void:
 	_msg_t = seconds
 
 
-func show_end(won: bool, info := "") -> void:
+## tables: [[title, [[icon, name, value, share %], ...]], ...] ([] hides).
+## Each table is a grid -- icon + name, value, share -- so the columns line
+## up in any language; the panel sits centred, as wide as its content.
+func show_end(won: bool, info := "", tables := []) -> void:
 	_touch = -1
 	_update_move()
 	_end_label.text = tr("VICTORY!") if won else tr("DEFEAT")
 	_end_info.text = info
+	for c in _end_stats.get_children():
+		c.queue_free()
+	for t in tables:
+		if _end_stats.get_child_count() > 0:
+			_end_stats.add_child(Control.new())  # a gap between the tables
+		var head := _label(String(t[0]), 26)
+		head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		head.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
+		_end_stats.add_child(head)
+		var grid := GridContainer.new()
+		grid.columns = 3
+		grid.add_theme_constant_override("h_separation", 28)
+		grid.add_theme_constant_override("v_separation", 4)
+		grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		_end_stats.add_child(grid)
+		if (t[1] as Array).is_empty():
+			grid.add_child(_label(tr("None"), 24))
+		for r in t[1]:
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 8)
+			var icon := TextureRect.new()
+			icon.texture = load(UiText.ICONS + String(r[0]) + ".png")
+			icon.custom_minimum_size = Vector2(34, 34)
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			row.add_child(icon)
+			row.add_child(_label(String(r[1]), 24))
+			grid.add_child(row)
+			var v := _label(str(roundi(float(r[2]))), 24)
+			v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			grid.add_child(v)
+			var pct := _label("%.1f%%" % float(r[3]), 24)
+			pct.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			pct.modulate = Color(1, 1, 1, 0.75)
+			grid.add_child(pct)
+	if _intro != null:
+		_intro.visible = false
+	_msg_t = 0.0
+	_msg.modulate.a = 0.0
+	(_end_stats.get_parent() as Control).visible = not tables.is_empty()
 	_end.visible = true
 	minimap.visible = false
 

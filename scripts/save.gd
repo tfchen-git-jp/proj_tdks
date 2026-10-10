@@ -5,7 +5,8 @@ extends RefCounted
 ##   run:    Sim.to_save() -- written when a wave starts and when one is
 ##           cleared, deleted when the game is won or lost.
 ##   scores: [{waves, score, keep, gold, won, date}], best first: more
-##           waves cleared, then the higher score (keep HP % x 10 + gold).
+##           waves cleared, then the higher score (keep HP % x 10 + gold +
+##           50 per hero level).
 
 const RUN := "user://run.json"
 const SCORES := "user://scores.json"
@@ -37,16 +38,22 @@ static func scores() -> Array:
 
 
 ## Tie-break score for the same waves cleared: every 1% of the keep's HP
-## left is worth 10 gold (a full keep = 1000), plus the gold in hand.
-static func score_of(keep_frac: float, gold: int) -> int:
-	return roundi(clampf(keep_frac, 0.0, 1.0) * 1000.0) + gold
+## left is worth 10 (a full keep = 1000), plus the gold in hand, plus
+## LEVEL_POINTS per hero level above 1 (the progress to the next level
+## counts its share).
+const LEVEL_POINTS := 50
+
+
+static func score_of(keep_frac: float, gold: int, level := 1, xp_frac := 0.0) -> int:
+	return roundi(clampf(keep_frac, 0.0, 1.0) * 1000.0) + gold + roundi((level - 1 + clampf(xp_frac, 0.0, 1.0)) * LEVEL_POINTS)
 
 
 ## Adds a finished game; returns its rank (1-based), or 0 if it didn't make
 ## the top 10.
-static func add_score(waves: int, keep_frac: float, gold: int, won: bool) -> int:
+static func add_score(waves: int, keep_frac: float, gold: int, won: bool, level := 1, xp_frac := 0.0) -> int:
 	var list := scores()
-	var entry := {waves = waves, score = score_of(keep_frac, gold), keep = roundi(keep_frac * 100.0), gold = gold,
+	var entry := {waves = waves, score = score_of(keep_frac, gold, level, xp_frac), keep = roundi(keep_frac * 100.0), gold = gold,
+		level = level,
 		won = won, date = Time.get_date_string_from_system()}
 	list.push_back(entry)
 	list.sort_custom(better)

@@ -40,8 +40,8 @@ msgstr "語言：%s"
 msgid "Top 10"
 msgstr "前十名"
 
-msgid "Most waves cleared, then score:\nkeep HP % x 10 + gold left"
-msgstr "通過波數多者優先，其次比分數：\n主堡生命 % x 10 + 剩餘黃金"
+msgid "Most waves cleared, then score:\nkeep HP % x 10 + gold left + 50 per hero level"
+msgstr "通過波數多者優先，其次比分數：\n主堡生命 % x 10 + 剩餘黃金 + 英雄每級 50"
 
 msgid "No games finished yet."
 msgstr "還沒有完成的遊戲。"
@@ -103,8 +103,20 @@ msgstr "勝利！"
 msgid "DEFEAT"
 msgstr "失敗"
 
-msgid "Waves cleared: %d / %d\nKeep %d%%  +  gold %d\nScore %d"
-msgstr "通過波數：%d／%d\n主堡 %d%%  +  黃金 %d\n分數 %d"
+msgid "Waves cleared: %d / %d\nKeep %d%%  +  gold %d  +  hero Lv %d\nScore %d"
+msgstr "通過波數：%d／%d\n主堡 %d%%  +  黃金 %d  +  英雄 Lv %d\n分數 %d"
+
+msgid "Damage dealt"
+msgstr "造成的傷害"
+
+msgid "Damage taken (gates and keep)"
+msgstr "受到的傷害（城門與主堡）"
+
+msgid "Hero"
+msgstr "英雄"
+
+msgid "None"
+msgstr "無"
 
 msgid "\nNew top-10 entry: #%d"
 msgstr "\n新紀錄：第 %d 名"
@@ -172,8 +184,8 @@ msgstr "新敵人：%s"
 msgid "Wave %d of %d starts in %d"
 msgstr "第 %d 波（共 %d 波）將在 %d 秒後開始"
 
-msgid "Walk off the pad to wait."
-msgstr "離開平台即可暫緩。"
+msgid "Walk off the pad to stop the countdown."
+msgstr "離開平台可暫停倒數計時"
 
 msgid "%s: %s"
 msgstr "%s：%s"

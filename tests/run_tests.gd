@@ -389,6 +389,8 @@ func _save() -> void:
 	_ok(b.buildings.size() == 3 and b.buildings.k_east.level == 1 and b.buildings.f_1.kind == "bank"
 		and b.horde.gate_d[1] > 0.0 and b.horde.gate_hp[1] > 0.0, "with its buildings and a standing gate")
 	_ok(b._rng.state == a._rng.state and b.horde._rng.state == a.horde._rng.state, "and its dice")
+	_ok(Save.score_of(0.5, 100, 11, 0.5) == 500 + 100 + roundi(10.5 * Save.LEVEL_POINTS),
+		"score counts the hero's level and XP")
 	var list := [{waves = 10, score = Save.score_of(0.2, 400)}, {waves = 8, score = Save.score_of(1.0, 900)},
 		{waves = 10, score = Save.score_of(0.9, 100)}]
 	list.sort_custom(Save.better)

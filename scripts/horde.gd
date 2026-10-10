@@ -49,6 +49,8 @@ var deaths: Array[Dictionary] = []  # {pos, kind, d, lane}
 var killed := 0
 var dealt := 0.0  # all damage taken (balance stats)
 var burn_dealt := 0.0  # of which by burning (Fire Bolts)
+## Damage done to gates and the keep, by enemy type (end-of-game stats).
+var wall_dmg := PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 ## Ranged enemies' shots this step, for the view: [from, to].
 var shots: Array = []
 
@@ -230,9 +232,11 @@ func step(dt: float) -> void:
 			var dmg := float(e.dps) * power[i] * (1.0 - slow[i]) * dt
 			var g := gate_of(i)
 			if g >= 0:
-				gate_hp[g] -= dmg * (1.0 - gate_armor[g])
+				dmg *= 1.0 - gate_armor[g]
+				gate_hp[g] -= dmg
 			else:
 				keep_hp -= dmg
+			wall_dmg[kind[i]] += dmg
 		if blocked[i] == 0:
 			phase[i] += spd[i] * (1.0 - slow[i]) * dt * 7.0
 		else:

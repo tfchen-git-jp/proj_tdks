@@ -72,8 +72,8 @@ def build():
     t("Back", "返回")
     t("Language: %s", "語言：%s")
     t("Top 10", g["top10"])
-    t("Most waves cleared, then score:\nkeep HP % x 10 + gold left",
-      "通過波數多者優先，其次比分數：\n%s生命 %% x 10 + 剩餘%s" % (g["keep"], g["gold"]))
+    t("Most waves cleared, then score:\nkeep HP % x 10 + gold left + 50 per hero level",
+      "通過波數多者優先，其次比分數：\n%s生命 %% x 10 + 剩餘%s + %s每級 50" % (g["keep"], g["gold"], g["hero"]))
     t("No games finished yet.", "還沒有完成的遊戲。")
     t("WIN", "勝利")
     t("wave %d", "第 %%d %s" % g["wave"])
@@ -95,8 +95,12 @@ def build():
     t("Play again", "再玩一次")
     t("VICTORY!", "勝利！")
     t("DEFEAT", "失敗")
-    t("Waves cleared: %d / %d\nKeep %d%%  +  gold %d\nScore %d",
-      "通過波數：%%d／%%d\n%s %%d%%%%  +  %s %%d\n分數 %%d" % (g["keep"], g["gold"]))
+    t("Waves cleared: %d / %d\nKeep %d%%  +  gold %d  +  hero Lv %d\nScore %d",
+      "通過波數：%%d／%%d\n%s %%d%%%%  +  %s %%d  +  %s Lv %%d\n分數 %%d" % (g["keep"], g["gold"], g["hero"]))
+    t("Damage dealt", "造成的傷害")
+    t("Damage taken (gates and keep)", "受到的傷害（%s與%s）" % (g["gate"], g["keep"]))
+    t("Hero", g["hero"])
+    t("None", "無")
     t("\nNew top-10 entry: #%d", "\n新紀錄：第 %d 名")
     t("RogueShot Tower Defense\nMade with Godot Engine 4.7 (godotengine.org), by directing Claude.\n\n3D MODELS (CC0)\n"
       "Kay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian), Skeletons (crossbowmen, Bone Warlord), "
@@ -141,7 +145,7 @@ def build():
     t("%d new spots!", "%d 個新的建造點！")
     t("NEW: %s", "新敵人：%s")
     t("Wave %d of %d starts in %d", "第 %%d %s（共 %%d %s）將在 %%d 秒後開始" % (g["wave"], g["wave"]))
-    t("Walk off the pad to wait.", "離開平台即可暫緩。")
+    t("Walk off the pad to stop the countdown.", "離開平台可暫停倒數計時")  # the user's wording
     t("%s: %s", "%s：%s")
     t(", ", "、")
     t("%d %s", "{1} ×{0}")

@@ -82,7 +82,7 @@ func _scores_page() -> Control:
 	var title := _label(tr("Top 10"), 72)
 	title.add_theme_color_override("font_color", TITLE_GOLD)
 	box.add_child(title)
-	var hint := _label(tr("Most waves cleared, then score:\nkeep HP % x 10 + gold left"), 24)
+	var hint := _label(tr("Most waves cleared, then score:\nkeep HP % x 10 + gold left + 50 per hero level"), 24)
 	hint.modulate = Color(1, 1, 1, 0.7)
 	box.add_child(hint)
 	_scores_box = GridContainer.new()

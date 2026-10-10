@@ -10,7 +10,7 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.1.24)
+## The game today (v0.1.26)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
@@ -48,10 +48,14 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   over the drifting map: New game, Continue (user://run.json, written at
   every wave start and clear; Sim.to_save / from_save, SAVE_VERSION 2),
   Scores (top 10 in user://scores.json: waves cleared, then
-  Save.score_of = keep HP % x 10 + gold), Credits, Exit. Esc / Android
+  Save.score_of = keep HP % x 10 + gold + 50 per hero level,
+  XP progress counting its share), Credits, Exit. Esc / Android
   back pauses and asks before leaving a game (mid-wave: Continue resumes
   from the wave's start; build phase: saved as it stands) or quitting.
-  End screen: Play again / Main menu. Debug args (main.DEBUG_ARGS) skip
+  End screen: waves, keep, gold, hero level, score, and two tables with
+  icons: damage dealt (hero incl. relics and burning, then archer,
+  ballista, mortar, frost: Sim.dealt_by) and damage taken by gates and
+  keep per enemy type (Horde.wall_dmg); Play again / Main menu. Debug args (main.DEBUG_ARGS) skip
   the menu and never save; real play uses a random seed. Save paths: PC
   %APPDATA%/Godot/app_userdata/RogueShot TD/, phone
   /data/user/0/com.tfc.rogueshottd/files/.
@@ -376,6 +380,9 @@ Windows build, never in WSL.
   to 2 m outside the walkable area and marked (user: enemies "in range"
   at the bottom of the centre lane weren't shot); score = keep % x 10 +
   gold for ties on waves.
+- v0.1.26: end-screen damage tables (centred grids, Hud.show_end), hero
+  level in the score; the last wave's coin sweep lands before the win
+  (Sim.finished); boss bar below the phase line.
 - v0.1.24: Traditional Chinese (Loc, gen_zh_tw.py, loc_check.py, Noto
   Sans TC), Language button, COMBAT PHASE.
 - v0.1.23: spots unlock by hero level; two gate sets (inner Lv 3, outer

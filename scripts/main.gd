@@ -642,15 +642,44 @@ func _game_over() -> void:
 	hud.hide_menu()
 	var won := sim.state == "win"
 	var cleared := Level.WAVES.size() if won else sim.wave
+	var xp_frac := float(sim.xp) / Perks.xp_needed(sim.level)
 	var rank := 0
 	if _persist:
 		Save.clear_run()
-		rank = Save.add_score(cleared, sim.base_hp / Level.BASE_HP, sim.coins, won)
+		rank = Save.add_score(cleared, sim.base_hp / Level.BASE_HP, sim.coins, won, sim.level, xp_frac)
 	var keep := roundi(100.0 * sim.base_hp / Level.BASE_HP)
-	hud.show_end(won, tr("Waves cleared: %d / %d\nKeep %d%%  +  gold %d\nScore %d") % [cleared, Level.WAVES.size(), keep,
-		sim.coins, Save.score_of(sim.base_hp / Level.BASE_HP, sim.coins)]
-		+ (tr("\nNew top-10 entry: #%d") % rank if rank > 0 else ""))
+	var score := Save.score_of(sim.base_hp / Level.BASE_HP, sim.coins, sim.level, xp_frac)
+	hud.show_end(won, tr("Waves cleared: %d / %d\nKeep %d%%  +  gold %d  +  hero Lv %d\nScore %d") % [cleared,
+		Level.WAVES.size(), keep, sim.coins, sim.level, score]
+		+ (tr("\nNew top-10 entry: #%d") % rank if rank > 0 else ""), _end_tables())
 	sfx.play("victory" if won else "defeat")
+
+
+## The end screen's two tables: damage dealt (hero, relics included, then
+## each tower kind) and damage taken by the walls, by enemy type, as
+## [[title, [[icon, name, value, share %], ...]], ...] (Hud.show_end).
+func _end_tables() -> Array:
+	var total := 0.0
+	for k in sim.dealt_by:
+		total += float(sim.dealt_by[k])
+	var dealt := []
+	var rows := [["hero", tr("Hero")]]
+	for k in ["archer", "ballista", "mortar", "frost"]:
+		rows.push_back([k, tr(String(Level.BUILDINGS[k].name))])
+	for r in rows:
+		var v := float(sim.dealt_by.get(r[0], 0.0))
+		if v > 0.0 or r[0] == "hero":
+			dealt.push_back([r[0], r[1], v, 100.0 * v / maxf(total, 1.0)])
+	var taken := 0.0
+	for v in sim.horde.wall_dmg:
+		taken += v
+	var by := []
+	for k in Level.ENEMIES.size():
+		var v := sim.horde.wall_dmg[k]
+		if v > 0.0:
+			by.push_back([String(Models.ENEMY_VAT[k].name) if k != Level.RUNNER else "runner", Level.ename(k), v,
+				100.0 * v / maxf(taken, 1.0)])
+	return [[tr("Damage dealt"), dealt], [tr("Damage taken (gates and keep)"), by]]
 
 
 ## Behind the title menu: a slow drift over the map.
@@ -722,7 +751,7 @@ func _sync_menu() -> void:
 			sfx.play("ui_click", -4.0)
 		hud.show_countdown(left)
 		hud.show_menu("start%d" % left, tr("Wave %d of %d starts in %d") % [sim.wave + 1, Level.WAVES.size(), left],
-			_preview_text(sim.wave) + "\n" + tr("Walk off the pad to wait."), [])
+			_preview_text(sim.wave) + "\n" + tr("Walk off the pad to stop the countdown."), [])
 		return
 	_count_seen = -1
 	hud.show_countdown(0)
@@ -975,7 +1004,7 @@ func _apply_events() -> void:
 				if not intro.is_empty() and e.wave > 0:
 					hud.show_intro("\n\n".join(intro), 7.0)
 			"wave_cleared":
-				if sim.state == "play" and _persist:
+				if sim.state == "play" and _persist and not sim.finished():
 					Save.save_run(sim.to_save())
 				if sim.state == "play":
 					sfx.play("wave_clear")

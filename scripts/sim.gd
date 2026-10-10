@@ -108,7 +108,11 @@ func step(dt: float, move: Vector2) -> void:
 	_hero_move(dt, move if state == "play" and not sweeping() else Vector2.ZERO)
 	if state != "play":
 		return
-	if phase == "build":
+	if phase == "build" and finished():
+		if drop_pos.is_empty():
+			state = "win"
+			return
+	elif phase == "build":
 		# The coin sweep lands first, then the picks open one by one; the
 		# start countdown waits for all of them.
 		if offer.is_empty() and drop_pos.is_empty():
@@ -218,8 +222,12 @@ func _end_wave() -> void:
 		pending_relics += 1
 	wave += 1
 	phase = "build"
-	if wave >= Level.WAVES.size():
-		state = "win"
+	# After the last wave the coins still fly in; the win follows (step).
+
+
+## Every wave cleared (the game ends once the coin sweep has landed).
+func finished() -> bool:
+	return wave >= Level.WAVES.size()
 
 
 ## Bosses: at each Level.BOSS_PHASES HP fraction call BOSS_SUMMON grunts
