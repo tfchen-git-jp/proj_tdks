@@ -10,6 +10,9 @@ extends RefCounted
 ## in; no building). Clearing the last wave (Level.WAVES) wins.
 
 const DROP_CAP := 1400
+## Selling a building pays back this share of everything spent on it
+## (user, 2026-10-10: punishing on purpose).
+const SELL_REFUND := 0.4
 ## The end-of-wave sweep: every coin left flies to the hero, longer
 ## flights taking longer (VACUUM_BASE + distance / VACUUM_SPEED).
 const VACUUM_BASE := 0.35
@@ -49,7 +52,7 @@ var level := 1  # the hero's level (starts at 1; each level-up banks a pick)
 var pending_levels := 0  # level-ups not yet offered
 var pending_relics := 0
 var perks := {}  # card id -> tier owned (1..MAX_TIER)
-var relics: Array = []  # relic ids owned
+var relics := {}  # relic id -> tier owned (1..MAX_TIER)
 var offer: Array = []  # the card / relic ids on offer now (build phase)
 var offer_relic := false
 var rerolls := 0
@@ -63,7 +66,9 @@ var _bounty_left := 0
 ## lightning, wisp, blasts) and each tower kind.
 var dealt_by := {}
 
-## Built things by spot id: {spot, kind, level, cd, aim, pos, broken}.
+## Built things by spot id: {spot, kind, level, spec, spent, cd, aim, pos,
+## broken}. spec: the tower's level-IV choice ("" before); spent: all the
+## gold paid for it (selling refunds SELL_REFUND of that).
 var buildings := {}
 ## Flying shots: {kind, from, to, uid, t, dur, arc, dmg, splash, hits}.
 var projectiles: Array[Dictionary] = []
@@ -128,8 +133,11 @@ func step(dt: float, move: Vector2) -> void:
 	_towers(dt)
 	_projectiles(dt)
 	var burnt := horde.burn_dealt
+	var burnt_m := horde.burn_mortar
 	horde.step(dt)
 	dealt_by.hero = float(dealt_by.get("hero", 0.0)) + horde.burn_dealt - burnt
+	if horde.burn_mortar > burnt_m:
+		dealt_by.mortar = float(dealt_by.get("mortar", 0.0)) + horde.burn_mortar - burnt_m
 	for sh in horde.shots:
 		events.push_back({type = "enemy_shot", from = sh[0], to = sh[1]})
 	_bosses()
@@ -181,7 +189,8 @@ func _spawn() -> void:
 	for i in groups.size():
 		var g: Dictionary = groups[i]
 		while _spawned[i] < int(g.count) and wave_time >= float(g.t) + _spawned[i] * float(g.every):
-			horde.spawn(int(g.type), int(g.lane), Level.wave_hp(wave))
+			var boss: bool = Level.ENEMIES[int(g.type)].get("boss", false)
+			horde.spawn(int(g.type), int(g.lane), float(g.get("hp", 1.0)) if boss else Level.wave_hp(wave))
 			_spawned[i] += 1
 
 
@@ -214,7 +223,7 @@ func _end_wave() -> void:
 	var interest := mini(floori(held * rate), cap)
 	coins += income + interest
 	if "laststand" in relics:
-		base_hp = minf(Level.BASE_HP, base_hp + Level.BASE_HP * Perks.LASTSTAND_HEAL)
+		base_hp = minf(Level.BASE_HP, base_hp + Level.BASE_HP * float(rv("laststand")))
 		horde.keep_hp = base_hp
 	events.push_back({type = "wave_cleared", wave = wave, income = income, interest = interest})
 	_vacuum()
@@ -230,8 +239,9 @@ func finished() -> bool:
 	return wave >= Level.WAVES.size()
 
 
-## Bosses: at each Level.BOSS_PHASES HP fraction call BOSS_SUMMON grunts
-## around itself; at the last one also go berserk.
+## Bosses: at each Level.BOSS_PHASES HP fraction call BOSS_SUMMON armored
+## men around itself; at the last one also go berserk (faster, harder
+## hitting, and slows / freezes stop working on it).
 func _bosses() -> void:
 	var h := horde
 	for i in h.count():
@@ -245,11 +255,12 @@ func _bosses() -> void:
 		var ln := h.lane[i]
 		var d0 := h.d[i]
 		for k in Level.BOSS_SUMMON:
-			h.spawn(Level.GRUNT, ln, Level.wave_hp(wave), maxf(0.0, d0 - 1.2 - k * 0.45))
+			h.spawn(Level.BOSS_SUMMON_TYPE, ln, Level.wave_hp(wave), maxf(0.0, d0 - 1.2 - k * 0.5))
 		var berserk := st + 1 == Level.BOSS_PHASES.size()
 		if berserk:
 			h.power[i] = Level.BOSS_RAGE
 			h.spd[i] *= Level.BOSS_RAGE
+			h.make_immune(i)
 		events.push_back({type = "boss_phase", pos = at, berserk = berserk})
 
 
@@ -267,9 +278,10 @@ func _vacuum() -> void:
 
 
 ## Damage enemy i, credited to `src` (dealt_by). Returns true if it died.
-func _hurt(i: int, amount: float, src: String) -> bool:
+## armored false: armour doesn't count (the Sniper).
+func _hurt(i: int, amount: float, src: String, armored := true) -> bool:
 	var before := horde.dealt
-	var died := horde.damage(i, amount)
+	var died := horde.damage(i, amount, true, armored)
 	dealt_by[src] = float(dealt_by.get(src, 0.0)) + horde.dealt - before
 	return died
 
@@ -287,8 +299,14 @@ func pv(id: String, none: float) -> float:
 	return none if t == 0 else float(Perks.CARDS[id].v[t - 1])
 
 
+## Relic `id`'s value at the owned tier (Perks.RELICS v), or null.
+func rv(id: String) -> Variant:
+	var t := int(relics.get(id, 0))
+	return null if t == 0 else Perks.RELICS[id].v[t - 1]
+
+
 func hero_damage() -> float:
-	return float(Level.HERO.damage) * pv("dmg", 1.0)
+	return float(Level.HERO.damage) * pv("dmg", 1.0) * (1.0 + standard_buff(hero_pos))
 
 
 func hero_range() -> float:
@@ -312,7 +330,7 @@ func picks_waiting() -> bool:
 func offer_view() -> Array:
 	var out := []
 	for id in offer:
-		out.push_back(Perks.view(id, offer_relic, perks))
+		out.push_back(Perks.view(id, offer_relic, relics if offer_relic else perks))
 	return out
 
 
@@ -332,7 +350,7 @@ func _roll(relic: bool) -> void:
 	var pool := []
 	if relic:
 		for id in Perks.RELICS:
-			if not id in relics:
+			if int(relics.get(id, 0)) < Perks.MAX_TIER:
 				pool.push_back(id)
 	else:
 		for id in Perks.CARDS:
@@ -354,10 +372,11 @@ func pick(k: int) -> bool:
 		return false
 	var id: String = offer[k]
 	if offer_relic:
-		relics.push_back(id)
+		relics[id] = int(relics.get(id, 0)) + 1
 	else:
 		perks[id] = tier(id) + 1
-	_pending.push_back({type = "perk", id = id, relic = offer_relic, tier = tier(id)})
+	_pending.push_back({type = "perk", id = id, relic = offer_relic,
+		tier = int(relics[id]) if offer_relic else tier(id)})
 	offer = []
 	_next_offer()
 	return true
@@ -422,7 +441,7 @@ func wisp_pos() -> Vector3:
 
 # --- save / load ----------------------------------------------------------------
 
-const SAVE_VERSION := 3  # 2: hero upgrades; 3: hero level counts from 1
+const SAVE_VERSION := 4  # 2: hero upgrades; 3: hero level counts from 1; 4: specs, spent, relic tiers
 
 
 ## The run as plain data (build phase only: no enemies or shots in flight).
@@ -430,7 +449,7 @@ func to_save() -> Dictionary:
 	var bl := []
 	for id in buildings:
 		var b: Dictionary = buildings[id]
-		bl.push_back([id, b.kind, b.level])
+		bl.push_back([id, b.kind, b.level, b.spec, b.spent])
 	# Build phase: every coin is on its way to the hero (_vacuum): bank it.
 	var held := coins
 	for v in drop_val:
@@ -466,9 +485,14 @@ static func from_save(d: Dictionary) -> Sim:
 	for id in d.perks:
 		if Perks.CARDS.has(String(id)):
 			s.perks[String(id)] = int(d.perks[id])
-	for id in d.relics:
+	# v3 and before: a list of relic ids (one tier each).
+	var rl: Dictionary = d.relics if d.relics is Dictionary else {}
+	if d.relics is Array:
+		for id in d.relics:
+			rl[id] = 1
+	for id in rl:
 		if Perks.RELICS.has(String(id)):
-			s.relics.push_back(String(id))
+			s.relics[String(id)] = int(rl[id])
 	s.offer = Array(d.offer)
 	s.offer_relic = bool(d.offer_relic)
 	s.rerolls = int(d.rerolls)
@@ -487,7 +511,17 @@ static func from_save(d: Dictionary) -> Sim:
 	for e in d.buildings:
 		for sp in Level.SPOTS:
 			if sp.id == e[0]:
-				var b := {spot = sp, kind = String(e[1]), level = int(e[2]), cd = 0.5, aim = Vector3(0, 0, 1),
+				var kind := String(e[1])
+				var lv := int(e[2])
+				# v3: level IV meant the old plain IV: the first spec now.
+				var spec := String(e[3]) if e.size() > 3 else ""
+				if lv >= Level.BUILDINGS[kind].levels.size() and spec == "":
+					spec = String(Level.BUILDINGS[kind].specs[0].id)
+				var spent := 0
+				for k in lv + 1:
+					spent += int(Level.stats(kind, k, spec).cost)
+				var b := {spot = sp, kind = kind, level = lv, spec = spec,
+					spent = int(e[4]) if e.size() > 4 else spent, cd = 0.5, aim = Vector3(0, 0, 1),
 					pos = sp.pos, broken = false}
 				s.buildings[sp.id] = b
 				if b.kind == "gate":
@@ -512,57 +546,97 @@ func spot_under_hero() -> Dictionary:
 	return best
 
 
-## What can be done at a spot: [{kind, level, cost, name, desc, upgrade, ok}].
-## An empty spot offers every building of its kind; a built one offers its
-## next level (none at max).
+## What can be done at a spot: [{kind, level, spec, cost, name, desc,
+## upgrade, ok}], plus {kind = "sell", cost = the refund} on a built one.
+## An empty spot offers every building of its kind; a built one its next
+## level (a tower at III: both specs; none at max).
 func options(spot: Dictionary) -> Array:
 	var out := []
 	var b: Dictionary = buildings.get(spot.id, {})
 	if b.is_empty():
 		for kind in Level.BUILDINGS:
 			if Level.BUILDINGS[kind].spot == spot.kind:
-				out.push_back(_option(kind, 0, false))
-	elif b.level + 1 < Level.BUILDINGS[b.kind].levels.size():
-		out.push_back(_option(b.kind, b.level + 1, true))
+				out.push_back(_option(kind, 0, "", false))
+		return out
+	if b.level + 1 < Level.BUILDINGS[b.kind].levels.size():
+		out.push_back(_option(b.kind, b.level + 1, "", true))
+	elif b.level + 1 < Level.max_levels(b.kind):
+		for sp in Level.BUILDINGS[b.kind].specs:
+			out.push_back(_option(b.kind, b.level + 1, String(sp.id), true))
+	out.push_back({kind = "sell", level = b.level, spec = "", cost = sell_value(b), upgrade = false, ok = true,
+		name = "Sell", desc = ""})
 	return out
 
 
-func _option(kind: String, level: int, upgrade: bool) -> Dictionary:
-	var cost := int(Level.stats(kind, level).cost)
-	return {kind = kind, level = level, cost = cost, upgrade = upgrade, ok = coins >= cost,
-		name = Level.BUILDINGS[kind].name, desc = Level.BUILDINGS[kind].desc}
+func _option(kind: String, level: int, spec: String, upgrade: bool) -> Dictionary:
+	var st := Level.stats(kind, level, spec)
+	var cost := int(st.cost)
+	return {kind = kind, level = level, spec = spec, cost = cost, upgrade = upgrade, ok = coins >= cost,
+		name = st.get("name", Level.BUILDINGS[kind].name), desc = st.get("desc", Level.BUILDINGS[kind].desc)}
 
 
-## Build `kind` on an empty spot, or upgrade what stands there. Returns
-## true if it happened (enough gold, right phase).
-func buy(spot_id: String, kind: String) -> bool:
+## Build `kind` on an empty spot, or upgrade what stands there (a tower at
+## level III to `spec`). Returns true if it happened (enough gold, right
+## phase).
+func buy(spot_id: String, kind: String, spec := "") -> bool:
 	if phase != "build" or state != "play":
 		return false
-	var spot: Dictionary = {}
-	for s in Level.SPOTS:
-		if s.id == spot_id:
-			spot = s
+	var spot := _spot(spot_id)
 	if spot.is_empty() or Level.BUILDINGS[kind].spot != spot.kind or not unlocked(spot):
 		return false
 	var b: Dictionary = buildings.get(spot_id, {})
 	var level := 0
 	if not b.is_empty():
-		if b.kind != kind or b.level + 1 >= Level.BUILDINGS[kind].levels.size():
+		if b.kind != kind or b.level + 1 >= Level.max_levels(kind):
 			return false
 		level = b.level + 1
-	var cost := int(Level.stats(kind, level).cost)
+	var specs: bool = level >= Level.BUILDINGS[kind].levels.size()
+	if specs and Level.spec_of(kind, spec).is_empty() or not specs and spec != "":
+		return false
+	var cost := int(Level.stats(kind, level, spec).cost)
 	if coins < cost:
 		return false
 	coins -= cost
 	if b.is_empty():
-		b = {spot = spot, kind = kind, level = 0, cd = 0.5, aim = Vector3(0, 0, 1), pos = spot.pos, broken = false}
+		b = {spot = spot, kind = kind, level = 0, spec = "", spent = 0, cd = 0.5, aim = Vector3(0, 0, 1),
+			pos = spot.pos, broken = false}
 		buildings[spot_id] = b
 	else:
 		b.level = level
+		b.spec = spec
+	b.spent += cost
 	if kind == "gate":
 		_raise_gate(b)
-	_pending.push_back({type = "built", spot = spot, kind = kind, level = level, cost = cost})
+	_pending.push_back({type = "built", spot = spot, kind = kind, level = level, spec = spec, cost = cost})
 	return true
+
+
+## Gold back for selling building b.
+func sell_value(b: Dictionary) -> int:
+	return floori(int(b.spent) * SELL_REFUND)
+
+
+## Tear down what stands on `spot_id` for sell_value() (build phase).
+func sell(spot_id: String) -> bool:
+	if phase != "build" or state != "play" or not buildings.has(spot_id):
+		return false
+	var b: Dictionary = buildings[spot_id]
+	var refund := sell_value(b)
+	coins += refund
+	buildings.erase(spot_id)
+	if b.kind == "gate":
+		var g := int(b.spot.slot)
+		horde.gate_d[g] = -1.0
+		horde.gate_hp[g] = 0.0
+	_pending.push_back({type = "sold", spot = b.spot, kind = b.kind, refund = refund})
+	return true
+
+
+func _spot(id: String) -> Dictionary:
+	for sp in Level.SPOTS:
+		if sp.id == id:
+			return sp
+	return {}
 
 
 func _raise_gate(b: Dictionary) -> void:
@@ -570,14 +644,14 @@ func _raise_gate(b: Dictionary) -> void:
 	var ln := int(b.spot.lane)
 	horde.gate_lane[g] = ln
 	horde.gate_d[g] = tracks[ln].closest_d(b.spot.pos)
-	horde.gate_hp[g] = float(Level.stats("gate", b.level).hp)
+	horde.gate_hp[g] = float(Level.bstats(b).hp)
 
 
 ## HP fraction of the gate in `slot` (0 if none stands there).
 func gate_hp_frac(slot: int) -> float:
 	for b in buildings.values():
 		if b.kind == "gate" and int(b.spot.slot) == slot and not b.broken:
-			return clampf(horde.gate_hp[slot] / float(Level.stats("gate", b.level).hp), 0.0, 1.0)
+			return clampf(horde.gate_hp[slot] / float(Level.bstats(b).hp), 0.0, 1.0)
 	return 0.0
 
 
@@ -606,14 +680,27 @@ func obstacles() -> Array:
 	return out
 
 
-## Attack-speed bonus from War Banners covering point p (best one counts).
-func banner_buff(p: Vector3) -> float:
+## Attack-speed bonus from War Banners covering point p (best one counts):
+## a tower's (hero false) or the hero's (War Drums give the hero nothing,
+## the Hero's Standard gives it more).
+func banner_buff(p: Vector3, hero := false) -> float:
 	var best := 0.0
 	for b in buildings.values():
 		if b.kind == "banner":
-			var st := Level.stats("banner", b.level)
-			if Vector2(p.x - b.pos.x, p.z - b.pos.z).length() <= _reach(b, st):
-				best = maxf(best, float(st.buff))
+			var st := Level.bstats(b)
+			if _flat_dist(p, b.pos) <= _reach(b, st):
+				best = maxf(best, float(st.get("hero_buff", st.buff)) if hero else float(st.buff))
+	return best
+
+
+## The Hero's Standard's damage bonus for the hero at p (0 outside one).
+func standard_buff(p: Vector3) -> float:
+	var best := 0.0
+	for b in buildings.values():
+		if b.kind == "banner" and b.spec == "standard":
+			var st := Level.bstats(b)
+			if _flat_dist(p, b.pos) <= _reach(b, st):
+				best = maxf(best, float(st.hero_buff))
 	return best
 
 
@@ -641,7 +728,7 @@ func _hero_move(dt: float, move: Vector2) -> void:
 
 
 func _hero_shoot(dt: float) -> void:
-	_hero_cd -= dt * (1.0 + banner_buff(hero_pos))
+	_hero_cd -= dt * (1.0 + banner_buff(hero_pos, true))
 	hero_aim_t += dt
 	if "thunder" in relics:
 		_thunder(dt)
@@ -658,10 +745,10 @@ func _hero_shoot(dt: float) -> void:
 	targets.append_array(horde.nearest_k(hero_pos, r, int(pv("multi", 0.0)), [horde.uid[first]]))
 	for v in (2 if "twin" in relics else 1):
 		for k in targets.size():
-			_fire_bolt(targets[k], -0.12 * v, (Perks.TWIN_DAMAGE if v > 0 else 1.0) * (Perks.MULTI_DAMAGE if k > 0 else 1.0))
+			_fire_bolt(targets[k], -0.12 * v, (float(rv("twin")) if v > 0 else 1.0) * (Perks.MULTI_DAMAGE if k > 0 else 1.0))
 	_shots += 1
-	if "volley" in relics and _shots % Perks.VOLLEY_EVERY == 0:
-		for i in horde.nearest_k(hero_pos, r + 2.0, Perks.VOLLEY_TARGETS):
+	if "volley" in relics and _shots % int(rv("volley")[0]) == 0:
+		for i in horde.nearest_k(hero_pos, r + 2.0, int(rv("volley")[1])):
 			_fire_bolt(i, 0.0, 1.0)
 		events.push_back({type = "volley", pos = hero_pos})
 	var to := horde.pos[first]
@@ -732,7 +819,7 @@ func _hero_hit(i: int, p: Dictionary) -> void:
 			q.chain = chain
 
 
-## Thunderstrike: every THUNDER_EVERY s, lightning from the sky into the
+## Thunderstrike: every few s (by tier), lightning from the sky into the
 ## toughest enemy near the hero, chaining on to the nearest unhit ones.
 func _thunder(dt: float) -> void:
 	_thunder_cd -= dt
@@ -745,13 +832,13 @@ func _thunder(dt: float) -> void:
 	for i in near:
 		if horde.hp[i] > horde.hp[first]:
 			first = i
-	_thunder_cd = Perks.THUNDER_EVERY
+	_thunder_cd = float(rv("thunder")[0])
 	var dmg := hero_damage() * Perks.THUNDER_DAMAGE
 	var p0 := horde.pos[first]
 	var pts: Array[Vector3] = [p0 + Vector3(0.6, 14.0, -1.5)]
 	var hit: Array = []
 	var cur := first
-	while cur >= 0 and hit.size() < Perks.THUNDER_CHAIN:
+	while cur >= 0 and hit.size() < int(rv("thunder")[1]):
 		var at := horde.pos[cur]
 		pts.push_back(at + Vector3(0, CHEST + 0.2, 0))
 		hit.push_back(horde.uid[cur])
@@ -769,7 +856,7 @@ func _wisp(dt: float) -> void:
 	var i := horde.nearest(hero_pos, hero_range())
 	if i < 0:
 		return
-	_wisp_cd = Perks.WISP_INTERVAL
+	_wisp_cd = float(rv("wisp"))
 	var from := wisp_pos()
 	var to := horde.pos[i] + Vector3(0, CHEST, 0)
 	_launch("wisp", from, to, horde.uid[i], from.distance_to(to) / 14.0, 0.3, hero_damage() * Perks.WISP_DAMAGE)
@@ -781,7 +868,7 @@ func _towers(dt: float) -> void:
 	for b in buildings.values():
 		if not b.kind in Level.TOWER_KINDS or b.kind == "banner":
 			continue
-		var st := Level.stats(b.kind, b.level)
+		var st := Level.bstats(b)
 		b.cd -= dt * (1.0 + banner_buff(b.pos) + (pv("rally", 0.0) if _in_aura(b.pos) else 0.0))
 		if b.cd > 0.0:
 			continue
@@ -797,17 +884,30 @@ func _reach(b: Dictionary, st: Dictionary) -> float:
 	return float(st.range) + (pv("spotter", 0.0) if _in_aura(b.pos) else 0.0)
 
 
+## Archer: the enemy nearest the keep (a Sniper: the one with the most HP;
+## a Repeater shoots `targets` of them at once).
 func _fire_archer(b: Dictionary, st: Dictionary) -> void:
-	var i := horde.first_in_range(b.pos, _reach(b, st))
-	if i < 0:
+	var r := _reach(b, st)
+	var aims: Array[int] = []
+	if st.get("toughest", false):
+		var t := horde.toughest(b.pos, r)
+		if t >= 0:
+			aims.push_back(t)
+	else:
+		aims = horde.first_k(b.pos, r, int(st.get("targets", 1)))
+	if aims.is_empty():
 		return
 	b.cd = float(st.interval)
 	var from: Vector3 = b.pos + Vector3(0, MUZZLE.archer, 0)
-	var to := horde.pos[i] + Vector3(0, CHEST, 0)
-	b.aim = Vector3(to.x - from.x, 0, to.z - from.z).normalized()
-	var dist := from.distance_to(to)
-	_launch("arrow", from, to, horde.uid[i], dist / ARROW_SPEED, dist * 0.12, float(st.damage))
-	events.push_back({type = "shot", kind = "archer", from = from})
+	for i in aims:
+		var to := horde.pos[i] + Vector3(0, CHEST, 0)
+		var dist := from.distance_to(to)
+		var p := _launch("arrow", from, to, horde.uid[i], dist / (ARROW_SPEED * (2.0 if st.has("toughest") else 1.0)),
+			dist * 0.12, float(st.damage))
+		p.pierce_armor = st.get("pierce_armor", false)
+	var to0 := horde.pos[aims[0]]
+	b.aim = Vector3(to0.x - from.x, 0, to0.z - from.z).normalized()
+	events.push_back({type = "shot", kind = "archer", from = from, spec = b.spec})
 
 
 func _fire_ballista(b: Dictionary, st: Dictionary) -> void:
@@ -828,7 +928,8 @@ func _fire_ballista(b: Dictionary, st: Dictionary) -> void:
 		hits.push_back([h.x * dur, horde.uid[int(h.y)]])
 	var p := _launch("ballista", from, end, -1, dur, 0.0, float(st.damage))
 	p.hits = hits
-	events.push_back({type = "shot", kind = "ballista", from = from})
+	p.harpoon = st.get("harpoon", [])
+	events.push_back({type = "shot", kind = "ballista", from = from, spec = b.spec})
 
 
 func _fire_mortar(b: Dictionary, st: Dictionary) -> void:
@@ -837,14 +938,27 @@ func _fire_mortar(b: Dictionary, st: Dictionary) -> void:
 		return
 	b.cd = float(st.interval)
 	# Lead the target: land where it will be when the shell comes down.
-	var lead: Vector3 = horde.forward(i) * Level.ENEMIES[horde.kind[i]].speed * (1.0 - horde.slow[i]) * SHELL_TIME
+	var lead: Vector3 = horde.forward(i) * float(Level.ENEMIES[horde.kind[i]].speed) * horde.pace(i) * SHELL_TIME
 	if horde.blocked[i] != 0:
 		lead = Vector3.ZERO
 	var land: Vector3 = horde.pos[i] + lead
 	b.aim = Vector3(land.x - b.pos.x, 0, land.z - b.pos.z).normalized()
-	var p := _launch("shell", b.pos + Vector3(0, MUZZLE.mortar, 0), land, -1, SHELL_TIME, 3.5, float(st.damage))
-	p.splash = float(st.splash)
-	events.push_back({type = "shot", kind = "mortar", from = b.pos})
+	var from: Vector3 = b.pos + Vector3(0, MUZZLE.mortar, 0)
+	var spots: Array[Vector3] = [land]
+	# Cluster: the shell bursts over the target into bomblets around it.
+	var bl: Array = st.get("bomblets", [])
+	if not bl.is_empty():
+		spots.clear()
+		for k in int(bl[0]):
+			var ang := TAU * k / float(bl[0]) + _rng.randf_range(-0.3, 0.3)
+			var rr := float(bl[1]) * (0.0 if k == 0 else _rng.randf_range(0.55, 1.0))
+			spots.push_back(land + Vector3(cos(ang) * rr, 0, sin(ang) * rr))
+	for k in spots.size():
+		var p := _launch("shell", from, spots[k], -1, SHELL_TIME + 0.06 * k, 3.5, float(st.damage))
+		p.splash = float(st.splash)
+		p.burn = st.get("burn", [])
+		p.small = not bl.is_empty()
+	events.push_back({type = "shot", kind = "mortar", from = b.pos, spec = b.spec})
 
 
 func _pulse_frost(b: Dictionary, st: Dictionary) -> void:
@@ -852,10 +966,15 @@ func _pulse_frost(b: Dictionary, st: Dictionary) -> void:
 	if hit.is_empty():
 		return
 	b.cd = float(st.interval)
+	var bri: Array = st.get("brittle", [])
 	for i in hit:
 		horde.chill(i, float(st.slow), float(st.slow_time))
+		if st.has("freeze"):
+			horde.freeze(i, float(st.freeze))
+		if not bri.is_empty():
+			horde.make_brittle(i, float(bri[0]), float(bri[1]))
 		_hurt(i, float(st.damage), "frost")
-	events.push_back({type = "pulse", pos = b.pos, r = _reach(b, st)})
+	events.push_back({type = "pulse", pos = b.pos, r = _reach(b, st), spec = b.spec})
 
 
 # --- projectiles --------------------------------------------------------------------
@@ -893,6 +1012,9 @@ func _projectiles(dt: float) -> void:
 						if p.get("hero", false):
 							_hero_hit(i, p)
 						else:
+							var hp_: Array = p.get("harpoon", [])
+							if not hp_.is_empty():
+								horde.chill(i, float(hp_[0]), float(hp_[1]))
 							_hurt(i, p.dmg, "ballista")
 							events.push_back({type = "hit", pos = horde.pos[i], kind = "ballista"})
 				else:
@@ -908,12 +1030,16 @@ func _projectiles(dt: float) -> void:
 					if p.get("hero", false):
 						_hero_hit(i, p)
 					else:
-						_hurt(i, p.dmg, "hero" if p.kind == "wisp" else "archer")
+						_hurt(i, p.dmg, "hero" if p.kind == "wisp" else "archer", not p.get("pierce_armor", false))
 						events.push_back({type = "hit", pos = horde.pos[i], kind = p.kind})
 			"shell":
+				var burn: Array = p.get("burn", [])
 				for i in horde.within(p.to, p.splash, true):
+					if not burn.is_empty():
+						horde.ignite(i, float(burn[0]), float(burn[1]), "mortar")
 					_hurt(i, p.dmg, "mortar")
-				events.push_back({type = "boom", pos = p.to, r = p.splash})
+				events.push_back({type = "boom", pos = p.to, r = p.splash, fire = not burn.is_empty(),
+					small = p.get("small", false)})
 	projectiles = keep
 
 
@@ -921,6 +1047,11 @@ func _projectiles(dt: float) -> void:
 
 func _drops_from_deaths() -> void:
 	for death in horde.deaths:
+		# A slime bursts into its brood where it fell (same toughness).
+		var split: Array = Level.ENEMIES[death.kind].get("split", [])
+		for k in (int(split[1]) if not split.is_empty() else 0):
+			horde.spawn(int(split[0]), int(death.lane), float(death.mult),
+				maxf(0.0, float(death.d) + _rng.randf_range(-0.5, 0.3)), float(death.off) + _rng.randf_range(-0.5, 0.5))
 		events.push_back({type = "kill", pos = death.pos, kind = death.kind, d = death.d, lane = death.lane})
 		var gold := int(Level.ENEMIES[death.kind].gold)
 		var spread := 1.1 if Level.ENEMIES[death.kind].get("big", false) else 0.35
@@ -932,7 +1063,7 @@ func _drops_from_deaths() -> void:
 				pieces.push_back(1)
 			if "midas" in relics:
 				_near_kills += 1
-				if _near_kills % Perks.MIDAS_EVERY == 0:
+				if _near_kills % int(rv("midas")) == 0:
 					pieces.push_back(20)
 					events.push_back({type = "midas", pos = death.pos})
 		for v in pieces:

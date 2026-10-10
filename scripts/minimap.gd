@@ -88,6 +88,10 @@ func _draw() -> void:
 			Level.RUNNER: draw_circle(p, 1.6, RUNNER)
 			Level.BAT: draw_circle(p, 2.0, Color(0.75, 0.45, 1.0))
 			Level.SIEGE: draw_circle(p, 2.0, Color(0.95, 0.95, 0.85))
+			Level.SLIME: draw_circle(p, 3.0, Color(0.5, 0.95, 0.4))
+			Level.SLIMELING: draw_circle(p, 1.5, Color(0.5, 0.95, 0.4))
+			Level.MAGE: draw_circle(p, 2.6, Color(0.4, 1.0, 0.5))
+			Level.CAPTAIN: draw_circle(p, 2.6, Color(1.0, 0.65, 0.15))
 			_: draw_circle(p, 1.8, ENEMY)
 	# What the camera sees
 	if cam:

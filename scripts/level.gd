@@ -42,39 +42,84 @@ const HERO := {
 
 ## Buildings. Each has levels; level 0 is what you build, the rest are
 ## upgrades (towers I-IV, farms, banks and gates I-III). "spot" says which spot kind it goes on.
+## Towers have three `levels` and two `specs`: level IV is one of them,
+## picked when upgrading from III (user, 2026-10-10: a clear trade-off,
+## neither one simply better). Spec keys beyond the plain stats:
+## toughest (aims at the enemy with the most HP), pierce_armor, targets
+## (arrows per shot), harpoon [slow, s] on every enemy hit, bomblets
+## [count, spread m], burn [dps, s], freeze (s frozen solid), brittle
+## [extra damage taken, s], hero_buff (Hero's Standard: the hero's
+## damage and attack speed), buff (towers' attack speed).
 const BUILDINGS := {
 	archer = {name = "Archer Tower", spot = "tower", desc = "Fast single shots at one target.",
 		weak = "armored, giants, the boss", strong = "grunts, runners, bats",
 		levels = [{cost = 15, range = 6.0, interval = 0.8, damage = 2.5},
 			{cost = 25, range = 6.5, interval = 0.65, damage = 3.5},
-			{cost = 40, range = 7.0, interval = 0.5, damage = 5.0},
-			{cost = 60, range = 7.5, interval = 0.4, damage = 7.0}]},
+			{cost = 40, range = 7.0, interval = 0.5, damage = 5.0}],
+		specs = [
+			{id = "sniper", name = "Sniper Tower", cost = 70, range = 9.5, interval = 2.2, damage = 24.0,
+				toughest = true, pierce_armor = true,
+				desc = "Long shots at the toughest enemy in reach; ignore armor.",
+				strong = "armored, giants, the boss", weak = "crowds, runners"},
+			{id = "repeater", name = "Repeater Tower", cost = 60, range = 7.0, interval = 0.22, damage = 6.0,
+				targets = 2,
+				desc = "Rapid arrows at two enemies at once.",
+				strong = "grunts, runners, bats, slimelings", weak = "armored, the boss"}]},
 	ballista = {name = "Ballista", spot = "tower", desc = "Heavy bolt that pierces every enemy in a line.",
 		weak = "scattered enemies (long reload)", strong = "armored, giants, the boss, crossbowmen",
 		levels = [{cost = 30, range = 8.0, interval = 1.6, damage = 6.0, pierce = 6},
 			{cost = 40, range = 8.5, interval = 1.4, damage = 9.0, pierce = 8},
-			{cost = 60, range = 9.0, interval = 1.2, damage = 13.0, pierce = 10},
-			{cost = 85, range = 9.5, interval = 1.0, damage = 18.0, pierce = 12}]},
+			{cost = 60, range = 9.0, interval = 1.2, damage = 13.0, pierce = 10}],
+		specs = [
+			{id = "great", name = "Great Ballista", cost = 90, range = 10.0, interval = 1.8, damage = 60.0, pierce = 4,
+				desc = "Huge bolts that pierce only a few enemies.",
+				strong = "giants, the boss, captains", weak = "crowds"},
+			{id = "harpoon", name = "Harpoon Ballista", cost = 80, range = 9.0, interval = 1.1, damage = 14.0,
+				pierce = 14, harpoon = [0.5, 2.5],
+				desc = "Barbed bolts: every enemy hit is slowed 50% for 2.5 s.",
+				strong = "long lines, runners, slimes", weak = "the berserk boss, bats"}]},
 	mortar = {name = "Mortar", spot = "tower", desc = "Lobbed boulders that splash a whole group.",
 		weak = "bats, anything within 2.5 m", strong = "crowds, gate queues",
 		levels = [{cost = 35, range = 7.0, min_range = 2.5, interval = 2.4, damage = 6.0, splash = 1.3},
 			{cost = 45, range = 7.5, min_range = 2.5, interval = 2.1, damage = 9.0, splash = 1.5},
-			{cost = 65, range = 8.0, min_range = 2.5, interval = 1.8, damage = 13.0, splash = 1.7},
-			{cost = 90, range = 8.5, min_range = 2.5, interval = 1.5, damage = 18.0, splash = 1.9}]},
+			{cost = 65, range = 8.0, min_range = 2.5, interval = 1.8, damage = 13.0, splash = 1.7}],
+		specs = [
+			{id = "cluster", name = "Cluster Mortar", cost = 90, range = 8.5, min_range = 2.5, interval = 1.7,
+				damage = 11.0, splash = 1.1, bomblets = [5, 1.8],
+				desc = "Shells burst into 5 bomblets over a wide area.",
+				strong = "crowds, slimes, slimelings", weak = "armored, bats"},
+			{id = "fire", name = "Fire Mortar", cost = 85, range = 8.5, min_range = 2.5, interval = 1.7,
+				damage = 10.0, splash = 2.0, burn = [11.0, 4.0],
+				desc = "Firepots: everything hit burns for 4 s, armor or not.",
+				strong = "armored, gate queues, captains", weak = "runners, bats"}]},
 	# Slow pulses, long chill (user, 2026-10-09: was a 1 s pulse). Chilled
 	# enemies walk AND attack slower.
 	frost = {name = "Frost Crystal", spot = "tower", desc = "Pulses slow walking and attacks of all nearby.",
 		weak = "bats; it deals little damage", strong = "gate queues, giants, runners",
 		levels = [{cost = 25, range = 3.8, interval = 2.5, damage = 1.0, slow = 0.35, slow_time = 3.5},
 			{cost = 35, range = 4.2, interval = 2.5, damage = 1.8, slow = 0.45, slow_time = 4.0},
-			{cost = 50, range = 4.6, interval = 2.5, damage = 2.8, slow = 0.55, slow_time = 4.5},
-			{cost = 70, range = 5.0, interval = 2.5, damage = 4.0, slow = 0.62, slow_time = 5.0}]},
+			{cost = 50, range = 4.6, interval = 2.5, damage = 2.8, slow = 0.55, slow_time = 4.5}],
+		specs = [
+			{id = "glacier", name = "Glacier Crystal", cost = 75, range = 5.5, interval = 4.0, damage = 3.0,
+				slow = 0.55, slow_time = 4.0, freeze = 0.8,
+				desc = "Freezes everything nearby solid for 0.8 s (bosses half), then chills.",
+				strong = "giants, gate queues, crossbowmen", weak = "the berserk boss, bats"},
+			{id = "frostbite", name = "Frostbite Crystal", cost = 70, range = 5.0, interval = 2.0, damage = 10.0,
+				slow = 0.5, slow_time = 3.5, brittle = [0.5, 3.0],
+				desc = "Weaker chill, but chilled enemies take 50% more damage.",
+				strong = "the boss, giants, armored", weak = "bats"}]},
 	banner = {name = "War Banner", spot = "tower", desc = "No attack: towers and hero nearby attack faster.",
 		weak = "standing alone", strong = "tower clusters",
 		levels = [{cost = 30, range = 4.5, buff = 0.25},
 			{cost = 45, range = 5.0, buff = 0.4},
-			{cost = 60, range = 5.5, buff = 0.55},
-			{cost = 80, range = 6.0, buff = 0.7}]},
+			{cost = 60, range = 5.5, buff = 0.55}],
+		specs = [
+			{id = "drums", name = "War Drums", cost = 80, range = 6.0, buff = 1.0, hero_buff = 0.0,
+				desc = "Towers nearby attack twice as fast; the hero gets nothing.",
+				strong = "tower clusters", weak = "a lone hero"},
+			{id = "standard", name = "Hero's Standard", cost = 80, range = 8.0, buff = 0.35, hero_buff = 0.6,
+				desc = "The hero nearby: +60% damage and attack speed; towers +35%.",
+				strong = "a strong hero", weak = "towers far from the hero"}]},
 	# Each upgrade pays back faster than a new level-1 farm (user, v0.1.18:
 	# "build three level 1s and leave them" was always best): gold per gold
 	# spent 0.24 / 0.29 / 0.31.
@@ -159,6 +204,10 @@ const ATTACK_CYCLE := 0.55
 ## ATTACK_CYCLE). boss: fixed HP (no wave scaling), phases (Sim._bosses).
 ## desc / weak / strong: the three info lines (popup, intro, guide). big:
 ## draws a red HP bar.
+## split: [type, count] it bursts into when it dies (slime). Support
+## enemies (user, 2026-10-10: "the player will want to kill them first")
+## work on allies within `aura` m, never on bosses: heal (share of max HP
+## per second), haste (walk and attack faster). The best one counts.
 const ENEMIES := [
 	{name = "grunt", plural = "grunts", hp = 3.0, speed = 1.7, radius = 0.28, gold = 1, xp = 1, dps = 2.0,
 		desc = "Basic foot soldier, comes in big crowds.", weak = "mortars, archers", strong = "nothing, but there are many"},
@@ -176,27 +225,47 @@ const ENEMIES := [
 	{name = "crossbowman", plural = "crossbowmen", hp = 8.0, speed = 1.2, radius = 0.3, gold = 3, xp = 3, dps = 1.6,
 		ranged = 6.5, cycle = 1.1,
 		desc = "Shoots gates from 6 m away, outside the queue.", weak = "ballistas, the hero", strong = "gates"},
-	{name = "Bone Warlord", plural = "Bone Warlords", hp = 1500.0, speed = 0.7, radius = 1.1, gold = 60, xp = 40,
-		dps = 40.0, heavy = true, reach = 2.0, armor = 2.5, boss = true, big = true,
-		desc = "Armored boss: calls grunts, goes berserk when hurt.", weak = "ballistas, Giant Slayer, fire", strong = "light hits, gates"},
+	{name = "Bone Warlord", plural = "Bone Warlords", hp = 1300.0, speed = 0.7, radius = 1.1, gold = 60, xp = 40,
+		dps = 28.0, heavy = true, reach = 2.0, armor = 2.5, boss = true, big = true,
+		desc = "Armored boss: calls armored men, berserk at 25%: no slow or freeze.",
+		weak = "ballistas, Giant Slayer, fire", strong = "light hits, gates, slow (berserk)"},
+	{name = "slime", plural = "slimes", hp = 22.0, speed = 1.0, radius = 0.5, gold = 2, xp = 3, dps = 5.0,
+		split = [8, 4],  # 4 slimelings
+		desc = "Bursts into 4 slimelings when it dies.", weak = "mortars, Harpoon", strong = "archers (more to kill)"},
+	{name = "slimeling", plural = "slimelings", hp = 3.0, speed = 2.2, radius = 0.24, gold = 1, xp = 1, dps = 1.5,
+		desc = "Small and quick, born from a slime.", weak = "mortars, frost, Repeater", strong = "single big shots"},
+	{name = "bone mage", plural = "bone mages", hp = 10.0, speed = 1.2, radius = 0.3, gold = 4, xp = 4, dps = 1.0,
+		ranged = 5.0, cycle = 1.4, aura = 4.5, heal = 0.05,
+		desc = "Heals all within 4.5 m, 5% HP a second. Kill it first.", weak = "the hero, Sniper", strong = "gate queues"},
+	{name = "captain", plural = "captains", hp = 26.0, speed = 1.3, radius = 0.36, gold = 5, xp = 5, dps = 5.0,
+		armor = 1.0, aura = 4.0, haste = 0.4,
+		desc = "All within 4 m walk and attack 40% faster.", weak = "ballistas, mortars", strong = "archers (armor)"},
 ]
 ## A hit on an armoured enemy does at least this share of its damage.
 const ARMOR_FLOOR := 0.4
-## The boss calls BOSS_SUMMON grunts at each of these HP fractions; at the
-## last it also goes berserk (speed and damage x BOSS_RAGE).
-const BOSS_PHASES := [0.66, 0.33]
-const BOSS_SUMMON := 8
+## The boss calls BOSS_SUMMON armored men at each of these HP fractions;
+## at the last it also goes berserk (speed and damage x BOSS_RAGE, and
+## slows / freezes no longer touch it: user, 2026-10-10).
+const BOSS_PHASES := [0.75, 0.5, 0.25]
+const BOSS_SUMMON := 6
+const BOSS_SUMMON_TYPE := 1  # ARMORED
 const BOSS_RAGE := 1.4
-enum { GRUNT, ARMORED, BRUTE, RUNNER, BAT, SIEGE, BOSS }
+enum { GRUNT, ARMORED, BRUTE, RUNNER, BAT, SIEGE, BOSS, SLIME, SLIMELING, MAGE, CAPTAIN }
 const WEST := 0
 const CENTRE := 1
 const EAST := 2
 
-const HP_PER_WAVE := 0.25
-const HP_PER_WAVE2 := 0.064
+## Enemy HP x (1 + HP_PER_WAVE w + HP_PER_WAVE2 w^2) in wave w (0-based).
+const HP_PER_WAVE := 0.2
+const HP_PER_WAVE2 := 0.046
 
 ## Waves. Each group: `count` enemies of `type` on `lane`, one every
-## `every` s, starting `t` s into the wave.
+## `every` s, starting `t` s into the wave; `hp` (bosses): HP x this
+## instead of the wave's toughness (bosses ignore it otherwise).
+## 15 waves since v0.1.28 (user: wave 10 easier than the old wave 10,
+## wave 15 harder than it). New kinds arrive alone or in small numbers
+## first: bats 4, crossbowmen 5, slimes 6, bone mages 8, captains 9; the
+## Bone Warlord at 10, two of them at 15.
 const WAVES := [
 	[{lane = CENTRE, type = GRUNT, count = 20, every = 0.7, t = 0.0}],
 	[{lane = WEST, type = GRUNT, count = 22, every = 0.55, t = 0.0},
@@ -205,63 +274,110 @@ const WAVES := [
 	[{lane = CENTRE, type = GRUNT, count = 22, every = 0.5, t = 0.0},
 		{lane = WEST, type = ARMORED, count = 6, every = 1.5, t = 3.0},
 		{lane = EAST, type = RUNNER, count = 14, every = 0.4, t = 8.0}],
-	# Bats arrive: a few, alone on the east (the counter is easy to see).
 	[{lane = WEST, type = GRUNT, count = 25, every = 0.4, t = 0.0},
 		{lane = CENTRE, type = GRUNT, count = 25, every = 0.4, t = 2.0},
 		{lane = EAST, type = BAT, count = 8, every = 0.8, t = 6.0},
 		{lane = CENTRE, type = BRUTE, count = 1, every = 1.0, t = 10.0},
-		{lane = EAST, type = ARMORED, count = 8, every = 1.2, t = 14.0}],
-	# Crossbowmen arrive behind a centre crowd.
-	[{lane = WEST, type = GRUNT, count = 34, every = 0.3, t = 0.0},
+		{lane = EAST, type = ARMORED, count = 6, every = 1.2, t = 14.0}],
+	[{lane = WEST, type = GRUNT, count = 30, every = 0.32, t = 0.0},
 		{lane = WEST, type = BRUTE, count = 1, every = 1.0, t = 6.0},
-		{lane = CENTRE, type = GRUNT, count = 20, every = 0.4, t = 0.0},
+		{lane = CENTRE, type = GRUNT, count = 18, every = 0.4, t = 0.0},
 		{lane = CENTRE, type = SIEGE, count = 3, every = 1.5, t = 6.0},
-		{lane = EAST, type = ARMORED, count = 10, every = 1.0, t = 0.0},
-		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 14.0}],
+		{lane = EAST, type = ARMORED, count = 8, every = 1.0, t = 0.0}],
+	# Slimes: a few down the centre.
+	[{lane = WEST, type = GRUNT, count = 30, every = 0.3, t = 0.0},
+		{lane = CENTRE, type = SLIME, count = 5, every = 1.6, t = 2.0},
+		{lane = EAST, type = RUNNER, count = 18, every = 0.3, t = 4.0},
+		{lane = EAST, type = ARMORED, count = 6, every = 1.0, t = 10.0},
+		{lane = WEST, type = BRUTE, count = 1, every = 1.0, t = 12.0}],
 	[{lane = WEST, type = GRUNT, count = 30, every = 0.32, t = 0.0},
 		{lane = EAST, type = GRUNT, count = 30, every = 0.32, t = 0.0},
 		{lane = CENTRE, type = ARMORED, count = 10, every = 1.0, t = 2.0},
-		{lane = WEST, type = BAT, count = 12, every = 0.6, t = 6.0},
-		{lane = CENTRE, type = RUNNER, count = 20, every = 0.3, t = 8.0},
-		{lane = EAST, type = SIEGE, count = 5, every = 1.4, t = 10.0},
-		{lane = WEST, type = BRUTE, count = 1, every = 1.0, t = 10.0},
-		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 16.0}],
-	[{lane = WEST, type = GRUNT, count = 45, every = 0.25, t = 0.0},
-		{lane = CENTRE, type = ARMORED, count = 18, every = 0.8, t = 0.0},
-		{lane = EAST, type = RUNNER, count = 30, every = 0.25, t = 4.0},
-		{lane = EAST, type = BAT, count = 14, every = 0.5, t = 10.0},
-		{lane = CENTRE, type = BRUTE, count = 2, every = 6.0, t = 12.0},
-		{lane = WEST, type = SIEGE, count = 6, every = 1.2, t = 14.0},
-		{lane = WEST, type = BRUTE, count = 1, every = 1.0, t = 20.0}],
+		{lane = WEST, type = BAT, count = 10, every = 0.6, t = 6.0},
+		{lane = CENTRE, type = RUNNER, count = 18, every = 0.3, t = 8.0},
+		{lane = EAST, type = SIEGE, count = 4, every = 1.4, t = 10.0},
+		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 14.0}],
+	# Bone mages: two, behind a centre crowd.
+	[{lane = CENTRE, type = GRUNT, count = 40, every = 0.25, t = 0.0},
+		{lane = CENTRE, type = MAGE, count = 2, every = 3.0, t = 6.0},
+		{lane = WEST, type = ARMORED, count = 12, every = 0.9, t = 2.0},
+		{lane = EAST, type = SLIME, count = 6, every = 1.4, t = 4.0},
+		{lane = EAST, type = BAT, count = 10, every = 0.5, t = 10.0},
+		{lane = WEST, type = BRUTE, count = 1, every = 1.0, t = 12.0}],
+	# Captains: one leads each side crowd.
+	[{lane = WEST, type = GRUNT, count = 36, every = 0.25, t = 0.0},
+		{lane = WEST, type = CAPTAIN, count = 1, every = 1.0, t = 3.0},
+		{lane = EAST, type = GRUNT, count = 36, every = 0.25, t = 0.0},
+		{lane = EAST, type = CAPTAIN, count = 1, every = 1.0, t = 3.0},
+		{lane = CENTRE, type = RUNNER, count = 24, every = 0.25, t = 4.0},
+		{lane = CENTRE, type = SIEGE, count = 5, every = 1.2, t = 8.0},
+		{lane = WEST, type = BAT, count = 10, every = 0.5, t = 10.0},
+		{lane = CENTRE, type = BRUTE, count = 2, every = 7.0, t = 10.0}],
+	# The Bone Warlord.
 	[{lane = WEST, type = GRUNT, count = 30, every = 0.28, t = 0.0},
 		{lane = CENTRE, type = GRUNT, count = 30, every = 0.28, t = 0.0},
 		{lane = EAST, type = GRUNT, count = 30, every = 0.28, t = 0.0},
-		{lane = WEST, type = ARMORED, count = 14, every = 0.9, t = 6.0},
-		{lane = EAST, type = ARMORED, count = 14, every = 0.9, t = 6.0},
-		{lane = CENTRE, type = BAT, count = 16, every = 0.5, t = 8.0},
-		{lane = CENTRE, type = SIEGE, count = 6, every = 1.2, t = 12.0},
-		{lane = EAST, type = BRUTE, count = 2, every = 7.0, t = 10.0},
-		{lane = CENTRE, type = BRUTE, count = 2, every = 7.0, t = 14.0}],
+		{lane = WEST, type = ARMORED, count = 10, every = 1.0, t = 5.0},
+		{lane = EAST, type = SLIME, count = 6, every = 1.2, t = 5.0},
+		{lane = CENTRE, type = BAT, count = 12, every = 0.5, t = 8.0},
+		{lane = CENTRE, type = MAGE, count = 2, every = 3.0, t = 14.0},
+		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 12.0},
+		{lane = CENTRE, type = BOSS, count = 1, every = 1.0, t = 20.0}],
+	[{lane = WEST, type = SLIME, count = 10, every = 1.0, t = 0.0},
+		{lane = CENTRE, type = GRUNT, count = 45, every = 0.22, t = 0.0},
+		{lane = CENTRE, type = CAPTAIN, count = 2, every = 4.0, t = 3.0},
+		{lane = EAST, type = ARMORED, count = 18, every = 0.7, t = 0.0},
+		{lane = EAST, type = MAGE, count = 2, every = 3.0, t = 8.0},
+		{lane = WEST, type = BAT, count = 14, every = 0.45, t = 8.0},
+		{lane = CENTRE, type = SIEGE, count = 6, every = 1.0, t = 12.0},
+		{lane = WEST, type = BRUTE, count = 2, every = 7.0, t = 10.0}],
 	[{lane = WEST, type = RUNNER, count = 40, every = 0.22, t = 0.0},
 		{lane = CENTRE, type = GRUNT, count = 50, every = 0.22, t = 0.0},
-		{lane = EAST, type = ARMORED, count = 24, every = 0.7, t = 0.0},
-		{lane = WEST, type = BAT, count = 18, every = 0.45, t = 6.0},
+		{lane = CENTRE, type = SLIME, count = 8, every = 1.0, t = 12.0},
+		{lane = EAST, type = ARMORED, count = 22, every = 0.7, t = 0.0},
+		{lane = EAST, type = CAPTAIN, count = 2, every = 5.0, t = 4.0},
+		{lane = WEST, type = BAT, count = 16, every = 0.45, t = 6.0},
+		{lane = CENTRE, type = MAGE, count = 3, every = 2.5, t = 8.0},
 		{lane = EAST, type = SIEGE, count = 8, every = 1.0, t = 10.0},
 		{lane = WEST, type = BRUTE, count = 2, every = 7.0, t = 8.0},
-		{lane = CENTRE, type = BRUTE, count = 1, every = 1.0, t = 12.0},
-		{lane = EAST, type = BRUTE, count = 2, every = 7.0, t = 16.0}],
-	# The finale: every lane at once, then the Bone Warlord down the centre.
+		{lane = CENTRE, type = BRUTE, count = 2, every = 7.0, t = 14.0}],
 	[{lane = WEST, type = GRUNT, count = 40, every = 0.25, t = 0.0},
-		{lane = CENTRE, type = GRUNT, count = 40, every = 0.25, t = 0.0},
+		{lane = CENTRE, type = SLIME, count = 14, every = 0.8, t = 0.0},
 		{lane = EAST, type = GRUNT, count = 40, every = 0.25, t = 0.0},
-		{lane = WEST, type = ARMORED, count = 14, every = 1.0, t = 5.0},
-		{lane = EAST, type = ARMORED, count = 14, every = 1.0, t = 5.0},
-		{lane = CENTRE, type = BAT, count = 16, every = 0.5, t = 8.0},
-		{lane = WEST, type = SIEGE, count = 5, every = 1.2, t = 12.0},
-		{lane = EAST, type = SIEGE, count = 5, every = 1.2, t = 12.0},
+		{lane = WEST, type = CAPTAIN, count = 3, every = 4.0, t = 3.0},
+		{lane = EAST, type = MAGE, count = 3, every = 2.5, t = 6.0},
+		{lane = WEST, type = ARMORED, count = 16, every = 0.8, t = 8.0},
+		{lane = CENTRE, type = BAT, count = 18, every = 0.4, t = 8.0},
+		{lane = EAST, type = SIEGE, count = 8, every = 1.0, t = 12.0},
+		{lane = EAST, type = BRUTE, count = 2, every = 6.0, t = 10.0}],
+	[{lane = WEST, type = ARMORED, count = 24, every = 0.6, t = 0.0},
+		{lane = WEST, type = CAPTAIN, count = 3, every = 5.0, t = 2.0},
+		{lane = CENTRE, type = RUNNER, count = 40, every = 0.2, t = 0.0},
+		{lane = CENTRE, type = MAGE, count = 4, every = 2.5, t = 8.0},
+		{lane = EAST, type = SLIME, count = 16, every = 0.7, t = 0.0},
+		{lane = EAST, type = GRUNT, count = 40, every = 0.25, t = 4.0},
+		{lane = EAST, type = BAT, count = 20, every = 0.4, t = 6.0},
+		{lane = CENTRE, type = SIEGE, count = 8, every = 1.0, t = 12.0},
+		{lane = WEST, type = BRUTE, count = 2, every = 7.0, t = 10.0},
+		{lane = CENTRE, type = BRUTE, count = 2, every = 7.0, t = 14.0},
+		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 18.0}],
+	# The finale: every lane at once, then two Bone Warlords.
+	[{lane = WEST, type = GRUNT, count = 45, every = 0.22, t = 0.0},
+		{lane = CENTRE, type = GRUNT, count = 45, every = 0.22, t = 0.0},
+		{lane = EAST, type = GRUNT, count = 45, every = 0.22, t = 0.0},
+		{lane = WEST, type = CAPTAIN, count = 2, every = 5.0, t = 3.0},
+		{lane = EAST, type = CAPTAIN, count = 2, every = 5.0, t = 3.0},
+		{lane = CENTRE, type = SLIME, count = 10, every = 1.0, t = 5.0},
+		{lane = WEST, type = ARMORED, count = 16, every = 0.8, t = 6.0},
+		{lane = EAST, type = ARMORED, count = 16, every = 0.8, t = 6.0},
+		{lane = CENTRE, type = BAT, count = 20, every = 0.4, t = 8.0},
+		{lane = CENTRE, type = MAGE, count = 3, every = 2.5, t = 10.0},
+		{lane = WEST, type = SIEGE, count = 6, every = 1.2, t = 12.0},
+		{lane = EAST, type = SIEGE, count = 6, every = 1.2, t = 12.0},
 		{lane = WEST, type = BRUTE, count = 2, every = 8.0, t = 10.0},
 		{lane = EAST, type = BRUTE, count = 2, every = 8.0, t = 18.0},
-		{lane = CENTRE, type = BOSS, count = 1, every = 1.0, t = 22.0}],
+		{lane = WEST, type = BOSS, count = 1, every = 1.0, t = 22.0, hp = 1.6},
+		{lane = EAST, type = BOSS, count = 1, every = 1.0, t = 30.0, hp = 1.6}],
 ]
 
 
@@ -270,9 +386,11 @@ const WAVES := [
 ## them (user). with_desc false: only the Strong / Weak lines.
 static func info(e: Dictionary, with_desc := true) -> String:
 	var lines := [Loc.t(e.desc)] if with_desc else []
-	var order := [["Strong vs:", e.strong], ["Weak vs:", e.weak]] if e.has("spot") else [["Weak vs:", e.weak], ["Strong vs:", e.strong]]
+	# Ours: a building, or a tower spec (has a cost); theirs: an enemy.
+	var ours: bool = e.has("spot") or e.has("cost")
+	var order := [["Strong vs:", e.strong], ["Weak vs:", e.weak]] if ours else [["Weak vs:", e.weak], ["Strong vs:", e.strong]]
 	for o in order:
-		var label := Loc.tc(o[0], "building" if e.has("spot") else "enemy")
+		var label := Loc.tc(o[0], "building" if ours else "enemy")
 		# A full-width colon (Chinese) takes no space after it.
 		lines.push_back(label + ("" if label.ends_with("：") else " ") + Loc.t(String(o[1])))
 	return "\n".join(lines)
@@ -324,5 +442,31 @@ static func wave_hp(w: int) -> float:
 	return 1.0 + HP_PER_WAVE * w + HP_PER_WAVE2 * w * w
 
 
-static func stats(kind: String, level: int) -> Dictionary:
-	return BUILDINGS[kind].levels[level]
+## Stats of `kind` at `level` (0-based); a tower's level IV (3) is its
+## spec's (`spec` = the spec id).
+static func stats(kind: String, level: int, spec := "") -> Dictionary:
+	var lv: Array = BUILDINGS[kind].levels
+	if level < lv.size():
+		return lv[level]
+	for sp in BUILDINGS[kind].get("specs", []):
+		if sp.id == spec:
+			return sp
+	return BUILDINGS[kind].specs[0] if spec == "" else {}
+
+
+## A built building's current stats ({kind, level, spec}).
+static func bstats(b: Dictionary) -> Dictionary:
+	return stats(b.kind, b.level, String(b.get("spec", "")))
+
+
+## How many levels `kind` has (towers: 3 + the spec level).
+static func max_levels(kind: String) -> int:
+	return BUILDINGS[kind].levels.size() + (1 if BUILDINGS[kind].has("specs") else 0)
+
+
+## The spec with this id across all towers, or {}.
+static func spec_of(kind: String, id: String) -> Dictionary:
+	for sp in BUILDINGS[kind].get("specs", []):
+		if sp.id == id:
+			return sp
+	return {}

@@ -73,6 +73,9 @@ var _hero_bow: Node3D
 var _hero_bow_x := 0.0  # the crossbow's own pitch in the aim pose
 var _enemy: Array[Dictionary] = []  # per kind: {mm, buf, clips, scale}
 var _corpses: Array[Dictionary] = []  # {pos, basis, kind, t}
+## Rings on the ground around support enemies (bone mages, captains), as
+## wide as their aura; pooled, hidden when unused.
+var _aura_rings: Array[MeshInstance3D] = []
 ## Dropped gold, one batch per tier: coin (1-4), coin stack (5-19),
 ## ingot (20+), by the piece's value.
 const DROP_TIERS := [0, 5, 20]
@@ -253,6 +256,7 @@ func _start(save := {}) -> void:
 	_gate_fx.clear()
 	_flying_pay.clear()
 	_enemy_bolts.clear()
+	_aura_rings.clear()
 	_enemy.clear()
 	_drop_mm.clear()  # (v0.1.13 bug: kept the freed batches of the last game:
 	_drop_buf.clear()  # no gold drawn after New game / Play again)
@@ -274,16 +278,18 @@ func _start(save := {}) -> void:
 			var f := item.split(":")
 			for k in (int(f[2]) if f.size() > 2 else 1):
 				sim.coins = 9999
-				sim.buy(f[0], f[1])
+				var b: Dictionary = sim.buildings.get(f[0], {})
+				var spec_lv: bool = not b.is_empty() and b.level + 1 >= Level.BUILDINGS[f[1]].levels.size()
+				sim.buy(f[0], f[1], (f[3] if f.size() > 3 else String(Level.BUILDINGS[f[1]].specs[0].id)) if spec_lv else "")
 		sim.coins = keep_coins
 		sim.level = keep_level
 		sim.step(DT, Vector2.ZERO)
 		_apply_events()
-	if _args.has("perks"):  # card[:tier] or relic, comma separated
+	if _args.has("perks"):  # card[:tier] or relic[:tier], comma separated
 		for item in String(_args.perks).split(","):
 			var f := item.split(":")
 			if Perks.RELICS.has(f[0]):
-				sim.relics.push_back(f[0])
+				sim.relics[f[0]] = int(f[1]) if f.size() > 1 else 1
 			else:
 				sim.perks[f[0]] = int(f[1]) if f.size() > 1 else 1
 	if _args.has("offer"):  # a relic (not with --offer=cards) and two level-ups waiting
@@ -677,7 +683,7 @@ func _end_tables() -> Array:
 	for k in Level.ENEMIES.size():
 		var v := sim.horde.wall_dmg[k]
 		if v > 0.0:
-			by.push_back([String(Models.ENEMY_VAT[k].name) if k != Level.RUNNER else "runner", Level.ename(k), v,
+			by.push_back([Models.enemy_icon(k), Level.ename(k), v,
 				100.0 * v / maxf(taken, 1.0)])
 	return [[tr("Damage dealt"), dealt], [tr("Damage taken (gates and keep)"), by]]
 
@@ -715,7 +721,7 @@ func _ring_near_hero() -> void:
 	var at := Vector3.ZERO
 	if sim.state == "play":
 		for b in sim.buildings.values():
-			var st := Level.stats(b.kind, b.level)
+			var st := Level.bstats(b)
 			var dd := Vector2(b.pos.x - sim.hero_pos.x, b.pos.z - sim.hero_pos.z).length()
 			if st.has("range") and dd < best:
 				best = dd
@@ -768,17 +774,24 @@ func _sync_menu() -> void:
 		_preview_spot = spot.id
 	var opts := []
 	for o in sim.options(spot):
+		if o.kind == "sell":
+			opts.push_back({id = "sell", text = tr(" Sell   +%d gold") % o.cost, ok = true, sell = true})
+			continue
+		var id: String = o.kind if o.spec == "" else "spec:" + String(o.spec)
 		var verb := tr("Upgrade to Lv %d") % (o.level + 1) if o.upgrade else tr(String(o.name))
+		if o.spec != "":
+			verb = tr(String(o.name))
 		var ok: bool = o.ok
-		if spot.kind == "tower" and b.is_empty():
-			# Every tower can be previewed, affordable or not.
-			ok = o.ok or o.kind != _preview
-			if o.kind == _preview:
+		# Every tower and every spec can be previewed, affordable or not.
+		if spot.kind == "tower" and (b.is_empty() or o.spec != ""):
+			ok = o.ok or id != _preview
+			if id == _preview:
 				verb = tr("> Build %s (tap again)") % tr(String(o.name)) if o.ok else tr("%s (need more gold)") % tr(String(o.name))
-		opts.push_back({id = o.kind, text = tr(" %s   -   %d gold") % [verb, o.cost], ok = ok,
+		opts.push_back({id = id, text = tr(" %s   -   %d gold") % [verb, o.cost], ok = ok,
 			icon = UiText.ICONS + String(o.kind) + ".png"})
 	var title := ""
 	var desc := ""
+	var spec_prev := _preview.trim_prefix("spec:") if _preview.begins_with("spec:") else ""
 	if b.is_empty():
 		title = {tower = tr("Tower spot"), eco = tr("Economy plot"), gate = tr("Gate spot")}[spot.kind]
 		desc = {tower = tr("Tap a tower: see its range and role. Tap again: build."),
@@ -787,26 +800,36 @@ func _sync_menu() -> void:
 		if _preview != "":
 			title = tr(String(Level.BUILDINGS[_preview].name))
 			desc = "%s\n%s" % [Level.info(Level.BUILDINGS[_preview]), _stats_text(_preview, 0)]
+	elif spec_prev != "":
+		var sp := Level.spec_of(b.kind, spec_prev)
+		title = "%s  Lv 4" % tr(String(sp.name))
+		desc = "%s\n%s" % [Level.info(sp), _stats_text(b.kind, 3, spec_prev)]
 	else:
-		title = "%s  Lv %d" % [tr(Level.BUILDINGS[b.kind].name), b.level + 1]
 		var bd: Dictionary = Level.BUILDINGS[b.kind]
-		desc = "%s\n%s" % [_stats_text(b.kind, b.level), Level.info(bd, false)]
-		if opts.is_empty():
+		var st := Level.bstats(b)
+		title = "%s  Lv %d" % [tr(String(st.get("name", bd.name))), b.level + 1]
+		desc = "%s\n%s" % [_stats_text(b.kind, b.level, String(b.spec)), Level.info(st if st.has("strong") else bd, false)]
+		if opts.size() == 1:
 			desc += "\n" + tr("Max level.")
-		elif Level.stats(b.kind, b.level).has("range"):
+		elif b.level + 1 == bd.levels.size() and bd.has("specs"):
+			desc += "\n" + tr("Lv 4: pick one of two specializations (tap to compare).")
+		elif st.has("range"):
 			desc += "\n" + tr("Gold ring: Lv %d range") % (b.level + 2)
 	hud.show_menu(spot.id, title, desc, opts)
 	# Rings: the reach of what stands here (or is being previewed), the next
 	# level's reach in gold, a mortar's dead zone in red.
-	var kind: String = _preview if b.is_empty() else String(b.kind)
-	var lv: int = 0 if b.is_empty() else int(b.level)
 	_hide_rings()
-	if kind == "" or not Level.stats(kind, lv).has("range"):
+	var kind: String = _preview if b.is_empty() else String(b.kind)
+	if kind == "":
 		return
-	var st := Level.stats(kind, lv)
+	var st := Level.stats(kind, 0) if b.is_empty() else Level.bstats(b)
+	if spec_prev != "":
+		st = Level.spec_of(kind, spec_prev)
+	if not st.has("range"):
+		return
 	_show_ring(_range_ring, spot.pos, float(st.range))
-	if not b.is_empty() and lv + 1 < Level.BUILDINGS[kind].levels.size():
-		_show_ring(_ring_next, spot.pos, float(Level.stats(kind, lv + 1).range))
+	if not b.is_empty() and spec_prev == "" and b.level + 1 < Level.BUILDINGS[kind].levels.size():
+		_show_ring(_ring_next, spot.pos, float(Level.stats(kind, b.level + 1).range))
 	if st.has("min_range"):
 		_show_ring(_ring_min, spot.pos, float(st.min_range))
 
@@ -854,8 +877,31 @@ func _show_ring(ring: MeshInstance3D, at: Vector3, r: float) -> void:
 	ring.scale = Vector3(r, 1, r)
 
 
-func _stats_text(kind: String, level: int) -> String:
-	var st := Level.stats(kind, level)
+func _stats_text(kind: String, level: int, spec := "") -> String:
+	var st := Level.stats(kind, level, spec)
+	match spec:
+		"sniper":
+			return tr("Damage %s, ignores armor  |  every %.1fs  |  range %s m") % [st.damage, st.interval, st.range]
+		"repeater":
+			return tr("Damage %s x %d arrows  |  every %.2fs  |  range %s m") % [st.damage, st.targets, st.interval, st.range]
+		"harpoon":
+			return tr("Damage %s  |  pierces %d, slows %d%% for %.1fs  |  every %.1fs  |  range %s m") % [st.damage, st.pierce,
+				roundi(float(st.harpoon[0]) * 100), st.harpoon[1], st.interval, st.range]
+		"cluster":
+			return tr("%d bomblets x damage %s, %.1f m splash  |  every %.1fs  |  range %s-%s m") % [st.bomblets[0], st.damage,
+				st.splash, st.interval, st.min_range, st.range]
+		"fire":
+			return tr("Damage %s, %.1f m splash, burns %s/s for %ds  |  every %.1fs  |  range %s-%s m") % [st.damage, st.splash,
+				st.burn[0], st.burn[1], st.interval, st.min_range, st.range]
+		"glacier":
+			return tr("Freezes %.1fs, then slow %d%% for %.1fs  |  every %.1fs  |  range %s m") % [st.freeze,
+				roundi(st.slow * 100), st.slow_time, st.interval, st.range]
+		"frostbite":
+			return tr("Damage %s, +%d%% damage taken for %ds, slow %d%%  |  every %.1fs  |  range %s m") % [st.damage,
+				roundi(float(st.brittle[0]) * 100), st.brittle[1], roundi(st.slow * 100), st.interval, st.range]
+		"drums", "standard":
+			return tr("Towers +%d%% attack speed  |  hero +%d%% damage and speed  |  range %s m") % [roundi(st.buff * 100),
+				roundi(st.hero_buff * 100), st.range]
 	match kind:
 		"archer":
 			return tr("Damage %s  |  every %.2fs  |  range %s m") % [st.damage, st.interval, st.range]
@@ -890,13 +936,29 @@ func _preview_text(w: int) -> String:
 
 func _on_menu_pick(id: String) -> void:
 	var spot := sim.spot_under_hero()
-	# Empty tower spot: the first tap previews the tower's range.
-	if not spot.is_empty() and spot.kind == "tower" and not sim.buildings.has(spot.id) and id != _preview:
+	if spot.is_empty():
+		return
+	var b: Dictionary = sim.buildings.get(spot.id, {})
+	if id == "sell":
+		_preview = ""
+		sfx.play("ui_click", -6.0, 0.9)
+		var name := tr(String(Level.bstats(b).get("name", Level.BUILDINGS[b.kind].name)))
+		confirm.ask(Loc.fmt(tr("Sell %s for %d gold?\n\nYou get back %d%% of what it cost."), [name, sim.sell_value(b),
+			roundi(Sim.SELL_REFUND * 100)]), func() -> void: sim.sell(spot.id), Callable(), tr("Sell"), tr("Cancel"))
+		return
+	# Empty tower spot, or a tower choosing its spec: the first tap previews.
+	var previewable: bool = spot.kind == "tower" and (b.is_empty() or id.begins_with("spec:"))
+	if previewable and id != _preview:
 		_preview = id
 		sfx.play("ui_click", -6.0, 1.2)
 		return
 	_preview = ""
-	if not spot.is_empty() and sim.buy(spot.id, id):
+	var ok := false
+	if id.begins_with("spec:"):
+		ok = sim.buy(spot.id, String(b.kind), id.trim_prefix("spec:"))
+	else:
+		ok = sim.buy(spot.id, id)
+	if ok:
 		sfx.play("ui_click")
 	else:
 		sfx.play("ui_click", -10.0, 0.7)
@@ -940,7 +1002,7 @@ func _apply_events() -> void:
 			"boss_phase":
 				_shake = 0.5
 				sfx.play("brute_die", 0.0, 0.6)
-				hud.message(tr("Berserk!") if e.berserk else tr("Grunts summoned!"), 2.0)
+				hud.message(tr("Berserk! Slows no longer work.") if e.berserk else tr("The Warlord calls for help!"), 2.0)
 				if not _fast_forwarding:
 					_flash(e.pos)
 			"vacuum":
@@ -965,13 +1027,15 @@ func _apply_events() -> void:
 				if not _fast_forwarding:
 					_flash(e.pos)
 			"boom":
-				sfx.play("mortar_boom", -3.0)
+				sfx.play("mortar_boom", -9.0 if e.get("small", false) else -3.0, 1.25 if e.get("small", false) else 1.0)
 				if not _fast_forwarding:
 					_boom(e.pos, e.r)
+					if e.get("fire", false):
+						fx.blast(e.pos, e.r)
 			"pulse":
-				sfx.play("frost_pulse", -8.0)
+				sfx.play("frost_pulse", -4.0 if e.get("spec", "") == "glacier" else -8.0, 0.8 if e.get("spec", "") == "glacier" else 1.0)
 				if not _fast_forwarding:
-					_pulse(e.pos, e.r)
+					_pulse(e.pos, e.r, e.get("spec", ""))
 			"kill":
 				if _corpses.size() < CORPSE_CAP:
 					var f: Vector3 = sim.tracks[e.lane].forward(e.d)
@@ -988,6 +1052,10 @@ func _apply_events() -> void:
 				sfx.play("build" if e.level == 0 else "upgrade")
 				for k in mini(int(e.cost), 12):
 					_flying_pay.push_back({a = sim.hero_pos + Vector3(0, 0.9, 0), b = e.spot.pos, t = -k * 0.03})
+			"sold":
+				sfx.play("gate_break", -6.0, 1.3)
+				sfx.play("coin_pay", 0.0, 1.1)
+				_on_sold(e)
 			"gate_broken":
 				_shake = 0.4
 				sfx.play("gate_break")
@@ -1078,6 +1146,29 @@ func _on_built(e: Dictionary) -> void:
 		_shake = maxf(_shake, 0.15)
 
 
+## A building was sold: it comes down, its pad (or ghost gate) is back.
+func _on_sold(e: Dictionary) -> void:
+	var spot: Dictionary = e.spot
+	if _built.has(spot.id):
+		var root: Node3D = _built[spot.id].root
+		_built.erase(spot.id)
+		if e.kind == "gate":
+			for g in _gate_fx:
+				if (_gate_fx[g].dust as Node).get_parent() == root:
+					root.remove_child(_gate_fx[g].dust)
+					add_child(_gate_fx[g].dust)
+		if _fast_forwarding:
+			root.queue_free()
+		else:
+			var tw := root.create_tween()
+			tw.tween_property(root, "scale", Vector3(1.0, 0.01, 1.0), 0.3).set_trans(Tween.TRANS_QUAD)
+			tw.tween_callback(root.queue_free)
+			_boom(spot.pos, 1.0)
+	if _pads.has(spot.id):
+		_pads[spot.id].node.visible = true
+	hud.message(tr("Sold: +%d gold") % e.refund, 1.5)
+
+
 ## Dust kicked up while enemies hammer a gate (emitting toggled per frame).
 func _dust() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
@@ -1131,9 +1222,11 @@ func _boom(p: Vector3, r: float) -> void:
 	_shake = maxf(_shake, 0.08)
 
 
-## Frost pulse: an icy ring growing to the crystal's reach and fading.
-func _pulse(p: Vector3, r: float) -> void:
-	var ring := _ring(1.0, Color(0.6, 0.9, 1.0, 0.7), 0.07)
+## Frost pulse: an icy ring growing to the crystal's reach and fading
+## (Glacier: thick and white; Frostbite: deep blue).
+func _pulse(p: Vector3, r: float, spec := "") -> void:
+	var col: Color = {glacier = Color(0.9, 0.97, 1.0, 0.85), frostbite = Color(0.3, 0.55, 1.0, 0.8)}.get(spec, Color(0.6, 0.9, 1.0, 0.7))
+	var ring := _ring(1.0, col, 0.16 if spec == "glacier" else 0.07)
 	ring.position = p
 	ring.scale = Vector3(0.3, 1, 0.3)
 	add_child(ring)
@@ -1245,7 +1338,7 @@ func _lane_preview(node: Node3D, counts: Dictionary) -> void:
 	for k in counts:
 		var at := -CAM_UP * (row * LANE_ROW) + Vector3(0, 0, 0.02 * row)
 		var icon := Sprite3D.new()
-		icon.texture = load(UiText.ICONS + (String(Models.ENEMY_VAT[k].name) if k != Level.RUNNER else "runner") + ".png")
+		icon.texture = load(UiText.ICONS + Models.enemy_icon(k) + ".png")
 		icon.pixel_size = 0.0058
 		icon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		icon.no_depth_test = true
@@ -1370,11 +1463,24 @@ func _draw_enemies() -> void:
 			cycle = fposmod(ph / TAU * 0.4, 1.0)
 		var frame := cycle * float(clip[1])
 		var b := Basis.looking_at(h.forward(i), Vector3.UP).scaled(Vector3.ONE * float(en.scale))
-		var col := Color(1.7, 1.7, 1.7) if h.flash[i] > 0.0 else (Color(0.7, 0.85, 1.25) if h.slow[i] > 0.0 else Color.WHITE)
+		var col := Color.WHITE
+		if h.flash[i] > 0.0:
+			col = Color(1.7, 1.7, 1.7)
+		elif h.freeze_t[i] > 0.0:  # frozen solid: icy white-blue, no animation
+			col = Color(0.75, 1.15, 1.7)
+		elif h.slow[i] > 0.0:
+			col = Color(0.7, 0.85, 1.25)
+		elif h.immune[i]:  # the berserk boss glows red
+			col = Color(1.5, 0.7, 0.6)
+		elif h.healed[i]:
+			col = Color(0.85, 1.35, 0.85)
+		elif h.haste[i] > 0.0:
+			col = Color(1.3, 1.1, 0.75)
 		if h.burn_t[i] > 0.0 and h.flash[i] <= 0.0:  # scorched, flickering
 			var fl := 0.85 + 0.15 * sin(sim.time * 23.0 + float(h.uid[i]))
 			col = Color(1.35 * fl, 0.75 * fl, 0.5 * fl)
 		_put(en.buf, n, Transform3D(b, p), col, clip, frame)
+	_draw_auras()
 	for c in _corpses:
 		var k: int = c.kind
 		var en: Dictionary = _enemy[k]
@@ -1393,6 +1499,33 @@ func _draw_enemies() -> void:
 	for k in _enemy.size():
 		_enemy[k].mm.buffer = _enemy[k].buf
 		_enemy[k].mm.visible_instance_count = counts[k]
+
+
+## A ring around each support enemy: green for a healer, orange for haste.
+func _draw_auras() -> void:
+	var h := sim.horde
+	var n := 0
+	for i in h.count():
+		var e: Dictionary = Level.ENEMIES[h.kind[i]]
+		if not e.has("aura") or h.hp[i] <= 0.0 or not h.targetable(i):
+			continue
+		if n >= _aura_rings.size():
+			var ring := _ring(1.0, Color.WHITE, 0.035)
+			add_child(ring)
+			_aura_rings.push_back(ring)
+		var ring := _aura_rings[n]
+		n += 1
+		ring.visible = true
+		var p := h.pos[i]
+		if i < h.prev_pos.size():
+			p = h.prev_pos[i].lerp(p, _alpha)
+		var r := float(e.aura) * (1.0 + 0.03 * sin(sim.time * 4.0 + i))
+		ring.position = Vector3(p.x, 0.0, p.z)
+		ring.scale = Vector3(r, 1, r)
+		(ring.material_override as StandardMaterial3D).albedo_color = Color(0.4, 1.0, 0.45, 0.75) \
+			if e.has("heal") else Color(1.0, 0.65, 0.15, 0.75)
+	for k in range(n, _aura_rings.size()):
+		_aura_rings[k].visible = false
 
 
 ## Write instance `i`: transform, colour and VAT custom data
@@ -1580,14 +1713,14 @@ func _sync_gates() -> void:
 ## Red HP bars over the giants (not the small fry: too many, too busy).
 func _sync_enemy_bars() -> void:
 	var bars: Array = []
-	var boss: Array = []
+	var boss: Array = []  # [name, hp fraction, berserk] per boss
 	var h := sim.horde
 	for i in h.count():
 		var e: Dictionary = Level.ENEMIES[h.kind[i]]
 		if not e.get("big", false) or h.hp[i] <= 0.0:
 			continue
 		if e.get("boss", false):
-			boss = [String(e.name), h.hp[i] / h.max_hp[i], h.stage[i] >= Level.BOSS_PHASES.size()]
+			boss.push_back([String(e.name), h.hp[i] / h.max_hp[i], h.stage[i] >= Level.BOSS_PHASES.size()])
 			continue  # its bar is the big one at the top
 		var top := h.pos[i] + Vector3(0, 2.75, 0)
 		if not cam.is_position_behind(top):

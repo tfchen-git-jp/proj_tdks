@@ -48,7 +48,7 @@ func _run() -> void:
 		var holder := Node3D.new()
 		holder.add_child(mi)
 		holder.rotation_degrees.y = 180.0 - 35.0  # baked models face -Z
-		_jobs.push_back([Models.ENEMY_VAT[k].name if k != Level.RUNNER else "runner", holder])
+		_jobs.push_back([Models.enemy_icon(k), holder])
 	for kind in Level.BUILDINGS:
 		var b: Node3D = Models.building(kind, 0)[0]
 		var holder := Node3D.new()

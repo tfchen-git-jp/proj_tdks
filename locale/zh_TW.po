@@ -121,8 +121,8 @@ msgstr "無"
 msgid "\nNew top-10 entry: #%d"
 msgstr "\n新紀錄：第 %d 名"
 
-msgid "RogueShot Tower Defense\nMade with Godot Engine 4.7 (godotengine.org), by directing Claude.\n\n3D MODELS (CC0)\nKay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian), Skeletons (crossbowmen, Bone Warlord), Medieval Hexagon (archer tower, windmill, market, keep, flag, gate), Dungeon Remastered (coins), Forest Nature (rocks)\nKenney (kenney.nl): Tower Defense Kit, Mini Dungeon, Mini Arena, Nature Kit\nQuaternius (quaternius.com): Animated Monsters (bat)\n\nSOUND (CC0 unless noted)\nKenney: RPG Audio, Impact Sounds, Interface Sounds, Casino Audio, Sci-fi Sounds, Music Jingles\nOpenGameArt: artisticdude (bow, freeze spell), Vehicle / Jan Schupke (Tinysized SFX), bart (ice spells), rubberduck (creature SFX), Joth (chunky explosion), qubodup (dull explosion), fvcalderan (fanfare), 0new4y (game-over trumpet)\nWave horn: \"Scary Echoey Horn Esque Sound\" by Kat, CC-BY 4.0 (opengameart.org)\n\nMUSIC\n\"RPG City\" by phantasticbeats (Pixabay)\n\nThanks for playing!"
-msgstr "俠盜塔防遊戲\n以 Godot Engine 4.7（godotengine.org）製作，由 Claude 協力開發。\n\n3D 模型（CC0）\nKay Lousberg（kaylousberg.com）：KayKit Adventurers（英雄、巨人）、Skeletons（骷髏弩手、骷髏戰閥）、Medieval Hexagon（弓箭塔、風車、市集、主堡、旗幟、城門）、Dungeon Remastered（金幣）、Forest Nature（岩石）\nKenney（kenney.nl）：Tower Defense Kit、Mini Dungeon、Mini Arena、Nature Kit\nQuaternius（quaternius.com）：Animated Monsters（魔蝠）\n\n音效（除另註明外皆為 CC0）\nKenney：RPG Audio、Impact Sounds、Interface Sounds、Casino Audio、Sci-fi Sounds、Music Jingles\nOpenGameArt：artisticdude（弓、冰凍法術）、Vehicle / Jan Schupke（Tinysized SFX）、bart（冰系法術）、rubberduck（生物音效）、Joth（爆炸）、qubodup（悶響爆炸）、fvcalderan（號角曲）、0new4y（失敗號角）\n波次號角：Kat〈Scary Echoey Horn Esque Sound〉，CC-BY 4.0（opengameart.org）\n\n音樂\nphantasticbeats〈RPG City〉（Pixabay）\n\n感謝遊玩！"
+msgid "RogueShot Tower Defense\nMade with Godot Engine 4.7 (godotengine.org), by directing Claude.\n\n3D MODELS (CC0)\nKay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian, captain), Skeletons (crossbowmen, bone mages, Bone Warlord), Medieval Hexagon (archer tower, windmill, market, keep, flag, gate), Dungeon Remastered (coins), Forest Nature (rocks)\nKenney (kenney.nl): Tower Defense Kit, Mini Dungeon, Mini Arena, Nature Kit\nQuaternius (quaternius.com): Animated Monsters (bat, slime)\n\nSOUND (CC0 unless noted)\nKenney: RPG Audio, Impact Sounds, Interface Sounds, Casino Audio, Sci-fi Sounds, Music Jingles\nOpenGameArt: artisticdude (bow, freeze spell), Vehicle / Jan Schupke (Tinysized SFX), bart (ice spells), rubberduck (creature SFX), Joth (chunky explosion), qubodup (dull explosion), fvcalderan (fanfare), 0new4y (game-over trumpet)\nWave horn: \"Scary Echoey Horn Esque Sound\" by Kat, CC-BY 4.0 (opengameart.org)\n\nMUSIC\n\"RPG City\" by phantasticbeats (Pixabay)\n\nThanks for playing!"
+msgstr "俠盜塔防遊戲\n以 Godot Engine 4.7（godotengine.org）製作，由 Claude 協力開發。\n\n3D 模型（CC0）\nKay Lousberg（kaylousberg.com）：KayKit Adventurers（英雄、巨人、隊長）、Skeletons（骷髏弩手、骷髏法師、骷髏戰閥）、Medieval Hexagon（弓箭塔、風車、市集、主堡、旗幟、城門）、Dungeon Remastered（金幣）、Forest Nature（岩石）\nKenney（kenney.nl）：Tower Defense Kit、Mini Dungeon、Mini Arena、Nature Kit\nQuaternius（quaternius.com）：Animated Monsters（魔蝠、史萊姆）\n\n音效（除另註明外皆為 CC0）\nKenney：RPG Audio、Impact Sounds、Interface Sounds、Casino Audio、Sci-fi Sounds、Music Jingles\nOpenGameArt：artisticdude（弓、冰凍法術）、Vehicle / Jan Schupke（Tinysized SFX）、bart（冰系法術）、rubberduck（生物音效）、Joth（爆炸）、qubodup（悶響爆炸）、fvcalderan（號角曲）、0new4y（失敗號角）\n波次號角：Kat〈Scary Echoey Horn Esque Sound〉，CC-BY 4.0（opengameart.org）\n\n音樂\nphantasticbeats〈RPG City〉（Pixabay）\n\n感謝遊玩！"
 
 msgid "KEEP"
 msgstr "主堡"
@@ -163,8 +163,11 @@ msgstr "狂暴！"
 msgid "BERSERK"
 msgstr "狂暴"
 
-msgid "Grunts summoned!"
-msgstr "召喚了雜兵！"
+msgid "The Warlord calls for help!"
+msgstr "骷髏戰閥召喚援軍！"
+
+msgid "Berserk! Slows no longer work."
+msgstr "狂暴！緩速不再有效。"
 
 msgid "Lv %d: %s"
 msgstr "Lv %d：%s"
@@ -267,6 +270,48 @@ msgstr " %s   -   %d 黃金"
 
 msgid "Max level."
 msgstr "已達最高等級。"
+
+msgid "Lv 4: pick one of two specializations (tap to compare)."
+msgstr "Lv 4：二選一特化（點一下比較）。"
+
+msgid "Lv 4: %s"
+msgstr "Lv 4：%s"
+
+msgid " Sell   +%d gold"
+msgstr " 出售   +%d 黃金"
+
+msgid "Sell"
+msgstr "出售"
+
+msgid "Sell %s for %d gold?\n\nYou get back %d%% of what it cost."
+msgstr "要以 {1} 黃金出售{0}嗎？\n\n可拿回花費的 {2}%。"
+
+msgid "Sold: +%d gold"
+msgstr "已出售：+%d 黃金"
+
+msgid "Damage %s, ignores armor  |  every %.1fs  |  range %s m"
+msgstr "傷害 %s，無視護甲  |  每 %.1f 秒  |  射程 %s 公尺"
+
+msgid "Damage %s x %d arrows  |  every %.2fs  |  range %s m"
+msgstr "傷害 %s x %d 支箭  |  每 %.2f 秒  |  射程 %s 公尺"
+
+msgid "Damage %s  |  pierces %d, slows %d%% for %.1fs  |  every %.1fs  |  range %s m"
+msgstr "傷害 %s  |  貫穿 %d，緩速 %d%% %.1f 秒  |  每 %.1f 秒  |  射程 %s 公尺"
+
+msgid "%d bomblets x damage %s, %.1f m splash  |  every %.1fs  |  range %s-%s m"
+msgstr "%d 顆子彈 x 傷害 %s，%.1f 公尺濺射  |  每 %.1f 秒  |  射程 %s-%s 公尺"
+
+msgid "Damage %s, %.1f m splash, burns %s/s for %ds  |  every %.1fs  |  range %s-%s m"
+msgstr "傷害 %s，%.1f 公尺濺射，燃燒每秒 %s 持續 %d 秒  |  每 %.1f 秒  |  射程 %s-%s 公尺"
+
+msgid "Freezes %.1fs, then slow %d%% for %.1fs  |  every %.1fs  |  range %s m"
+msgstr "凍結 %.1f 秒，再緩速 %d%% %.1f 秒  |  每 %.1f 秒  |  射程 %s 公尺"
+
+msgid "Damage %s, +%d%% damage taken for %ds, slow %d%%  |  every %.1fs  |  range %s m"
+msgstr "傷害 %s，受到傷害 +%d%% %d 秒，緩速 %d%%  |  每 %.1f 秒  |  射程 %s 公尺"
+
+msgid "Towers +%d%% attack speed  |  hero +%d%% damage and speed  |  range %s m"
+msgstr "防禦塔攻擊速度 +%d%%  |  英雄傷害與速度 +%d%%  |  射程 %s 公尺"
 
 msgid "Gold ring: Lv %d range"
 msgstr "金色圓圈：Lv %d 射程"
@@ -407,6 +452,129 @@ msgstr "魔蝠（飛越）、骷髏弩手（遠距射擊）"
 msgid "holding crowds inside tower range"
 msgstr "把敵群擋在塔的射程內"
 
+msgid "Sniper Tower"
+msgstr "狙擊塔"
+
+msgid "Repeater Tower"
+msgstr "連弩塔"
+
+msgid "Great Ballista"
+msgstr "重型弩砲塔"
+
+msgid "Harpoon Ballista"
+msgstr "魚叉弩砲塔"
+
+msgid "Cluster Mortar"
+msgstr "散彈臼砲塔"
+
+msgid "Fire Mortar"
+msgstr "燃燒臼砲塔"
+
+msgid "Glacier Crystal"
+msgstr "冰封晶塔"
+
+msgid "Frostbite Crystal"
+msgstr "霜傷晶塔"
+
+msgid "War Drums"
+msgstr "戰鼓塔"
+
+msgid "Hero's Standard"
+msgstr "英雄戰旗"
+
+msgid "Sniper"
+msgstr "狙擊塔"
+
+msgid "Repeater"
+msgstr "連弩塔"
+
+msgid "Harpoon"
+msgstr "魚叉弩砲塔"
+
+msgid "Long shots at the toughest enemy in reach; ignore armor."
+msgstr "遠距狙擊射程內最強的敵人，無視護甲。"
+
+msgid "Rapid arrows at two enemies at once."
+msgstr "快速連射，同時射擊兩個敵人。"
+
+msgid "Huge bolts that pierce only a few enemies."
+msgstr "巨型弩箭，只貫穿少數敵人。"
+
+msgid "Barbed bolts: every enemy hit is slowed 50% for 2.5 s."
+msgstr "倒鉤弩箭：被命中的敵人緩速 50% 2.5 秒。"
+
+msgid "Shells burst into 5 bomblets over a wide area."
+msgstr "砲彈在空中分裂成 5 顆子彈，炸開一大片。"
+
+msgid "Firepots: everything hit burns for 4 s, armor or not."
+msgstr "火罐：命中的敵人燃燒 4 秒，護甲無效。"
+
+msgid "Freezes everything nearby solid for 0.8 s (bosses half), then chills."
+msgstr "把周圍所有敵人凍結 0.8 秒（頭目減半），之後冰凍。"
+
+msgid "Weaker chill, but chilled enemies take 50% more damage."
+msgstr "冰凍較弱，但被冰凍的敵人受到的傷害 +50%。"
+
+msgid "Towers nearby attack twice as fast; the hero gets nothing."
+msgstr "附近的防禦塔攻擊速度加倍；英雄沒有加成。"
+
+msgid "The hero nearby: +60% damage and attack speed; towers +35%."
+msgstr "附近的英雄：傷害與攻擊速度 +60%；防禦塔 +35%。"
+
+msgid "crowds, runners"
+msgstr "密集敵群、疾行兵"
+
+msgid "grunts, runners, bats, slimelings"
+msgstr "雜兵、疾行兵、魔蝠、分身史萊姆"
+
+msgid "armored, the boss"
+msgstr "裝甲兵、頭目"
+
+msgid "giants, the boss, captains"
+msgstr "巨人、頭目、隊長"
+
+msgid "crowds"
+msgstr "密集敵群"
+
+msgid "long lines, runners, slimes"
+msgstr "長列敵人、疾行兵、史萊姆"
+
+msgid "the berserk boss, bats"
+msgstr "狂暴的頭目、魔蝠"
+
+msgid "crowds, slimes, slimelings"
+msgstr "密集敵群、史萊姆、分身史萊姆"
+
+msgid "armored, bats"
+msgstr "裝甲兵、魔蝠"
+
+msgid "armored, gate queues, captains"
+msgstr "裝甲兵、城門前的隊伍、隊長"
+
+msgid "runners, bats"
+msgstr "疾行兵、魔蝠"
+
+msgid "giants, gate queues, crossbowmen"
+msgstr "巨人、城門前的隊伍、骷髏弩手"
+
+msgid "the berserk boss"
+msgstr "狂暴的頭目"
+
+msgid "the boss, giants, armored"
+msgstr "頭目、巨人、裝甲兵"
+
+msgid "a strong hero"
+msgstr "強大的英雄"
+
+msgid "a lone hero"
+msgstr "獨自作戰的英雄"
+
+msgid "towers far from the hero"
+msgstr "離英雄太遠的防禦塔"
+
+msgid "gate queues"
+msgstr "城門前的隊伍"
+
 msgid "grunt"
 msgstr "雜兵"
 
@@ -445,6 +613,63 @@ msgstr "骷髏戰閥"
 
 msgid "Bone Warlords"
 msgstr "骷髏戰閥"
+
+msgid "slime"
+msgstr "史萊姆"
+
+msgid "slimes"
+msgstr "史萊姆"
+
+msgid "slimeling"
+msgstr "分身史萊姆"
+
+msgid "slimelings"
+msgstr "分身史萊姆"
+
+msgid "bone mage"
+msgstr "骷髏法師"
+
+msgid "bone mages"
+msgstr "骷髏法師"
+
+msgid "captain"
+msgstr "隊長"
+
+msgid "captains"
+msgstr "隊長"
+
+msgid "Bursts into 4 slimelings when it dies."
+msgstr "死亡時分裂成 4 隻分身史萊姆。"
+
+msgid "mortars, Harpoon"
+msgstr "臼砲塔、魚叉弩砲塔"
+
+msgid "archers (more to kill)"
+msgstr "弓箭塔（要打的更多了）"
+
+msgid "Small and quick, born from a slime."
+msgstr "又小又快，由史萊姆分裂而來。"
+
+msgid "mortars, frost, Repeater"
+msgstr "臼砲塔、冰晶塔、連弩塔"
+
+msgid "single big shots"
+msgstr "單發重擊"
+
+msgid "Heals all within 4.5 m, 5% HP a second. Kill it first."
+msgstr "治療 4.5 公尺內所有敵人，每秒 5% 生命。優先擊殺！"
+
+msgid "the hero, Sniper"
+msgstr "英雄、狙擊塔"
+
+msgid "All within 4 m walk and attack 40% faster."
+msgstr "4 公尺內所有敵人移動與攻擊加速 40%。"
+
+msgid "ballistas, mortars"
+msgstr "弩砲塔、臼砲塔"
+
+msgid "archers (armor)"
+msgstr "弓箭塔（護甲）"
 
 msgid "Basic foot soldier, comes in big crowds."
 msgstr "基本步兵，成群出現。"
@@ -497,14 +722,17 @@ msgstr "在 6 公尺外射擊城門，不必排隊。"
 msgid "ballistas, the hero"
 msgstr "弩砲塔、英雄"
 
-msgid "Armored boss: calls grunts, goes berserk when hurt."
-msgstr "重甲頭目：召喚雜兵，受傷後會狂暴。"
+msgid "Armored boss: calls armored men, berserk at 25%: no slow or freeze."
+msgstr "重甲頭目：召喚裝甲兵；生命 25% 時狂暴，緩速與凍結無效。"
 
 msgid "ballistas, Giant Slayer, fire"
 msgstr "弩砲塔、巨人殺手、火焰"
 
-msgid "light hits, gates"
-msgstr "小傷害、城門"
+msgid "light hits, gates, slow (berserk)"
+msgstr "小傷害、城門、緩速（狂暴時）"
+
+msgid "Giant"
+msgstr "巨人"
 
 msgid "archers"
 msgstr "弓箭塔"
@@ -580,6 +808,36 @@ msgstr "護甲"
 
 msgid "armour"
 msgstr "護甲"
+
+msgid "slows"
+msgstr "緩速"
+
+msgid "slowed"
+msgstr "緩速"
+
+msgid "chilled"
+msgstr "冰凍"
+
+msgid "Freezes"
+msgstr "凍結"
+
+msgid "freeze"
+msgstr "凍結"
+
+msgid "burns"
+msgstr "燃燒"
+
+msgid "Firepots"
+msgstr "火罐"
+
+msgid "Heals"
+msgstr "治療"
+
+msgid "heals"
+msgstr "治療"
+
+msgid "faster"
+msgstr "加速"
 
 msgid "Sharpened Bolts"
 msgstr "磨尖箭矢"
@@ -803,20 +1061,56 @@ msgstr "點金術"
 msgid "Last Stand"
 msgstr "背水一戰"
 
-msgid "Every shot fires a second, half-damage volley right after the first."
-msgstr "每次射擊後，緊接著再射出一輪一半傷害的弩箭。"
+msgid "Every shot fires a second volley at 50% damage right after the first."
+msgstr "每次射擊後，緊接著再射出一輪 50% 傷害的弩箭。"
+
+msgid "Second volley at 70% damage"
+msgstr "第二輪 70% 傷害"
+
+msgid "Second volley at 90% damage"
+msgstr "第二輪 90% 傷害"
 
 msgid "Every 6th shot also looses a bolt at each of the 4 nearest enemies."
 msgstr "每第 6 次射擊，額外向最近的 4 個敵人各射一箭。"
 
+msgid "Every 5th shot, 5 enemies"
+msgstr "每第 5 次射擊，5 個敵人"
+
+msgid "Every 4th shot, 6 enemies"
+msgstr "每第 4 次射擊，6 個敵人"
+
 msgid "Every 8 s lightning strikes the toughest enemy near you and chains through 4 more."
 msgstr "每 8 秒，閃電擊中你附近最強的敵人，並連鎖到另外 4 個。"
+
+msgid "Every 6 s, chains through 5 more"
+msgstr "每 6 秒，連鎖到另外 5 個"
+
+msgid "Every 4.5 s, chains through 7 more"
+msgstr "每 4.5 秒，連鎖到另外 7 個"
 
 msgid "A wisp circles you and shoots magic bolts at enemies."
 msgstr "追射妖精繞著你飛行，向敵人發射魔法彈。"
 
+msgid "The wisp shoots 40% faster"
+msgstr "追射妖精射速 +40%"
+
+msgid "The wisp shoots twice as fast"
+msgstr "追射妖精射速加倍"
+
 msgid "Every 40th kill near you drops a gold ingot (20)."
 msgstr "在你附近每擊殺 40 個敵人，掉落一塊金條（20）。"
 
+msgid "Every 30th kill"
+msgstr "每擊殺 30 個"
+
+msgid "Every 20th kill"
+msgstr "每擊殺 20 個"
+
 msgid "The keep regains 10% of its HP after every wave."
 msgstr "每波結束後，主堡恢復 10% 生命。"
+
+msgid "Regains 15%"
+msgstr "恢復 15%"
+
+msgid "Regains 20%"
+msgstr "恢復 20%"

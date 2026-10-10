@@ -11,7 +11,9 @@ keeps the decisions, the original analysis and what is left to build.
   keep (stand on it for a 5 s countdown; its popup lists the coming
   enemies per lane).
 - **Build between every wave** (Thronefall style); no building during an
-  attack. A level = 10 waves.
+  attack. A level = 15 waves (10 until v0.1.26; user 2026-10-10: the new
+  wave 10 easier than the old one, wave 15 harder; the standard bot
+  should win 60-65%).
 - **Build popup appears when the hero stands on a spot** (no tapping the
   map); tap a button in it to build or upgrade.
 - **Gold:** walk over dropped gold during a wave, and when the wave ends
@@ -20,8 +22,12 @@ keeps the decisions, the original analysis and what is left to build.
   hero's walkable area (marked on the road).
 - Each gate gets its own tower spot beside its queue; unbuilt gate pads
   show a see-through gate across their lane.
-- Upgrades are linear (towers 4 levels, farm / bank / gate 3), not 2-way
-  choices.
+- Upgrades are linear up to III (towers), farm / bank / gate I-III; at
+  level IV every tower picks one of two specs with a clear trade-off,
+  neither simply better (user, 2026-10-10; not only damage: frost and
+  the banner matter in other ways). Selling a building refunds 40% of
+  all it cost, after a yes / no (user: punishing on purpose; a maxed
+  tower only offers Sell).
 - **Enemies attack only walls** (gates, then the keep), never the hero or
   towers: no building HP, no hero death.
 - **Spots unlock with the hero's level** (5 tower + 1 gold at level 1,
@@ -32,8 +38,16 @@ keeps the decisions, the original analysis and what is left to build.
   gold, capped).
 - **Hero upgrades** (rogue-like): XP from kills near the hero, whoever
   kills; level-ups banked during a wave and picked after it (3 cards,
-  tiers I-III, reroll for gold); a relic after waves 3/6/9. No permanent
+  tiers I-III, reroll for gold); a relic after waves 3/6/9/12, relics
+  also tiered I-III (user, v0.1.28: Thunderstrike strikes more often,
+  and so on). Hades-like combined effects: far future. No permanent
   unlocks until there are many more waves / maps.
+- **Bosses** (user, v0.1.28): the Bone Warlord calls armored men (three
+  times), and berserk it shrugs off slows and freezes. Wave 10 has one,
+  wave 15 two tougher ones.
+- **Support enemies** the player wants to kill first (user): bone mages
+  heal, captains hasten everyone near them; slimes burst into
+  slimelings (the "spider and spiderlings" idea).
 - Main menu with Continue (saved at every wave), top-10 scores (waves,
   then keep HP % x 10 + gold), credits; Esc / back always asks first.
 
@@ -122,18 +136,32 @@ summoning / commanding.
    score + top 10. TODO: more levels / maps, then permanent unlocks and
    difficulty mutators.
 
+## Spec balance (v0.1.28)
+
+The standard bot takes Sniper / Great / Cluster / Glacier (it builds no
+banner) and wins 62% of 96 seeds. Swapping one tower kind to its other
+spec (tools/meta_report.py --fixed --specs=KIND:SPEC, 96 seeds each):
+Repeater 44%, Harpoon 61%, Fire Mortar 64%, Frostbite 52%. The bosses
+decide most games, so the boss-hurting / boss-holding side reads strong
+in bot runs; a player who loses to crowds or gate breaks should find the
+other side (Repeater, Frostbite) better. First passes had Repeater at
+2-9% and Frostbite at 9-23%; Sniper slowed (2.2 s), Glacier's freeze cut
+to 0.8 s and halved on bosses (Horde.BOSS_FREEZE), Repeater and
+Frostbite strengthened. Banner specs untested by the bot. Random builds
+win ~6%.
+
 ## Roadmap (agreed 2026-10-10; batch 1 done in v0.1.18)
 
 1. DONE: armour, flyers (bats), ranged siege (crossbowmen), wave-10 boss.
-2. Endless mode (after wave 10, ever-tougher waves; score = wave
+2. Later (user, v0.1.28: not now): endless mode (after the last wave, ever-tougher waves; score = wave
    reached) + 2-3 mutators chosen before a run ("enemies +30% speed",
    "no gates", "keep 50% HP"), each adding a score bonus.
 3. Card evolutions (two maxed cards fuse, e.g. Fire Bolts III + Explosive
    Tips III -> Inferno; Ricochet III + Multishot III -> Storm of Bolts)
    + 4-5 new relics, some changing towers ("archers shoot fire arrows",
    "gates reflect damage", "frost pulses deal damage").
-4. Tower specialisations at level IV (pick one of two, e.g. archer ->
-   Sniper or Rapid) + selling a building (60-70% refund).
+4. DONE (v0.1.28, with 15 waves, relic tiers, new enemies and bosses):
+   tower specialisations at level IV + selling (40% refund).
 5. A second map (the user designs it; Claude adds a level file format and
    checks: spot placement, start lines, a bot test run).
 

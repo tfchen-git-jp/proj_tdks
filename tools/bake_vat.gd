@@ -41,6 +41,20 @@ const JOBS := [
 			["res://assets/chars/skeleton/Skeleton_Shield_Large_A.gltf", "handslot.l"]],
 		clips = [["walk", "Walking_B", true], ["attack", "1H_Melee_Attack_Chop", true],
 			["die", "Death_C_Skeletons", false], ["idle", "Idle_Combat", true]]},
+	# v0.1.28: Quaternius slime (its brood is the same mesh, scaled), a
+	# KayKit skeleton mage (healer) and the Adventurers knight (captain).
+	{name = "slime", src = "res://assets/chars/slime/Slime.glb", height = 0.8, fps = 20.0, palette = true,
+		clips = [["walk", "Slime_Walk", true], ["attack", "Slime_Attack", true],
+			["die", "Slime_Death", false], ["idle", "Slime_Idle", true]]},
+	{name = "mage", src = "res://assets/chars/skeleton/Skeleton_Mage.glb", height = 1.25, fps = 18.0,
+		attach = ["Skeleton_Mage_Hat"],
+		extra = [["res://assets/chars/skeleton/Skeleton_Staff.gltf", "handslot.r"]],
+		clips = [["walk", "Walking_D_Skeletons", true], ["attack", "Spellcast_Shoot", true],
+			["die", "Death_C_Skeletons", false], ["idle", "Spellcasting", true]]},
+	{name = "captain", src = "res://assets/chars/knight/Knight.glb", height = 1.25, fps = 18.0,
+		attach = ["Knight_Helmet", "Knight_Cape", "1H_Sword", "Badge_Shield"],
+		clips = [["walk", "Walking_A", true], ["attack", "1H_Melee_Attack_Chop", true],
+			["die", "Death_A", false], ["idle", "Idle", true]]},
 ]
 
 
@@ -50,8 +64,14 @@ func _init() -> void:
 
 func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://assets/vat"))
+	# -- --only=a,b: bake just these.
+	var only := []
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--only="):
+			only = a.get_slice("=", 1).split(",")
 	for job in JOBS:
-		_bake(job)
+		if only.is_empty() or job.name in only:
+			_bake(job)
 	quit()
 
 

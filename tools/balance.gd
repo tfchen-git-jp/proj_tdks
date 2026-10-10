@@ -27,7 +27,7 @@ func _init() -> void:
 	var wave_peak := 0
 	var keep_at_start := 0.0
 	var spent := 0
-	while sim.state == "play" and sim.time < 3000.0:
+	while sim.state == "play" and sim.time < 5000.0:
 		if idle:
 			sim.step(dt, Vector2.ZERO)
 			if sim.phase == "build":

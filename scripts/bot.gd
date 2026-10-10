@@ -18,7 +18,20 @@ const PLAN := [
 	["gc_t", "mortar"], ["ge_t", "archer"], ["gw_t", "archer"], ["e_in", "archer"], ["w_in", "archer"],
 	["e_mid", "frost"], ["w_out", "archer"], ["e_in", "archer"], ["w_in", "archer"],
 	["c_far", "ballista"], ["w_mid", "mortar"], ["gc_t", "mortar"],
+	# Waves 11-15 (v0.1.28): the spots opened late, gates up, more specs.
+	["g_c1", "gate"], ["g_e1", "gate"], ["g_w1", "gate"], ["x_c2", "ballista"], ["x_e1", "mortar"],
+	["x_c2", "ballista"], ["x_e1", "mortar"], ["x_w2", "archer"], ["x_w5", "mortar"],
+	["c_far", "ballista"], ["e_mid", "frost"], ["x_c2", "ballista"], ["x_e1", "mortar"],
+	["x_w2", "archer"], ["x_w5", "mortar"], ["x_w2", "archer"], ["x_w5", "mortar"],
+	["g_c1", "gate"], ["g_e1", "gate"], ["g_w1", "gate"], ["x_c1", "ballista"], ["x_w3", "archer"],
+	["x_c2", "ballista"], ["x_e1", "mortar"], ["x_c1", "ballista"], ["x_w3", "archer"],
+	["g_c2", "gate"], ["g_e2", "gate"], ["g_w2", "gate"], ["x_c1", "ballista"], ["x_w3", "archer"],
+	["x_w4", "archer"], ["x_w4", "archer"], ["x_w4", "archer"], ["x_w1", "mortar"], ["x_w1", "mortar"],
 ]
+
+## The spec each tower kind takes at level IV (a variant bot picks at
+## random per spot).
+const SPECS := {archer = "sniper", ballista = "great", mortar = "cluster", frost = "glacier", banner = "standard"}
 
 ## Card / relic preferences, best first (it never rerolls).
 const CARD_PRIORITY := ["dmg", "aspd", "multi", "ricochet", "fire", "crit", "slayer", "pierce", "blast",
@@ -32,6 +45,7 @@ var _step := 0
 ## the same for every step on that spot (tools/meta.gd).
 var plan: Array = PLAN
 var _rng: RandomNumberGenerator = null  # set: random card / relic picks
+var specs := {}  # spot id -> spec id (variant bots; else SPECS by kind)
 
 
 func _init(s: Sim, variant := -1) -> void:
@@ -52,6 +66,9 @@ func _init(s: Sim, variant := -1) -> void:
 				kinds[id] = "farm" if _rng.randf() < 0.5 else "bank"
 			else:
 				kinds[id] = kind
+			var sp: Array = Level.BUILDINGS[kinds[id]].get("specs", [])
+			if not sp.is_empty():
+				specs[id] = sp[_rng.randi() % sp.size()].id
 		plan.push_back([id, kinds[id]])
 
 
@@ -92,7 +109,7 @@ func _target() -> Vector3:
 			# Built farms are solid: the hero can't reach the middle, only
 			# the popup range (what a player sees).
 			if sim.spot_under_hero().get("id", "") == spot.id:
-				sim.buy(spot.id, plan[k][1])
+				sim.buy(spot.id, plan[k][1], _spec_for(plan[k]))
 			return spot.pos
 		var coin := _nearest_coin()
 		if coin != Vector3.INF:
@@ -118,13 +135,21 @@ func _done(idx: int) -> bool:
 	var b: Dictionary = sim.buildings.get(step[0], {})
 	if b.is_empty():
 		return false
-	return b.kind != step[1] or b.level + 1 >= want or b.level + 1 >= Level.BUILDINGS[b.kind].levels.size()
+	return b.kind != step[1] or b.level + 1 >= want or b.level + 1 >= Level.max_levels(b.kind)
+
+
+## The spec to ask for at plan step `step` ("" unless it is the spec level).
+func _spec_for(step: Array) -> String:
+	var b: Dictionary = sim.buildings.get(step[0], {})
+	if b.is_empty() or b.level + 1 < Level.BUILDINGS[step[1]].levels.size():
+		return ""
+	return String(specs.get(step[0], SPECS.get(step[1], "")))
 
 
 func _cost(step: Array) -> int:
 	var b: Dictionary = sim.buildings.get(step[0], {})
 	var level: int = 0 if b.is_empty() else b.level + 1
-	return int(Level.stats(step[1], mini(level, Level.BUILDINGS[step[1]].levels.size() - 1)).cost)
+	return int(Level.stats(step[1], mini(level, Level.max_levels(step[1]) - 1), _spec_for(step)).cost)
 
 
 func _spot(id: String) -> Dictionary:

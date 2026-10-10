@@ -4,6 +4,7 @@
 wins and what loses.
 
   tools/meta_report.py [--runs=120] [--jobs=4] [--fixed] [--from=0] [--json=out.jsonl]
+      [--specs=archer:repeater,...]   (the fixed bot's specs, for A/B runs)
 
 Report: win rate; where runs die (wave) and lose keep HP; damage share by
 source (hero vs each tower kind) in wins and losses; win rate by how much
@@ -29,9 +30,10 @@ def arg(name, default):
 
 
 def play(chunk):
-    start, count, fixed = chunk
+    start, count, fixed, specs = chunk
     cmd = ["godot", "--headless", "--path", ROOT, "--script", "res://tools/meta.gd", "--",
-           "--from=%d" % start, "--count=%d" % count] + (["--fixed"] if fixed else [])
+           "--from=%d" % start, "--count=%d" % count] + (["--fixed"] if fixed else []) + \
+        (["--specs=" + specs] if specs else [])
     out = subprocess.run(cmd, capture_output=True, text=True, timeout=3600).stdout
     return [json.loads(line[6:]) for line in out.splitlines() if line.startswith("[run] ")]
 
@@ -44,7 +46,8 @@ def main():
     runs, jobs, fixed = arg("runs", 120), arg("jobs", 4), arg("fixed", False)
     start = arg("from", 0)
     per = max(1, (runs + jobs - 1) // jobs)
-    chunks = [(start + k, min(per, start + runs - k), fixed) for k in range(start, start + runs, per)]
+    specs = arg("specs", "")
+    chunks = [(k, min(per, start + runs - k), fixed, specs) for k in range(start, start + runs, per)]
     games = []
     with ThreadPoolExecutor(jobs) as ex:
         for got in ex.map(play, chunks):
@@ -106,6 +109,14 @@ def main():
             rel[r][0] += g["win"]
             rel[r][1] += 1
     print("  ".join("%s %s/%d" % (r, pct(*v), v[1]) for r, v in sorted(rel.items())))
+    print("\n-- tower specs (win rate when built, towers) --")
+    spc = defaultdict(lambda: [0, 0, 0])
+    for g in games:
+        for sp, k in g.get("specs", {}).items():
+            spc[sp][0] += g["win"]
+            spc[sp][1] += 1
+            spc[sp][2] += k
+    print("  ".join("%s %s/%d (%d)" % (sp, pct(v[0], v[1]), v[1], v[2]) for sp, v in sorted(spc.items())))
     print("\n-- cards (win rate when owned, avg tier) --")
     card = defaultdict(lambda: [0, 0, 0])
     for g in games:

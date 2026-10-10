@@ -78,9 +78,12 @@ t_check() {
 t_test() {
   t_check || return 1
   info "unit tests"
-  timeout 120 "$GODOT" --headless --path "$ROOT" --script res://tests/run_tests.gd > "$LOGS/test.log" 2>&1
+  timeout 400 "$GODOT" --headless --path "$ROOT" --script res://tests/run_tests.gd > "$LOGS/test.log" 2>&1
   grep -E "^(PASS|FAIL|ok|RESULT)|SCRIPT ERROR" "$LOGS/test.log" | tail -40
   grep -q "^ALL PASSED" "$LOGS/test.log" || { red "tests FAILED"; return 1; }
+  info "icons in info texts (tools/icon_check.gd)"
+  timeout 120 "$GODOT" --headless --path "$ROOT" --script res://tools/icon_check.gd > "$LOGS/icons.log" 2>&1 \
+    || { red "icon check FAILED"; grep -E "no icon|SCRIPT ERROR" "$LOGS/icons.log" | head -20; return 1; }
   info "localization (tools/loc_check.py)"
   python3 "$ROOT/tools/loc_check.py" > "$LOGS/loc.log" 2>&1 || { red "localization FAILED"; grep -vE "^zh|^\(" "$LOGS/loc.log" | head -20; return 1; }
   grn "tests passed"

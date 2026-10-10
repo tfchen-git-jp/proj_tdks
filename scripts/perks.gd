@@ -1,7 +1,7 @@
 class_name Perks
 extends RefCounted
-## The hero's rogue-like upgrades: cards (3 tiers each; drawing one you own
-## raises its tier) and relics (one-off, offered after RELIC_WAVES). All
+## The hero's rogue-like upgrades: cards and relics, 3 tiers each (drawing
+## one you own raises its tier; relics are offered after RELIC_WAVES). All
 ## their tuning lives here; Sim applies them. Design: docs/DESIGN.md
 ## "Hero upgrades".
 
@@ -15,7 +15,7 @@ const XP_PAST_RANGE := 2.0
 const XP_BASE := 10
 const XP_STEP := 12
 ## A relic is offered after clearing these waves (1-based).
-const RELIC_WAVES := [3, 6, 9]
+const RELIC_WAVES := [3, 6, 9, 12]
 const OFFER_SIZE := 3
 ## Rerolls cost REROLL_COST, then 2x, 3x ... (over the whole run).
 const REROLL_COST := 10
@@ -65,30 +65,34 @@ const CARDS := {
 const AURA := 5.0
 const ENGINEER_R := 6.0
 
-## Relics: one pick each, game-changing.
+## Relics: game-changing, 3 tiers each (user, 2026-10-10: a relic drawn
+## again gets stronger, e.g. Thunderstrike strikes more often). v: per
+## tier, read through Sim.rv(); desc: per tier, for the tier you'd get.
 const RELICS := {
-	twin = {name = "Twin Crossbow", desc = "Every shot fires a second, half-damage volley right after the first."},
-	volley = {name = "Volley", desc = "Every 6th shot also looses a bolt at each of the 4 nearest enemies."},
-	thunder = {name = "Thunderstrike", desc = "Every 8 s lightning strikes the toughest enemy near you and chains through 4 more."},
-	wisp = {name = "Spirit Wisp", desc = "A wisp circles you and shoots magic bolts at enemies."},
-	midas = {name = "Midas Touch", desc = "Every 40th kill near you drops a gold ingot (20)."},
-	laststand = {name = "Last Stand", desc = "The keep regains 10% of its HP after every wave."},
+	twin = {name = "Twin Crossbow", v = [0.5, 0.7, 0.9],
+		desc = ["Every shot fires a second volley at 50% damage right after the first.",
+			"Second volley at 70% damage", "Second volley at 90% damage"]},
+	volley = {name = "Volley", v = [[6, 4], [5, 5], [4, 6]],
+		desc = ["Every 6th shot also looses a bolt at each of the 4 nearest enemies.",
+			"Every 5th shot, 5 enemies", "Every 4th shot, 6 enemies"]},
+	thunder = {name = "Thunderstrike", v = [[8.0, 5], [6.0, 6], [4.5, 8]],
+		desc = ["Every 8 s lightning strikes the toughest enemy near you and chains through 4 more.",
+			"Every 6 s, chains through 5 more", "Every 4.5 s, chains through 7 more"]},
+	wisp = {name = "Spirit Wisp", v = [0.7, 0.5, 0.35],
+		desc = ["A wisp circles you and shoots magic bolts at enemies.", "The wisp shoots 40% faster",
+			"The wisp shoots twice as fast"]},
+	midas = {name = "Midas Touch", v = [40, 30, 20],
+		desc = ["Every 40th kill near you drops a gold ingot (20).", "Every 30th kill", "Every 20th kill"]},
+	laststand = {name = "Last Stand", v = [0.1, 0.15, 0.2],
+		desc = ["The keep regains 10% of its HP after every wave.", "Regains 15%", "Regains 20%"]},
 }
-const VOLLEY_EVERY := 6
-const VOLLEY_TARGETS := 4
-const THUNDER_EVERY := 8.0
 const THUNDER_RANGE := 9.0
-const THUNDER_CHAIN := 5  # enemies hit, the first included
 const THUNDER_JUMP := 4.5  # m between chained enemies
 const THUNDER_DAMAGE := 7.0  # x the hero's bolt damage
-const WISP_INTERVAL := 0.7
 const WISP_DAMAGE := 0.6  # x the hero's bolt damage
-const MIDAS_EVERY := 40
-const LASTSTAND_HEAL := 0.1
 const RICOCHET_RANGE := 4.0
 const RICOCHET_FALLOFF := 0.6
 const MULTI_DAMAGE := 0.4  # extra Multishot bolts
-const TWIN_DAMAGE := 0.5  # the Twin Crossbow's second volley
 const BURN_TIME := 3.0
 const CRIT_MULT := 2.5
 const FROST_TIME := 2.0
@@ -99,9 +103,11 @@ static func xp_needed(level: int) -> int:
 
 
 ## Card id or relic id -> what the offer shows: {id, relic, name, tier
-## (0-based, the tier you'd get), desc}.
+## (0-based, the tier you'd get), desc}. owned: the tiers owned (cards or
+## relics).
 static func view(id: String, relic: bool, owned: Dictionary) -> Dictionary:
 	if relic:
-		return {id = id, relic = true, name = RELICS[id].name, tier = -1, desc = RELICS[id].desc}
+		var r := int(owned.get(id, 0))
+		return {id = id, relic = true, name = RELICS[id].name, tier = r, desc = RELICS[id].desc[r]}
 	var t := int(owned.get(id, 0))
 	return {id = id, relic = false, name = CARDS[id].name, tier = t, desc = CARDS[id].desc[t]}

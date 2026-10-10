@@ -22,7 +22,17 @@ var slow := PackedFloat32Array()  # current slow fraction (0..1)
 var slow_t := PackedFloat32Array()  # seconds the slow lasts
 var burn_dps := PackedFloat32Array()  # Fire Bolts: damage per second while burning
 var burn_t := PackedFloat32Array()  # seconds it keeps burning
+var burn_src := PackedByteArray()  # who lit it: 0 the hero (Fire Bolts), 1 a Fire Mortar
 var power := PackedFloat32Array()  # damage multiplier (an enraged boss)
+var mult := PackedFloat32Array()  # the HP multiplier it spawned with (a slime's brood gets the same)
+var freeze_t := PackedFloat32Array()  # seconds frozen solid (Glacier): no walking, no attacks
+var brittle := PackedFloat32Array()  # extra damage taken (Frostbite) ...
+var brittle_t := PackedFloat32Array()  # ... for this many seconds
+var immune := PackedByteArray()  # 1 = slows and freezes don't work (the berserk boss)
+## Per enemy this step: the best haste from a captain nearby (walk and
+## attack x 1 + haste), and whether a bone mage is healing it (view).
+var haste := PackedFloat32Array()
+var healed := PackedByteArray()
 var stage := PackedInt32Array()  # boss phase reached (Sim._bosses)
 var blocked := PackedByteArray()  # 1 = at the gate, hitting it; 2 = held up
                                   # behind another enemy in the queue; 0 = walking
@@ -45,12 +55,13 @@ var gate_armor := PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 var keep_hp := 1e9
 
 ## Results since the caller last drained them.
-var deaths: Array[Dictionary] = []  # {pos, kind, d, lane}
+var deaths: Array[Dictionary] = []  # {pos, kind, d, lane, off, mult}
 var killed := 0
 var dealt := 0.0  # all damage taken (balance stats)
 var burn_dealt := 0.0  # of which by burning (Fire Bolts)
+var burn_mortar := 0.0  # ... and by Fire Mortars' flames
 ## Damage done to gates and the keep, by enemy type (end-of-game stats).
-var wall_dmg := PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+var wall_dmg := PackedFloat32Array()
 ## Ranged enemies' shots this step, for the view: [from, to].
 var shots: Array = []
 
@@ -74,6 +85,7 @@ const HEAVY_CENTRING := 0.5
 func _init(lane_tracks: Array[Track], seed_value := 1) -> void:
 	tracks = lane_tracks
 	_rng.seed = seed_value
+	wall_dmg.resize(Level.ENEMIES.size())
 	for t in tracks:
 		entry.push_back(start_line(t))
 
@@ -95,12 +107,11 @@ func count() -> int:
 	return kind.size()
 
 
-## hp_mult: the wave's toughness (Level.wave_hp; bosses ignore it). at_d
-## >= 0: appear there (a boss's summons) instead of at the lane's start.
-func spawn(type: int, ln: int, hp_mult := 1.0, at_d := -1.0) -> void:
+## hp_mult: the wave's toughness (Level.wave_hp; Sim gives bosses their
+## own). at_d >= 0: appear there (a boss's summons, a slime's brood)
+## instead of at the lane's start; at_off: across the road there too.
+func spawn(type: int, ln: int, hp_mult := 1.0, at_d := -1.0, at_off := INF) -> void:
 	var e: Dictionary = Level.ENEMIES[type]
-	if e.get("boss", false):
-		hp_mult = 1.0
 	var lim := Level.ROAD_HALF_WIDTH - float(e.radius) * 0.6
 	kind.push_back(type)
 	lane.push_back(ln)
@@ -109,6 +120,13 @@ func spawn(type: int, ln: int, hp_mult := 1.0, at_d := -1.0) -> void:
 	_next_uid += 1
 	hp.push_back(float(e.hp) * hp_mult)
 	power.push_back(1.0)
+	mult.push_back(hp_mult)
+	freeze_t.push_back(0.0)
+	brittle.push_back(0.0)
+	brittle_t.push_back(0.0)
+	immune.push_back(0)
+	haste.push_back(0.0)
+	healed.push_back(0)
 	stage.push_back(0)
 	max_hp.push_back(float(e.hp) * hp_mult)
 	d.push_back(_rng.randf_range(0.0, 0.6) if at_d < 0.0 else at_d)
@@ -127,8 +145,15 @@ func spawn(type: int, ln: int, hp_mult := 1.0, at_d := -1.0) -> void:
 	slow_t.push_back(0.0)
 	burn_dps.push_back(0.0)
 	burn_t.push_back(0.0)
+	burn_src.push_back(0)
 	blocked.push_back(0)
+	if at_off != INF:
+		off[off.size() - 1] = clampf(at_off, -lim, lim)
 	pos.push_back(tracks[ln].point(d[d.size() - 1], off[off.size() - 1]))
+	# Spawned mid-step (a slime's brood): the view interpolates from here.
+	if prev_pos.size() < pos.size():
+		prev_pos.push_back(pos[pos.size() - 1])
+		prev_phase.push_back(phase[phase.size() - 1])
 
 
 ## Index of the living enemy with this uid, or -1.
@@ -144,10 +169,13 @@ func targetable(i: int) -> bool:
 
 ## Deal damage; returns true if this hit killed it. Hits on the already
 ## dead (hp <= 0, waiting for removal) do nothing.
-## armored: false for burning (armour doesn't stop fire).
+## armored: false for burning and the Sniper (armour doesn't stop them).
+## A brittle enemy (Frostbite) takes its extra share.
 func damage(i: int, amount: float, flashes := true, armored := true) -> bool:
 	if hp[i] <= 0.0:
 		return false
+	if brittle_t[i] > 0.0:
+		amount *= 1.0 + brittle[i]
 	if armored:
 		var ar := float(Level.ENEMIES[kind[i]].get("armor", 0.0))
 		if ar > 0.0:
@@ -158,20 +186,62 @@ func damage(i: int, amount: float, flashes := true, armored := true) -> bool:
 		flash[i] = 0.12
 	if hp[i] <= 0.0:
 		killed += 1
-		deaths.push_back({pos = pos[i], kind = kind[i], d = d[i], lane = lane[i]})
+		deaths.push_back({pos = pos[i], kind = kind[i], d = d[i], lane = lane[i], off = off[i], mult = mult[i]})
 		return true
 	return false
 
 
-## Set enemy i ablaze (the stronger burn wins; the timer restarts).
-func ignite(i: int, dps: float, seconds: float) -> void:
+## Set enemy i ablaze (the stronger burn wins; the timer restarts). src:
+## "hero" or "mortar" (whose damage it counts as).
+func ignite(i: int, dps: float, seconds: float, src := "hero") -> void:
+	if dps >= burn_dps[i]:
+		burn_src[i] = 1 if src == "mortar" else 0
 	burn_dps[i] = maxf(burn_dps[i], dps)
-	burn_t[i] = seconds
+	burn_t[i] = maxf(burn_t[i], seconds)
 
 
+## Slow enemy i (walking and attacks); not a berserk boss.
 func chill(i: int, fraction: float, seconds: float) -> void:
+	if immune[i]:
+		return
 	slow[i] = maxf(slow[i], fraction)
 	slow_t[i] = maxf(slow_t[i], seconds)
+
+
+## Freeze enemy i solid (Glacier): it neither walks nor attacks. Bosses
+## thaw in half the time.
+const BOSS_FREEZE := 0.5
+
+
+func freeze(i: int, seconds: float) -> void:
+	if immune[i]:
+		return
+	if Level.ENEMIES[kind[i]].get("boss", false):
+		seconds *= BOSS_FREEZE
+	freeze_t[i] = maxf(freeze_t[i], seconds)
+
+
+## Frostbite: enemy i takes `extra` more damage for `seconds`.
+func make_brittle(i: int, extra: float, seconds: float) -> void:
+	brittle[i] = maxf(brittle[i], extra)
+	brittle_t[i] = maxf(brittle_t[i], seconds)
+
+
+## Slows and freezes stop working on enemy i, and any on it end (a boss
+## going berserk).
+func make_immune(i: int) -> void:
+	immune[i] = 1
+	slow[i] = 0.0
+	slow_t[i] = 0.0
+	freeze_t[i] = 0.0
+
+
+## How much slower enemy i acts now: 1 = normal, 0 = frozen (slow and
+## haste included).
+func pace(i: int) -> float:
+	if freeze_t[i] > 0.0:
+		return 0.0
+	return (1.0 - slow[i]) * (1.0 + haste[i])
 
 
 ## Walking direction of enemy i.
@@ -184,6 +254,7 @@ func step(dt: float) -> void:
 	prev_phase = phase.duplicate()
 	var n := count()
 	var prev := d.duplicate()
+	_auras(dt)
 	# 1. Everyone walks; nobody passes a standing gate on their lane.
 	for i in n:
 		if hp[i] <= 0.0:
@@ -193,7 +264,10 @@ func step(dt: float) -> void:
 			burn_t[i] -= dt
 			var before := dealt
 			var died := damage(i, burn_dps[i] * dt, false, false)
-			burn_dealt += dealt - before
+			if burn_src[i] == 1:
+				burn_mortar += dealt - before
+			else:
+				burn_dealt += dealt - before
 			if died:
 				continue
 			if burn_t[i] <= 0.0:
@@ -201,7 +275,9 @@ func step(dt: float) -> void:
 		slow_t[i] -= dt
 		if slow_t[i] <= 0.0:
 			slow[i] = 0.0
-		var nd := d[i] + spd[i] * (1.0 - slow[i]) * dt
+		freeze_t[i] = maxf(freeze_t[i] - dt, 0.0)
+		brittle_t[i] -= dt
+		var nd := d[i] + spd[i] * pace(i) * dt
 		blocked[i] = 0
 		var stop := d[i] + 1e9
 		var rng_r := float(Level.ENEMIES[kind[i]].get("ranged", 0.0))
@@ -227,9 +303,11 @@ func step(dt: float) -> void:
 		if hp[i] <= 0.0:
 			continue
 		var e: Dictionary = Level.ENEMIES[kind[i]]
-		# Frost slows attacks as much as walking (swing and damage).
+		# Frost slows attacks as much as walking (swing and damage); a
+		# captain's haste speeds both up.
+		var pc := pace(i)
 		if blocked[i] == 1:
-			var dmg := float(e.dps) * power[i] * (1.0 - slow[i]) * dt
+			var dmg := float(e.dps) * power[i] * pc * dt
 			var g := gate_of(i)
 			if g >= 0:
 				dmg *= 1.0 - gate_armor[g]
@@ -238,9 +316,9 @@ func step(dt: float) -> void:
 				keep_hp -= dmg
 			wall_dmg[kind[i]] += dmg
 		if blocked[i] == 0:
-			phase[i] += spd[i] * (1.0 - slow[i]) * dt * 7.0
+			phase[i] += spd[i] * pc * dt * 7.0
 		else:
-			var inc := (1.0 - slow[i]) * dt * TAU / float(e.get("cycle", Level.ATTACK_CYCLE))
+			var inc := pc * dt * TAU / float(e.get("cycle", Level.ATTACK_CYCLE))
 			# A ranged attacker looses a bolt once per attack cycle.
 			if blocked[i] == 1 and float(e.get("ranged", 0.0)) > 0.0 and floori((phase[i] + inc) / TAU) > floori(phase[i] / TAU):
 				shots.push_back([pos[i] + Vector3(0, 1.0, 0), _wall_point(i)])
@@ -249,6 +327,35 @@ func step(dt: float) -> void:
 		if e.get("flies", false):
 			pos[i].y += float(e.fly_h) + 0.18 * sin(phase[i] * 0.5)
 	_compact()
+
+
+## Support enemies: bone mages heal and captains hasten everyone within
+## their aura (themselves included, bosses never); the best one counts.
+func _auras(dt: float) -> void:
+	var n := count()
+	var heal := PackedFloat32Array()
+	heal.resize(n)
+	for i in n:
+		haste[i] = 0.0
+		healed[i] = 0
+	for j in n:
+		var ej: Dictionary = Level.ENEMIES[kind[j]]
+		if hp[j] <= 0.0 or not ej.has("aura") or not targetable(j):
+			continue
+		var r := float(ej.aura)
+		var pj := pos[j]
+		for i in n:
+			if hp[i] <= 0.0 or Level.ENEMIES[kind[i]].get("boss", false):
+				continue
+			var q := pos[i]
+			if (q.x - pj.x) * (q.x - pj.x) + (q.z - pj.z) * (q.z - pj.z) > r * r:
+				continue
+			haste[i] = maxf(haste[i], float(ej.get("haste", 0.0)))
+			heal[i] = maxf(heal[i], float(ej.get("heal", 0.0)))
+	for i in n:
+		if heal[i] > 0.0 and hp[i] > 0.0 and hp[i] < max_hp[i]:
+			hp[i] = minf(max_hp[i], hp[i] + max_hp[i] * heal[i] * dt)
+			healed[i] = 1
 
 
 ## The gate slot holding enemy i up: the nearest standing gate ahead of it
@@ -403,6 +510,36 @@ func first_in_range(p: Vector3, r: float, r_min := 0.0, ground_only := false) ->
 	return best_i
 
 
+## Up to k targetable enemies within r of p, the nearest to the keep first
+## (a Repeater's arrows).
+func first_k(p: Vector3, r: float, k: int) -> Array[int]:
+	var found: Array = []
+	for i in count():
+		if not targetable(i):
+			continue
+		var q := pos[i]
+		if (q.x - p.x) * (q.x - p.x) + (q.z - p.z) * (q.z - p.z) < r * r:
+			found.push_back(Vector2(tracks[lane[i]].length - d[i], i))
+	found.sort()
+	var out: Array[int] = []
+	for v in found.slice(0, k):
+		out.push_back(int(v.y))
+	return out
+
+
+## The targetable enemy with the most HP within r of p (a Sniper's aim), or
+## -1.
+func toughest(p: Vector3, r: float) -> int:
+	var best := -1
+	for i in count():
+		if not targetable(i):
+			continue
+		var q := pos[i]
+		if (q.x - p.x) * (q.x - p.x) + (q.z - p.z) * (q.z - p.z) < r * r and (best < 0 or hp[i] > hp[best]):
+			best = i
+	return best
+
+
 ## Targetable enemies within `r` of `p` (xz); ground_only skips flyers.
 func within(p: Vector3, r: float, ground_only := false) -> Array[int]:
 	var out: Array[int] = []
@@ -443,17 +580,21 @@ func _compact() -> void:
 		var last := count() - 1
 		kind[i] = kind[last]; lane[i] = lane[last]; uid[i] = uid[last]; hp[i] = hp[last]; max_hp[i] = max_hp[last]
 		power[i] = power[last]; stage[i] = stage[last]
+		mult[i] = mult[last]; freeze_t[i] = freeze_t[last]; brittle[i] = brittle[last]
+		brittle_t[i] = brittle_t[last]; immune[i] = immune[last]; haste[i] = haste[last]; healed[i] = healed[last]
 		d[i] = d[last]; off[i] = off[last]; spd[i] = spd[last]; gap[i] = gap[last]
 		phase[i] = phase[last]; flash[i] = flash[last]; slow[i] = slow[last]
 		slow_t[i] = slow_t[last]; blocked[i] = blocked[last]; pos[i] = pos[last]
-		burn_dps[i] = burn_dps[last]; burn_t[i] = burn_t[last]
+		burn_dps[i] = burn_dps[last]; burn_t[i] = burn_t[last]; burn_src[i] = burn_src[last]
 		prev_pos[i] = prev_pos[last]; prev_phase[i] = prev_phase[last]
 		kind.resize(last); lane.resize(last); uid.resize(last); hp.resize(last); max_hp.resize(last)
 		power.resize(last); stage.resize(last)
+		mult.resize(last); freeze_t.resize(last); brittle.resize(last); brittle_t.resize(last)
+		immune.resize(last); haste.resize(last); healed.resize(last)
 		d.resize(last); off.resize(last); spd.resize(last); gap.resize(last)
 		phase.resize(last); flash.resize(last); slow.resize(last)
 		slow_t.resize(last); blocked.resize(last); pos.resize(last)
-		burn_dps.resize(last); burn_t.resize(last)
+		burn_dps.resize(last); burn_t.resize(last); burn_src.resize(last)
 		prev_pos.resize(last); prev_phase.resize(last)
 	_index.clear()
 	for k in count():

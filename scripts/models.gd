@@ -16,15 +16,25 @@ const COIN_STACK := "res://assets/props/coin/coin_stack_small.glb"
 const COIN_STACK_LARGE := "res://assets/props/coin/coin_stack_large.glb"
 const VAT_SHADER := preload("res://shaders/vat.gdshader")
 ## Per enemy type: baked VAT name and recolour (a = strength).
+## name: the baked VAT (assets/vat); icon: assets/icons/<icon>.png.
 const ENEMY_VAT := [
-	{name = "grunt", tint = Color(0.9, 0.12, 0.1, 0.85), scale = 1.0},
-	{name = "armored", tint = Color(1, 1, 1, 0.0), scale = 1.0},
-	{name = "brute", tint = Color(0.85, 0.3, 0.25, 0.35), scale = 1.0},
-	{name = "grunt", tint = Color(0.98, 0.72, 0.12, 0.85), scale = 0.85},  # runner
-	{name = "bat", tint = Color(1, 1, 1, 0.0), scale = 1.0},
-	{name = "siege", tint = Color(1, 1, 1, 0.0), scale = 1.0},
-	{name = "boss", tint = Color(0.45, 0.2, 0.6, 0.45), scale = 1.0},
+	{name = "grunt", icon = "grunt", tint = Color(0.9, 0.12, 0.1, 0.85), scale = 1.0},
+	{name = "armored", icon = "armored", tint = Color(1, 1, 1, 0.0), scale = 1.0},
+	{name = "brute", icon = "brute", tint = Color(0.85, 0.3, 0.25, 0.35), scale = 1.0},
+	{name = "grunt", icon = "runner", tint = Color(0.98, 0.72, 0.12, 0.85), scale = 0.85},
+	{name = "bat", icon = "bat", tint = Color(1, 1, 1, 0.0), scale = 1.0},
+	{name = "siege", icon = "siege", tint = Color(1, 1, 1, 0.0), scale = 1.0},
+	{name = "boss", icon = "boss", tint = Color(0.45, 0.2, 0.6, 0.45), scale = 1.0},
+	{name = "slime", icon = "slime", tint = Color(1, 1, 1, 0.0), scale = 1.0},
+	{name = "slime", icon = "slimeling", tint = Color(0.55, 0.95, 0.85, 0.5), scale = 0.5},
+	{name = "mage", icon = "mage", tint = Color(1, 1, 1, 0.0), scale = 1.0},
+	{name = "captain", icon = "captain", tint = Color(0.95, 0.6, 0.15, 0.3), scale = 1.0},
 ]
+
+
+## Enemy type k's icon name (assets/icons).
+static func enemy_icon(k: int) -> String:
+	return String(ENEMY_VAT[k].icon)
 const HEX := "res://assets/props/hexagon/"
 
 

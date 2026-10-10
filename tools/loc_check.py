@@ -193,8 +193,8 @@ def main():
                 continue
             a, b = slots(k[1]), slots(v)
             braces = re.findall(r'\{(\d)\}', v)
-            if braces:
-                ok = sorted(int(x) for x in braces) == list(range(len(a)))
+            if braces:  # {n} per real slot ("%%" is a literal percent sign)
+                ok = sorted(int(x) for x in braces) == list(range(len([x for x in a if x != "%%"])))
             else:
                 ok = a == b
             if not ok:

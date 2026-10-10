@@ -12,21 +12,29 @@ const FIRE := "ff7a33"
 const ICE := "8fd8ff"
 const SHOCK := "ffe066"
 const GOLD := "ffd24a"
+const HEAL := "6ee87a"  # bone mages' healing
+const HASTE := "ffb347"  # captains' haste
 const STEEL := "c0c8d8"
 
 ## Words that get an icon in front: word -> icon file. Longest first, so
 ## "the boss" wins over "boss".
 const ICON_WORDS := [
 	["crossbowmen", "siege"], ["crossbowman", "siege"], ["the boss", "boss"], ["Bone Warlord", "boss"],
-	["giants", "brute"], ["brutes", "brute"], ["brute", "brute"], ["grunt", "grunt"], ["runner", "runner"],
+	["giants", "brute"], ["Giant", "brute"], ["brutes", "brute"], ["brute", "brute"], ["grunt", "grunt"], ["runner", "runner"],
 	["bat", "bat"], ["grunts", "grunt"], ["runners", "runner"], ["bats", "bat"],
 	["armored", "armored"], ["archers", "archer"], ["ballistas", "ballista"], ["mortars", "mortar"],
 	["frost", "frost"], ["gates", "gate"], ["the hero", "hero"], ["tower clusters", "banner"],
+	["slimes", "slime"], ["slime", "slime"], ["slimelings", "slimeling"], ["slimeling", "slimeling"],
+	["bone mages", "mage"], ["bone mage", "mage"], ["captains", "captain"], ["captain", "captain"],
+	["crowds", "grunt"], ["a strong hero", "hero"], ["a lone hero", "hero"], ["the berserk boss", "boss"],
+	["Sniper", "archer"], ["Repeater", "archer"], ["Harpoon", "ballista"],
 ]
 ## Coloured words (no icon): word -> colour. Checked after the icons.
 const COLOR_WORDS := [
 	["Fire Bolts", FIRE], ["ablaze", FIRE], ["Burn", FIRE], ["burn", FIRE], ["fire", FIRE],
-	["Frost Bolts", ICE], ["chill", ICE], ["Chill", ICE], ["Slow", ICE], ["slow", ICE],
+	["Frost Bolts", ICE], ["chill", ICE], ["Chill", ICE], ["Slow", ICE], ["slow", ICE], ["slows", ICE],
+	["Freezes", ICE], ["freeze", ICE], ["chilled", ICE], ["slowed", ICE], ["burns", FIRE], ["Firepots", FIRE],
+	["Heals", HEAL], ["heals", HEAL], ["faster", HASTE],
 	["Lightning", SHOCK], ["lightning", SHOCK], ["Thunderstrike", SHOCK], ["critical", SHOCK],
 	["interest", GOLD], ["gold", GOLD], ["Gold", GOLD], ["ingot", GOLD],
 	["Armor", STEEL], ["armor", STEEL], ["armour", STEEL], ["Giant Slayer", STEEL], ["Multishot", STEEL],
@@ -100,8 +108,10 @@ static func _find_word(s: String, word: String, from: int) -> int:
 	return -1
 
 
+## (A placeholder mark next to a word is a boundary: in Chinese the first
+## name follows the label's full-width colon directly, 克制：雜兵.)
 static func _letter(c: String) -> bool:
-	return c != "" and (c.to_lower() != c.to_upper() or c == "\u0001" or c == "\u0002")
+	return c != "" and c.to_lower() != c.to_upper()
 
 
 ## A RichTextLabel set up like the HUD's labels (outline, wrapping, height

@@ -127,12 +127,16 @@ func _guide_page() -> Control:
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 14)
 	scroll.add_child(list)
-	var entries := [[tr("BUILDINGS"), null]]
+	# [name, info dict, icon]; a heading has no dict. Towers list their two
+	# level-IV specs right after them.
+	var entries := [[tr("BUILDINGS"), null, ""]]
 	for k in Level.BUILDINGS:
-		entries.push_back([tr(String(Level.BUILDINGS[k].name)), Level.BUILDINGS[k]])
-	entries.push_back([tr("ENEMIES"), null])
+		entries.push_back([tr(String(Level.BUILDINGS[k].name)), Level.BUILDINGS[k], k])
+		for sp in Level.BUILDINGS[k].get("specs", []):
+			entries.push_back([tr("Lv 4: %s") % tr(String(sp.name)), sp, k])
+	entries.push_back([tr("ENEMIES"), null, ""])
 	for k in Level.ENEMIES.size():
-		entries.push_back([Level.ename(k), Level.ENEMIES[k]])
+		entries.push_back([Level.ename(k), Level.ENEMIES[k], Models.enemy_icon(k)])
 	for it in entries:
 		if it[1] == null:
 			var head := _label(it[0], 34)
@@ -141,7 +145,7 @@ func _guide_page() -> Control:
 			continue
 		# Name with its own icon, then the three info lines.
 		var name := UiText.label(30)
-		var icon_key: String = _icon_of(it[1])
+		var icon_key: String = it[2]
 		name.text = ("[img=44x44]%s%s.png[/img] " % [UiText.ICONS, icon_key] if icon_key != "" else "") + String(it[0])
 		name.custom_minimum_size = Vector2(620, 0)
 		list.add_child(name)
@@ -153,15 +157,6 @@ func _guide_page() -> Control:
 	box.add_child(scroll)
 	box.add_child(_button(tr("Back"), Color(0.35, 0.35, 0.4), func() -> void: show_page("main")))
 	return _centered(box)
-
-
-## Icon file name (assets/icons) of a building or enemy entry.
-func _icon_of(e: Dictionary) -> String:
-	for k in Level.BUILDINGS:
-		if Level.BUILDINGS[k] == e:
-			return k
-	var i := Level.ENEMIES.find(e)
-	return String(Models.ENEMY_VAT[i].name) if i != Level.RUNNER else "runner"
 
 
 func _credits_page() -> Control:
@@ -186,9 +181,9 @@ const CREDITS := """RogueShot Tower Defense
 Made with Godot Engine 4.7 (godotengine.org), by directing Claude.
 
 3D MODELS (CC0)
-Kay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian), Skeletons (crossbowmen, Bone Warlord), Medieval Hexagon (archer tower, windmill, market, keep, flag, gate), Dungeon Remastered (coins), Forest Nature (rocks)
+Kay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian, captain), Skeletons (crossbowmen, bone mages, Bone Warlord), Medieval Hexagon (archer tower, windmill, market, keep, flag, gate), Dungeon Remastered (coins), Forest Nature (rocks)
 Kenney (kenney.nl): Tower Defense Kit, Mini Dungeon, Mini Arena, Nature Kit
-Quaternius (quaternius.com): Animated Monsters (bat)
+Quaternius (quaternius.com): Animated Monsters (bat, slime)
 
 SOUND (CC0 unless noted)
 Kenney: RPG Audio, Impact Sounds, Interface Sounds, Casino Audio, Sci-fi Sounds, Music Jingles

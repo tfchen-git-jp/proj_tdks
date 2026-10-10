@@ -26,11 +26,9 @@ var _count_n := 0
 var _count_pop := 0.0
 var _msg_t := 0.0
 var _end: Control
-var _boss: Control
+var _boss_bars: Array = []  # per boss bar: [root, fill, name]
 var _intro: RichTextLabel
 var _intro_t := 0.0
-var _boss_fill: ColorRect
-var _boss_name: Label
 var _top := 0.0  # status-bar inset
 var _xp_fill: ColorRect
 var _lv_label: Label
@@ -493,34 +491,40 @@ func set_gate_bars(bars: Array) -> void:
 ## Red HP bars over enemies (giants only): [[screen position, frac], ...].
 ## The boss's big HP bar under the wave line; [] hides it, else [name,
 ## hp fraction, berserk].
-func set_boss(b: Array) -> void:
-	if _boss == null:
-		_boss = Control.new()
-		_boss.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-		_boss.position = Vector2(-260, _top + 124)
-		_boss.size = Vector2(520, 60)
-		_boss.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_root.add_child(_boss)
+## bosses: [[name, hp fraction, berserk], ...] (one bar each, stacked).
+func set_boss(bosses: Array) -> void:
+	while _boss_bars.size() < bosses.size():
+		var k := _boss_bars.size()
+		var root := Control.new()
+		root.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+		root.position = Vector2(-260, _top + 124 + k * 62)
+		root.size = Vector2(520, 60)
+		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_root.add_child(root)
 		var back := ColorRect.new()
 		back.color = Color(0.08, 0.04, 0.1, 0.85)
 		back.position = Vector2(0, 30)
 		back.size = Vector2(520, 26)
-		_boss.add_child(back)
-		_boss_fill = ColorRect.new()
-		_boss_fill.position = Vector2(4, 4)
-		_boss_fill.size = Vector2(512, 18)
-		back.add_child(_boss_fill)
-		_boss_name = _label("", 26)
-		_boss_name.size = Vector2(520, 30)
-		_boss_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_boss.add_child(_boss_name)
-	_boss.visible = not b.is_empty()
-	_msg.offset_top = _top + (200 if _boss.visible else 150)
-	if b.is_empty():
-		return
-	_boss_name.text = tr(String(b[0])) + ("  -  " + tr("BERSERK") if b[2] else "")
-	_boss_fill.size.x = 512.0 * clampf(float(b[1]), 0.0, 1.0)
-	_boss_fill.color = Color(0.95, 0.25, 0.2) if b[2] else Color(0.7, 0.35, 0.95)
+		root.add_child(back)
+		var fill := ColorRect.new()
+		fill.position = Vector2(4, 4)
+		fill.size = Vector2(512, 18)
+		back.add_child(fill)
+		var name := _label("", 26)
+		name.size = Vector2(520, 30)
+		name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		root.add_child(name)
+		_boss_bars.push_back([root, fill, name])
+	for k in _boss_bars.size():
+		var bar: Array = _boss_bars[k]
+		(bar[0] as Control).visible = k < bosses.size()
+		if k >= bosses.size():
+			continue
+		var b: Array = bosses[k]
+		(bar[2] as Label).text = tr(String(b[0])) + ("  -  " + tr("BERSERK") if b[2] else "")
+		(bar[1] as ColorRect).size.x = 512.0 * clampf(float(b[1]), 0.0, 1.0)
+		(bar[1] as ColorRect).color = Color(0.95, 0.25, 0.2) if b[2] else Color(0.7, 0.35, 0.95)
+	_msg.offset_top = _top + 150 + 62 * bosses.size()
 
 
 func set_enemy_bars(bars: Array) -> void:
@@ -579,9 +583,14 @@ func show_menu(key: String, title: String, desc: String, options: Array) -> void
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.custom_minimum_size = Vector2(0, 70)
 		b.disabled = not o.ok
-		b.add_theme_stylebox_override("normal", _box(Color(0.2, 0.5, 0.3), 14, Color(1, 1, 1, 0.7), 2))
-		b.add_theme_stylebox_override("hover", _box(Color(0.24, 0.6, 0.36), 14, Color.WHITE, 2))
-		b.add_theme_stylebox_override("pressed", _box(Color(0.15, 0.4, 0.24), 14, Color.WHITE, 2))
+		# Sell: a smaller, brick-red button under the rest (it asks first).
+		var col := Color(0.55, 0.22, 0.18) if o.get("sell", false) else Color(0.2, 0.5, 0.3)
+		if o.get("sell", false):
+			b.custom_minimum_size = Vector2(0, 56)
+			b.add_theme_font_size_override("font_size", 24)
+		b.add_theme_stylebox_override("normal", _box(col, 14, Color(1, 1, 1, 0.7), 2))
+		b.add_theme_stylebox_override("hover", _box(col.lightened(0.12), 14, Color.WHITE, 2))
+		b.add_theme_stylebox_override("pressed", _box(col.darkened(0.2), 14, Color.WHITE, 2))
 		b.add_theme_stylebox_override("disabled", _box(Color(0.22, 0.22, 0.24), 14, Color(1, 1, 1, 0.3), 2))
 		if o.has("icon") and ResourceLoader.exists(String(o.icon)):
 			b.icon = load(String(o.icon))
