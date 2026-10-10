@@ -5,22 +5,24 @@ extends RefCounted
 ## the wave. Attack phase: sweep up coins, else stand off the road beside
 ## the enemy nearest the keep.
 
-## [spot id, building] in order; a repeated pair upgrades it.
+## [spot id, building] in order; a repeated pair upgrades it. v0.2.1:
+## frost crystals beside a gate on each lane (w_out, gc_t, x_e2) reveal
+## shades.
 const PLAN := [
 	# v0.1.30: the spots open by tactical value; the cheap one-lane spots
 	# come first.
 	["k_east", "archer"], ["k_west", "archer"], ["x_e1", "archer"], ["f_1", "farm"], ["x_w2", "archer"],
 	["e_in", "archer"],
 	["w_in", "archer"], ["e_mid", "frost"], ["g_c1", "gate"], ["w_mid", "mortar"],
-	["k_east", "archer"], ["k_west", "archer"], ["f_3", "farm"], ["x_e2", "ballista"],
-	["g_e1", "gate"], ["g_w1", "gate"], ["w_out", "archer"],
+	["k_east", "archer"], ["k_west", "archer"], ["f_3", "farm"], ["x_e2", "frost"],
+	["g_e1", "gate"], ["g_w1", "gate"], ["w_out", "frost"],
 	["e_in", "archer"], ["w_in", "archer"], ["w_mid", "mortar"], ["f_1", "farm"],
 	["e_mid", "frost"], ["c_far", "ballista"], ["k_east", "archer"], ["k_west", "archer"],
-	["f_2", "farm"], ["gc_t", "mortar"], ["g_c2", "gate"], ["ge_t", "archer"], ["gw_t", "archer"],
+	["f_2", "farm"], ["gc_t", "frost"], ["g_c2", "gate"], ["ge_t", "archer"], ["gw_t", "archer"],
 	["g_e2", "gate"], ["g_w2", "gate"], ["w_mid", "mortar"], ["c_far", "ballista"],
-	["gc_t", "mortar"], ["ge_t", "archer"], ["gw_t", "archer"], ["e_in", "archer"], ["w_in", "archer"],
-	["e_mid", "frost"], ["w_out", "archer"], ["e_in", "archer"], ["w_in", "archer"],
-	["c_far", "ballista"], ["w_mid", "mortar"], ["gc_t", "mortar"],
+	["gc_t", "frost"], ["ge_t", "archer"], ["gw_t", "archer"], ["e_in", "archer"], ["w_in", "archer"],
+	["e_mid", "frost"], ["w_out", "frost"], ["e_in", "archer"], ["w_in", "archer"],
+	["c_far", "ballista"], ["w_mid", "mortar"], ["gc_t", "frost"],
 	# Waves 11-15 (v0.1.28): the spots opened late, gates up, more specs.
 	["g_c1", "gate"], ["g_e1", "gate"], ["g_w1", "gate"], ["x_c2", "ballista"], ["x_e1", "mortar"],
 	["x_c2", "ballista"], ["x_e1", "mortar"], ["x_w2", "archer"], ["x_w5", "mortar"],

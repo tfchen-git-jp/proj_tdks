@@ -87,7 +87,7 @@ const BUILDINGS := {
 			{id = "cluster", name = "Cluster Mortar", cost = 90, range = 8.5, min_range = 2.5, interval = 1.7,
 				damage = 11.0, splash = 1.1, bomblets = [5, 1.8],
 				desc = "Shells burst into 5 bomblets over a wide area.",
-				strong = "crowds, slimes, slimelings", weak = "armored, bats"},
+				strong = "crowds, slimes, slimelings", weak = "the boss, armored, bats"},
 			{id = "fire", name = "Fire Mortar", cost = 85, range = 8.5, min_range = 2.5, interval = 1.7,
 				damage = 10.0, splash = 2.0, burn = [11.0, 4.0],
 				desc = "Firepots: everything hit burns for 4 s, armor or not.",
@@ -108,33 +108,33 @@ const BUILDINGS := {
 				slow = 0.5, slow_time = 3.5, brittle = [0.5, 3.0],
 				desc = "Weaker chill, but chilled enemies take 50% more damage.",
 				strong = "the boss, giants, armored", weak = "bats"}]},
-	banner = {name = "War Banner", spot = "tower", desc = "No attack: towers and hero nearby attack faster.",
+	banner = {name = "War Banner", spot = "tower", support = true, desc = "No attack: towers and hero nearby attack faster.",
 		weak = "standing alone", strong = "tower clusters",
 		levels = [{cost = 30, range = 4.5, buff = 0.25},
 			{cost = 45, range = 5.0, buff = 0.4},
 			{cost = 60, range = 5.5, buff = 0.55}],
 		specs = [
-			{id = "drums", name = "War Drums", cost = 80, range = 6.0, buff = 1.0, hero_buff = 0.0,
+			{id = "drums", name = "War Drums", support = true, cost = 80, range = 6.0, buff = 1.0, hero_buff = 0.0,
 				desc = "Towers nearby attack twice as fast; the hero gets nothing.",
 				strong = "tower clusters", weak = "a lone hero"},
-			{id = "standard", name = "Hero's Standard", cost = 80, range = 8.0, buff = 0.35, hero_buff = 0.6,
+			{id = "standard", name = "Hero's Standard", support = true, cost = 80, range = 8.0, buff = 0.35, hero_buff = 0.6,
 				desc = "The hero nearby: +60% damage and attack speed; towers +35%.",
 				strong = "a strong hero", weak = "towers far from the hero"}]},
 	# Each upgrade pays back faster than a new level-1 farm (user, v0.1.18:
 	# "build three level 1s and leave them" was always best): gold per gold
 	# spent 0.24 / 0.29 / 0.31.
-	farm = {name = "Farm", spot = "eco", desc = "Fixed gold after every wave.",
+	farm = {name = "Farm", spot = "eco", support = true, desc = "Fixed gold after every wave.",
 		weak = "nothing to defend with now", strong = "early builds; upgrades pay best",
 		levels = [{cost = 25, income = 6}, {cost = 35, income = 16}, {cost = 45, income = 30}]},
 	# Interest instead of a fixed income: `rate` of the gold you hold when a
 	# wave ends, up to `cap`. The best bank's rate counts (rates never
 	# stack); every bank adds its cap. Upgrades raise both.
-	bank = {name = "Bank", spot = "eco", desc = "Interest on the gold you hold after each wave.",
+	bank = {name = "Bank", spot = "eco", support = true, desc = "Interest on the gold you hold after each wave.",
 		weak = "spending: no gold, no interest", strong = "saving up for big upgrades",
 		levels = [{cost = 30, rate = 0.1, cap = 12}, {cost = 40, rate = 0.15, cap = 25},
 			{cost = 55, rate = 0.2, cap = 45}]},
 	gate = {name = "Gate", spot = "gate", desc = "Blocks its lane until broken; rebuilt each wave.",
-		weak = "bats (fly over), crossbowmen (shoot from range)", strong = "holding crowds inside tower range",
+		weak = "bats (fly over), crossbowmen (shoot from range)", strong = "grunts, runners, slimes (held in tower range)",
 		levels = [{cost = 30, hp = 220.0}, {cost = 40, hp = 420.0}, {cost = 60, hp = 700.0}]},
 }
 const TOWER_KINDS := ["archer", "ballista", "mortar", "frost", "banner"]
@@ -236,7 +236,7 @@ const ENEMIES := [
 	{name = "crossbowman", plural = "crossbowmen", hp = 8.0, speed = 1.2, radius = 0.3, gold = 3, xp = 3, dps = 1.6,
 		ranged = 6.5, cycle = 1.1,
 		desc = "Shoots gates from 6 m away, outside the queue.", weak = "ballistas, the hero", strong = "gates"},
-	{name = "Bone Warlord", plural = "Bone Warlords", hp = 1300.0, speed = 0.7, radius = 1.1, gold = 60, xp = 40,
+	{name = "Bone Warlord", plural = "Bone Warlords", hp = 2000.0, speed = 0.7, radius = 1.1, gold = 60, xp = 40,
 		dps = 28.0, heavy = true, reach = 2.0, armor = 2.5, boss = true, big = true,
 		desc = "Armored boss: calls armored men, berserk at 25%: no slow or freeze.",
 		weak = "ballistas, Giant Slayer, fire", strong = "light hits, gates, slow (berserk)"},
@@ -251,6 +251,32 @@ const ENEMIES := [
 	{name = "captain", plural = "captains", hp = 26.0, speed = 1.3, radius = 0.36, gold = 5, xp = 5, dps = 5.0,
 		armor = 1.0, aura = 4.0, haste = 0.4,
 		desc = "All within 4 m walk and attack 40% faster.", weak = "ballistas, mortars", strong = "archers (armor)"},
+	# v0.2.1 (user ideas, 2026-10-11). ward: share of the hero's damage it
+	# turns aside (towers do full damage). cloak: untargetable unless inside
+	# a frost crystal's or war banner's reach (Sim._reveal). blast: [gate,
+	# keep] damage when it reaches a wall and explodes, x sqrt(the wave's
+	# toughness); an exploded sapper gives nothing. revive: a necromancer
+	# raises an ally dying within its aura to full HP, then waits [s after
+	# a small one, s after a giant]; never a boss or another necromancer.
+	{name = "warded", plural = "warded", hp = 16.0, speed = 1.3, radius = 0.32, gold = 4, xp = 4, dps = 4.0,
+		ward = 0.8,
+		desc = "Runes turn aside 80% of the hero's damage.", weak = "archers, mortars, ballistas", strong = "the hero"},
+	{name = "shade", plural = "shades", hp = 10.0, speed = 2.0, radius = 0.28, gold = 4, xp = 3, dps = 8.0,
+		cloak = true,
+		desc = "Can't be hit unless near a frost crystal or war banner.", weak = "frost, banners (reveal it)",
+		strong = "gates out of frost and banner reach"},
+	{name = "sapper", plural = "sappers", hp = 5.0, speed = 2.4, radius = 0.26, gold = 3, xp = 2, dps = 0.0,
+		blast = [40.0, 20.0],
+		desc = "Runs at the walls and explodes: a big hit on a gate or the keep.", weak = "archers, the hero",
+		strong = "gates"},
+	{name = "drake", plural = "drakes", hp = 30.0, speed = 1.5, radius = 0.7, gold = 10, xp = 8, dps = 8.0,
+		armor = 1.5, flies = true, fly_h = 3.0, big = true,
+		desc = "Armored flyer, straight to the keep.", weak = "ballistas, archers, the hero",
+		strong = "gates, mortars, frost (can't reach it)"},
+	{name = "necromancer", plural = "necromancers", hp = 16.0, speed = 1.2, radius = 0.32, gold = 6, xp = 6, dps = 2.0,
+		aura = 5.0, revive = [8.0, 16.0],
+		desc = "Raises an ally that falls near it at full HP (then rests 8 s).", weak = "the hero, Sniper",
+		strong = "giants (a second life)"},
 ]
 ## A hit on an armoured enemy does at least this share of its damage.
 const ARMOR_FLOOR := 0.4
@@ -261,21 +287,24 @@ const BOSS_PHASES := [0.75, 0.5, 0.25]
 const BOSS_SUMMON := 6
 const BOSS_SUMMON_TYPE := 1  # ARMORED
 const BOSS_RAGE := 1.4
-enum { GRUNT, ARMORED, BRUTE, RUNNER, BAT, SIEGE, BOSS, SLIME, SLIMELING, MAGE, CAPTAIN }
+const BOSS_WAVE := 9  # the first boss's wave (0-based): its HP is ENEMIES' as it stands
+enum { GRUNT, ARMORED, BRUTE, RUNNER, BAT, SIEGE, BOSS, SLIME, SLIMELING, MAGE, CAPTAIN, WARDED, SHADE, SAPPER,
+	DRAKE, NECRO }
 const WEST := 0
 const CENTRE := 1
 const EAST := 2
 
 ## Enemy HP x (1 + HP_PER_WAVE w + HP_PER_WAVE2 w^2) in wave w (0-based).
 const HP_PER_WAVE := 0.2
-const HP_PER_WAVE2 := 0.058
+const HP_PER_WAVE2 := 0.05
 
 ## Waves. Each group: `count` enemies of `type` on `lane`, one every
 ## `every` s, starting `t` s into the wave; `hp` (bosses): HP x this
 ## instead of the wave's toughness (bosses ignore it otherwise).
 ## 15 waves since v0.1.28 (user: wave 10 easier than the old wave 10,
 ## wave 15 harder than it). New kinds arrive alone or in small numbers
-## first: bats 4, crossbowmen 5, slimes 6, bone mages 8, captains 9; the
+## first: bats 4, crossbowmen 5, slimes 6, sappers 7, bone mages 8,
+## captains and shades 9, drakes 11, warded 12, necromancers 13; the
 ## Bone Warlord at 10, two of them at 15.
 const WAVES := [
 	[{lane = CENTRE, type = GRUNT, count = 20, every = 0.7, t = 0.0}],
@@ -307,14 +336,16 @@ const WAVES := [
 		{lane = WEST, type = BAT, count = 10, every = 0.6, t = 6.0},
 		{lane = CENTRE, type = RUNNER, count = 18, every = 0.3, t = 8.0},
 		{lane = EAST, type = SIEGE, count = 4, every = 1.4, t = 10.0},
-		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 14.0}],
+		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 14.0},
+		{lane = WEST, type = SAPPER, count = 4, every = 1.0, t = 8.0}],
 	# Bone mages: two, behind a centre crowd.
 	[{lane = CENTRE, type = GRUNT, count = 40, every = 0.25, t = 0.0},
 		{lane = CENTRE, type = MAGE, count = 2, every = 3.0, t = 6.0},
 		{lane = WEST, type = ARMORED, count = 12, every = 0.9, t = 2.0},
 		{lane = EAST, type = SLIME, count = 6, every = 1.4, t = 4.0},
 		{lane = EAST, type = BAT, count = 10, every = 0.5, t = 10.0},
-		{lane = WEST, type = BRUTE, count = 1, every = 1.0, t = 12.0}],
+		{lane = WEST, type = BRUTE, count = 1, every = 1.0, t = 12.0},
+		{lane = EAST, type = SAPPER, count = 4, every = 1.0, t = 6.0}],
 	# Captains: one leads each side crowd.
 	[{lane = WEST, type = GRUNT, count = 36, every = 0.25, t = 0.0},
 		{lane = WEST, type = CAPTAIN, count = 1, every = 1.0, t = 3.0},
@@ -323,7 +354,8 @@ const WAVES := [
 		{lane = CENTRE, type = RUNNER, count = 24, every = 0.25, t = 4.0},
 		{lane = CENTRE, type = SIEGE, count = 5, every = 1.2, t = 8.0},
 		{lane = WEST, type = BAT, count = 10, every = 0.5, t = 10.0},
-		{lane = CENTRE, type = BRUTE, count = 2, every = 7.0, t = 10.0}],
+		{lane = CENTRE, type = BRUTE, count = 2, every = 7.0, t = 10.0},
+		{lane = CENTRE, type = SHADE, count = 4, every = 1.5, t = 6.0}],
 	# The Bone Warlord.
 	[{lane = WEST, type = GRUNT, count = 30, every = 0.28, t = 0.0},
 		{lane = CENTRE, type = GRUNT, count = 30, every = 0.28, t = 0.0},
@@ -333,7 +365,9 @@ const WAVES := [
 		{lane = CENTRE, type = BAT, count = 12, every = 0.5, t = 8.0},
 		{lane = CENTRE, type = MAGE, count = 2, every = 3.0, t = 3.0},
 		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 12.0},
-		{lane = CENTRE, type = BOSS, count = 1, every = 1.0, t = 20.0}],
+		{lane = CENTRE, type = BOSS, count = 1, every = 1.0, t = 20.0},
+		{lane = CENTRE, type = SAPPER, count = 4, every = 1.0, t = 10.0},
+		{lane = WEST, type = SHADE, count = 3, every = 1.5, t = 6.0}],
 	[{lane = WEST, type = SLIME, count = 10, every = 1.0, t = 0.0},
 		{lane = CENTRE, type = GRUNT, count = 45, every = 0.22, t = 0.0},
 		{lane = CENTRE, type = CAPTAIN, count = 2, every = 4.0, t = 3.0},
@@ -341,7 +375,9 @@ const WAVES := [
 		{lane = EAST, type = MAGE, count = 2, every = 3.0, t = 8.0},
 		{lane = WEST, type = BAT, count = 14, every = 0.45, t = 8.0},
 		{lane = CENTRE, type = SIEGE, count = 6, every = 1.0, t = 12.0},
-		{lane = WEST, type = BRUTE, count = 2, every = 7.0, t = 10.0}],
+		{lane = WEST, type = BRUTE, count = 2, every = 7.0, t = 10.0},
+		{lane = WEST, type = DRAKE, count = 2, every = 6.0, t = 10.0},
+		{lane = EAST, type = SHADE, count = 4, every = 1.5, t = 6.0}],
 	[{lane = WEST, type = RUNNER, count = 40, every = 0.22, t = 0.0},
 		{lane = CENTRE, type = GRUNT, count = 50, every = 0.22, t = 0.0},
 		{lane = CENTRE, type = SLIME, count = 8, every = 1.0, t = 12.0},
@@ -351,7 +387,9 @@ const WAVES := [
 		{lane = CENTRE, type = MAGE, count = 3, every = 2.5, t = 3.0},
 		{lane = EAST, type = SIEGE, count = 8, every = 1.0, t = 10.0},
 		{lane = WEST, type = BRUTE, count = 2, every = 7.0, t = 8.0},
-		{lane = CENTRE, type = BRUTE, count = 2, every = 7.0, t = 14.0}],
+		{lane = CENTRE, type = BRUTE, count = 2, every = 7.0, t = 14.0},
+		{lane = CENTRE, type = WARDED, count = 8, every = 1.0, t = 4.0},
+		{lane = WEST, type = SAPPER, count = 5, every = 1.0, t = 6.0}],
 	[{lane = WEST, type = GRUNT, count = 40, every = 0.25, t = 0.0},
 		{lane = CENTRE, type = SLIME, count = 14, every = 0.8, t = 0.0},
 		{lane = EAST, type = GRUNT, count = 40, every = 0.25, t = 0.0},
@@ -360,7 +398,10 @@ const WAVES := [
 		{lane = WEST, type = ARMORED, count = 16, every = 0.8, t = 8.0},
 		{lane = CENTRE, type = BAT, count = 18, every = 0.4, t = 8.0},
 		{lane = EAST, type = SIEGE, count = 8, every = 1.0, t = 12.0},
-		{lane = EAST, type = BRUTE, count = 2, every = 6.0, t = 10.0}],
+		{lane = EAST, type = BRUTE, count = 2, every = 6.0, t = 10.0},
+		{lane = WEST, type = NECRO, count = 2, every = 4.0, t = 4.0},
+		{lane = EAST, type = WARDED, count = 8, every = 1.0, t = 6.0},
+		{lane = CENTRE, type = DRAKE, count = 2, every = 6.0, t = 14.0}],
 	[{lane = WEST, type = ARMORED, count = 24, every = 0.6, t = 0.0},
 		{lane = WEST, type = CAPTAIN, count = 3, every = 5.0, t = 2.0},
 		{lane = CENTRE, type = RUNNER, count = 40, every = 0.2, t = 0.0},
@@ -371,7 +412,12 @@ const WAVES := [
 		{lane = CENTRE, type = SIEGE, count = 8, every = 1.0, t = 12.0},
 		{lane = WEST, type = BRUTE, count = 2, every = 7.0, t = 10.0},
 		{lane = CENTRE, type = BRUTE, count = 2, every = 7.0, t = 14.0},
-		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 18.0}],
+		{lane = EAST, type = BRUTE, count = 1, every = 1.0, t = 18.0},
+		{lane = EAST, type = NECRO, count = 2, every = 4.0, t = 6.0},
+		{lane = WEST, type = WARDED, count = 10, every = 0.9, t = 4.0},
+		{lane = CENTRE, type = SHADE, count = 5, every = 1.2, t = 6.0},
+		{lane = EAST, type = SAPPER, count = 6, every = 0.8, t = 8.0},
+		{lane = WEST, type = DRAKE, count = 3, every = 5.0, t = 12.0}],
 	# The finale: every lane at once, then two Bone Warlords.
 	[{lane = WEST, type = GRUNT, count = 45, every = 0.22, t = 0.0},
 		{lane = CENTRE, type = GRUNT, count = 45, every = 0.22, t = 0.0},
@@ -388,7 +434,14 @@ const WAVES := [
 		{lane = WEST, type = BRUTE, count = 2, every = 8.0, t = 10.0},
 		{lane = EAST, type = BRUTE, count = 2, every = 8.0, t = 18.0},
 		{lane = WEST, type = BOSS, count = 1, every = 1.0, t = 22.0, hp = 1.6},
-		{lane = EAST, type = BOSS, count = 1, every = 1.0, t = 30.0, hp = 1.6}],
+		{lane = EAST, type = BOSS, count = 1, every = 1.0, t = 30.0, hp = 1.6},
+		{lane = CENTRE, type = NECRO, count = 2, every = 4.0, t = 4.0},
+		{lane = WEST, type = WARDED, count = 8, every = 1.0, t = 5.0},
+		{lane = EAST, type = WARDED, count = 8, every = 1.0, t = 5.0},
+		{lane = CENTRE, type = SHADE, count = 6, every = 1.2, t = 8.0},
+		{lane = WEST, type = SAPPER, count = 4, every = 1.0, t = 10.0},
+		{lane = EAST, type = SAPPER, count = 4, every = 1.0, t = 10.0},
+		{lane = CENTRE, type = DRAKE, count = 3, every = 5.0, t = 16.0}],
 ]
 
 
@@ -400,6 +453,9 @@ static func info(e: Dictionary, with_desc := true) -> String:
 	# Ours: a building, or a tower spec (has a cost); theirs: an enemy.
 	var ours: bool = e.has("spot") or e.has("cost")
 	var order := [["Strong vs:", e.strong], ["Weak vs:", e.weak]] if ours else [["Weak vs:", e.weak], ["Strong vs:", e.strong]]
+	# Support buildings (banners, farms, banks) fight nobody: what suits them.
+	if e.get("support", false):
+		order = [["Good with:", e.strong], ["Bad with:", e.weak]]
 	for o in order:
 		var label := Loc.tc(o[0], "building" if ours else "enemy")
 		# A full-width colon (Chinese) takes no space after it.
@@ -451,6 +507,13 @@ static func wave_preview(w: int) -> Array:
 ## faster, while gold per kill stays the same.
 static func wave_hp(w: int) -> float:
 	return 1.0 + HP_PER_WAVE * w + HP_PER_WAVE2 * w * w
+
+
+## A boss's HP multiplier in wave w: its group's `hp`, grown like everyone
+## else's from its first wave (BOSS_WAVE) on (user, v0.2.2: the wave-15
+## warlords fell in 10-15 s).
+static func boss_hp(w: int, group_hp: float) -> float:
+	return group_hp * wave_hp(w) / wave_hp(BOSS_WAVE)
 
 
 ## Stats of `kind` at `level` (0-based); a tower's level IV (3) is its

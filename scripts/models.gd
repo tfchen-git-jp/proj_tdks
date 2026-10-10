@@ -15,6 +15,7 @@ const COIN := "res://assets/props/coin/coin.glb"
 const COIN_STACK := "res://assets/props/coin/coin_stack_small.glb"
 const COIN_STACK_LARGE := "res://assets/props/coin/coin_stack_large.glb"
 const VAT_SHADER := preload("res://shaders/vat.gdshader")
+const VAT_GHOST_SHADER := preload("res://shaders/vat_ghost.gdshader")
 ## Per enemy type: baked VAT name and recolour (a = strength).
 ## name: the baked VAT (assets/vat); icon: assets/icons/<icon>.png.
 const ENEMY_VAT := [
@@ -29,6 +30,13 @@ const ENEMY_VAT := [
 	{name = "slime", icon = "slimeling", tint = Color(0.55, 0.95, 0.85, 0.5), scale = 0.5},
 	{name = "mage", icon = "mage", tint = Color(1, 1, 1, 0.0), scale = 1.0},
 	{name = "captain", icon = "captain", tint = Color(0.95, 0.6, 0.15, 0.3), scale = 1.0},
+	# v0.2.1: the warded one is the Bone Warlord's model at man size, cyan;
+	# the shade is see-through (ghost: the instance colour's alpha).
+	{name = "boss", icon = "warded", tint = Color(0.35, 0.85, 1.0, 0.55), scale = 0.36},
+	{name = "shade", icon = "shade", tint = Color(0.25, 0.2, 0.45, 0.6), scale = 1.0, ghost = true},
+	{name = "sapper", icon = "sapper", tint = Color(1.0, 0.5, 0.12, 0.45), scale = 1.0},
+	{name = "drake", icon = "drake", tint = Color(1, 1, 1, 0.0), scale = 1.0},
+	{name = "necro", icon = "necro", tint = Color(0.35, 0.12, 0.45, 0.55), scale = 1.0},
 ]
 
 
@@ -269,7 +277,7 @@ static func enemy(k: int) -> Array:
 	var meta: Dictionary = mesh.get_meta("vat")
 	var src := mesh.surface_get_material(0) as BaseMaterial3D
 	var m := ShaderMaterial.new()
-	m.shader = VAT_SHADER
+	m.shader = VAT_GHOST_SHADER if cfg.get("ghost", false) else VAT_SHADER
 	m.set_shader_parameter("albedo_tex", src.albedo_texture if src else null)
 	m.set_shader_parameter("pos_tex", load(base + "_pos.res"))
 	m.set_shader_parameter("nrm_tex", load(base + "_nrm.res"))

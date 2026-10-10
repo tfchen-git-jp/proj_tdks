@@ -32,6 +32,8 @@ func _init() -> void:
 	_specs_and_selling()
 	_support_and_split()
 	_reworks()
+	_enemies_v021()
+	_feedback_v022()
 	_layout()
 	_full_run()
 	print("ALL PASSED" if _fails == 0 else "%d FAILED" % _fails)
@@ -868,6 +870,116 @@ func _reworks() -> void:
 	_ok(h.d[0] - m0 > float(Level.ENEMIES[Level.MAGE].speed) * 1.1 * DT, "a bone mage keeps up with the grunts around it")
 
 
+## Warded, shades, sappers, drakes, necromancers (v0.2.1).
+func _enemies_v021() -> void:
+	# Warded: the hero does 20%, towers full damage.
+	var s = SimS.new(71)
+	var i: int = _place(s, Level.WARDED, 1, 30.0)
+	s.horde.hp[i] = 100.0
+	s._hurt(i, 10.0, "hero")
+	_ok(is_equal_approx(s.horde.hp[i], 98.0), "warded: the hero's 10 damage does 2")
+	s._hurt(i, 10.0, "archer")
+	_ok(is_equal_approx(s.horde.hp[i], 88.0), "...an archer's does 10")
+	# Shades: untargetable until a frost crystal or banner is near.
+	var t = SimS.new(72)
+	var sh: int = _place(t, Level.SHADE, 2, t.tracks[2].closest_d(_spot("x_e1").pos))
+	t._reveal(DT)
+	_ok(not t.horde.targetable(sh) and t.horde.nearest(t.horde.pos[sh], 3.0) < 0, "a shade can't be targeted")
+	t.coins = 999
+	t.buy("x_e1", "frost")
+	t._reveal(DT)
+	_ok(t.horde.targetable(sh), "a frost crystal reveals it")
+	t.sell("x_e1")
+	t._reveal(DT)
+	_ok(t.horde.targetable(sh), "...and it stays revealed a moment")
+	# Sapper: explodes at the gate, big damage, no gold.
+	var h = HordeS.new(_lane_tracks(), 73)
+	h.gate_d[1] = 25.0
+	h.gate_hp[1] = 1e4
+	h.spawn(Level.SAPPER, 1)
+	h.d[0] = 22.0
+	var killed: int = h.killed
+	var blasts := 0
+	for k in 60 * 5:
+		h.step(DT)
+		blasts += h.blasts.size()
+	var hit: float = 1e4 - h.gate_hp[1]
+	_ok(blasts == 1 and h.count() == 0 and h.killed == killed and h.deaths.is_empty(), "a sapper blows itself up at the gate")
+	_ok(is_equal_approx(hit, float(Level.ENEMIES[Level.SAPPER].blast[0])), "...for %d damage" % hit)
+	# Necromancer: an ally dying near it comes back at full HP, then it rests.
+	var n = HordeS.new(_lane_tracks(), 74)
+	n.spawn(Level.NECRO, 1)
+	n.spawn(Level.GRUNT, 1)
+	n.spawn(Level.GRUNT, 1)
+	for k in 3:
+		n.d[k] = 30.0
+		n.pos[k] = n.tracks[1].point(30.0, n.off[k])
+	_ok(not n.damage(1, 99.0) and n.hp[1] == n.max_hp[1] and n.raised.size() == 1, "a grunt falling by the necromancer is raised")
+	_ok(n.damage(2, 99.0), "the next one dies: it rests")
+	var bs = HordeS.new(_lane_tracks(), 75)
+	bs.spawn(Level.NECRO, 1)
+	bs.spawn(Level.BOSS, 1, 1.0)
+	for k in 2:
+		bs.d[k] = 30.0
+		bs.pos[k] = bs.tracks[1].point(30.0)
+	_ok(bs.damage(1, 1e5), "it never raises a boss")
+	# Drakes fly and have a bar.
+	_ok(Level.ENEMIES[Level.DRAKE].flies and Level.ENEMIES[Level.DRAKE].big, "a drake flies, with an HP bar")
+
+
+## v0.2.2 play-test feedback: four abreast at a gate, bomblets hit each
+## enemy once, bosses grow with the wave.
+func _feedback_v022() -> void:
+	var h = HordeS.new(_lane_tracks(), 81)
+	h.gate_d[1] = 25.0
+	h.gate_hp[1] = 1e9
+	for k in 10:
+		h.spawn(Level.GRUNT, 1)
+		h.d[k] = 18.0 - k * 0.4
+	var most := 0
+	for k in 60 * 15:
+		h.step(DT)
+		var hitting := 0
+		for i in h.count():
+			if h.blocked[i] == 1:
+				hitting += 1
+		most = maxi(most, hitting)
+	var now := 0
+	for i in h.count():
+		if h.blocked[i] == 1:
+			now += 1
+	_ok(now == Horde.FRONT_MAX and most <= Horde.FRONT_MAX, "ten grunts: %d hit the gate side by side (at most %d)" % [now, most])
+	var g = HordeS.new(_lane_tracks(), 82)
+	g.gate_d[1] = 25.0
+	g.gate_hp[1] = 1e9
+	g.spawn(Level.BRUTE, 1)
+	for k in 6:
+		g.spawn(Level.GRUNT, 1)
+		g.d[k + 1] = 20.0 - k * 0.4
+	g.d[0] = 12.0
+	for k in 60 * 25:
+		g.step(DT)
+	var light := 0
+	for i in g.count():
+		if g.blocked[i] == 1 and g.kind[i] == Level.GRUNT:
+			light += 1
+	_ok(light == 2, "a giant takes two places: %d grunts beside it" % light)
+	# Bomblets of one shell strike an enemy once.
+	var s = SimS.new(83)
+	var i: int = _place(s, Level.BOSS, 1, 30.0)
+	var hp0: float = s.horde.hp[i]
+	var struck: Array = []
+	for k in 5:
+		var p: Dictionary = s._launch("shell", s.horde.pos[i], s.horde.pos[i], -1, 0.01, 0.0, 50.0)
+		p.splash = 1.1
+		p.struck = struck
+	s._projectiles(0.1)
+	var once: float = hp0 - s.horde.hp[i]
+	_ok(once > 0.0 and once <= 50.0, "five bomblets on one warlord hit it once (%.0f damage)" % once)
+	_ok(Fx.BODY_H.size() == Level.ENEMIES.size(), "every enemy type has a flame height (Fx.BODY_H)")
+	_ok(Level.boss_hp(Level.BOSS_WAVE, 1.0) == 1.0 and Level.boss_hp(14, 1.6) > 3.0, "the wave-15 warlords are tougher than the first")
+
+
 func _spot(id: String) -> Dictionary:
 	for sp in Level.SPOTS:
 		if sp.id == id:
@@ -909,12 +1021,15 @@ func _layout() -> void:
 	_ok(Level.START_SPOT.distance_to(Level.KEEP_POS) < 5.0, "start spot by the keep")
 
 
-## A whole game by the standard bot. It wins ~62% of seeds (v0.1.28
-## balance target 60-65%), so this one is a seed it wins with the keep
-## untouched: a change that makes it lose broke something.
+## A whole game by the standard bot, all 15 waves to the win screen. Since
+## v0.2.2 the game is tuned for human play (the bot, standing still, loses
+## most games), so its keep can't fall here: this checks the full path,
+## not the balance (tools/meta_report.py measures that).
 func _full_run() -> void:
 	var s = SimS.new(1017)
+	s.base_hp = 1e6
+	s.horde.keep_hp = 1e6
 	var bot = BotS.new(s)
 	while s.state == "play" and s.time < 4000.0:
 		s.step(DT, bot.move())
-	_ok(s.state == "win", "the bot wins level 1, seed 1017 (%s at %.0f s, wave %d, keep %d)" % [s.state, s.time, s.wave, s.base_hp])
+	_ok(s.state == "win", "the bot plays all 15 waves, seed 1017 (%s at %.0f s, wave %d)" % [s.state, s.time, s.wave])

@@ -55,6 +55,23 @@ const JOBS := [
 		attach = ["Knight_Helmet", "Knight_Cape", "1H_Sword", "Badge_Shield"],
 		clips = [["walk", "Walking_A", true], ["attack", "1H_Melee_Attack_Chop", true],
 			["die", "Death_A", false], ["idle", "Idle", true]]},
+	# v0.2.1: shade (KayKit Adventurers Rogue, two knives), sapper (KayKit
+	# skeleton minion), drake (Quaternius Dragon, palette), necromancer
+	# (KayKit Adventurers Mage with staff).
+	{name = "shade", src = "res://assets/chars/rogue2/Rogue.glb", height = 1.2, fps = 18.0,
+		attach = ["Rogue_Cape", "Knife", "Knife_Offhand"],
+		clips = [["walk", "Running_B", true], ["attack", "Dualwield_Melee_Attack_Chop", true],
+			["die", "Death_A", false], ["idle", "Idle", true]]},
+	{name = "sapper", src = "res://assets/chars/skeleton/Skeleton_Minion.glb", height = 0.95, fps = 18.0,
+		clips = [["walk", "Running_A", true], ["attack", "1H_Melee_Attack_Stab", true],
+			["die", "Death_C_Skeletons", false], ["idle", "Idle", true]]},
+	{name = "drake", src = "res://assets/chars/dragon/Dragon.glb", height = 1.5, fps = 18.0, palette = true,
+		clips = [["walk", "Dragon_Flying", true], ["attack", "Dragon_Attack", true],
+			["die", "Dragon_Death", false], ["idle", "Dragon_Flying", true]]},
+	{name = "necro", src = "res://assets/chars/mage/Mage.glb", height = 1.3, fps = 18.0,
+		attach = ["Mage_Hat", "Mage_Cape", "2H_Staff"],
+		clips = [["walk", "Walking_A", true], ["attack", "Spellcast_Shoot", true],
+			["die", "Death_A", false], ["idle", "Spellcasting", true]]},
 ]
 
 

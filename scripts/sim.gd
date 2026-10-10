@@ -130,6 +130,7 @@ func step(dt: float, move: Vector2) -> void:
 	if phase == "attack":
 		wave_time += dt
 		_spawn()
+	_reveal(dt)
 	_hero_shoot(dt)
 	_towers(dt)
 	_projectiles(dt)
@@ -143,6 +144,11 @@ func step(dt: float, move: Vector2) -> void:
 		events.push_back({type = "enemy_shot", from = sh[0], to = sh[1]})
 	for at in horde.saved:
 		events.push_back({type = "last_stand", pos = at})
+	for at in horde.blasts:
+		events.push_back({type = "sapper_blast", pos = at})
+	for at in horde.raised:
+		events.push_back({type = "raised", pos = at})
+	horde.raised.clear()
 	_bosses()
 	_gates()
 	_drops_from_deaths()
@@ -195,7 +201,7 @@ func _spawn() -> void:
 		var g: Dictionary = groups[i]
 		while _spawned[i] < int(g.count) and wave_time >= float(g.t) + _spawned[i] * float(g.every):
 			var boss: bool = Level.ENEMIES[int(g.type)].get("boss", false)
-			horde.spawn(int(g.type), int(g.lane), float(g.get("hp", 1.0)) if boss else Level.wave_hp(wave))
+			horde.spawn(int(g.type), int(g.lane), Level.boss_hp(wave, float(g.get("hp", 1.0))) if boss else Level.wave_hp(wave))
 			_spawned[i] += 1
 
 
@@ -285,6 +291,8 @@ func _vacuum() -> void:
 func _hurt(i: int, amount: float, src: String, armored := true) -> bool:
 	if src != "hero" and horde.mark_t[i] > 0.0:  # Spotter's mark
 		amount *= 1.0 + horde.mark_v[i]
+	if src == "hero":  # wards turn the hero's damage aside
+		amount *= 1.0 - float(Level.ENEMIES[horde.kind[i]].get("ward", 0.0))
 	var before := horde.dealt
 	var died := horde.damage(i, amount, true, armored)
 	dealt_by[src] = float(dealt_by.get(src, 0.0)) + horde.dealt - before
@@ -428,6 +436,29 @@ func _gain_xp(n: float) -> void:
 			if int(sp.get("lv", 1)) == level:
 				opened.push_back(sp.id)
 		events.push_back({type = "level_up", level = level, opened = opened})
+
+
+## Shades show (can be hit) inside any frost crystal's or war banner's
+## reach, and for REVEAL_LINGER s after leaving it; within KEEP_REVEAL m
+## of the keep always (else a run with no reveal on that lane could never
+## end: nothing could kill them).
+const REVEAL_LINGER := 1.5
+const KEEP_REVEAL := 4.0
+
+
+func _reveal(_dt: float) -> void:
+	var h := horde
+	for i in h.count():
+		if not Level.ENEMIES[h.kind[i]].get("cloak", false) or h.hp[i] <= 0.0:
+			continue
+		if _flat_dist(h.pos[i], Level.KEEP_POS) <= KEEP_REVEAL:
+			h.reveal_t[i] = REVEAL_LINGER
+		for b in buildings.values():
+			if b.kind == "frost" or b.kind == "banner":
+				if _flat_dist(h.pos[i], b.pos) <= float(Level.bstats(b).range):
+					h.reveal_t[i] = REVEAL_LINGER
+					break
+		h.hidden[i] = 0 if h.reveal_t[i] > 0.0 else 1
 
 
 ## Rally: is a tower at p inside the hero's ring (double bonus)?
@@ -975,9 +1006,14 @@ func _fire_mortar(b: Dictionary, st: Dictionary) -> void:
 			var ang := TAU * k / float(bl[0]) + _rng.randf_range(-0.3, 0.3)
 			var rr := float(bl[1]) * (0.0 if k == 0 else _rng.randf_range(0.55, 1.0))
 			spots.push_back(land + Vector3(cos(ang) * rr, 0, sin(ang) * rr))
+	# A shell's bomblets hit each enemy once (user, v0.2.2: all five
+	# landed on one warlord), so Cluster is for crowds.
+	var struck: Array = []
 	for k in spots.size():
 		var p := _launch("shell", from, spots[k], -1, SHELL_TIME + 0.06 * k, 3.5, float(st.damage))
 		p.splash = float(st.splash)
+		if not bl.is_empty():
+			p.struck = struck
 		p.burn = st.get("burn", [])
 		p.small = not bl.is_empty()
 	events.push_back({type = "shot", kind = "mortar", from = b.pos, spec = b.spec})
@@ -1056,7 +1092,12 @@ func _projectiles(dt: float) -> void:
 						events.push_back({type = "hit", pos = horde.pos[i], kind = p.kind})
 			"shell":
 				var burn: Array = p.get("burn", [])
+				var struck: Array = p.get("struck", [])
 				for i in horde.within(p.to, p.splash, true):
+					if p.has("struck"):
+						if horde.uid[i] in struck:
+							continue
+						struck.push_back(horde.uid[i])
 					if not burn.is_empty():
 						horde.ignite(i, float(burn[0]), float(burn[1]), "mortar")
 					_hurt(i, p.dmg, "mortar")

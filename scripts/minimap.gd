@@ -92,6 +92,11 @@ func _draw() -> void:
 			Level.SLIMELING: draw_circle(p, 1.5, Color(0.5, 0.95, 0.4))
 			Level.MAGE: draw_circle(p, 2.6, Color(0.4, 1.0, 0.5))
 			Level.CAPTAIN: draw_circle(p, 2.6, Color(1.0, 0.65, 0.15))
+			Level.WARDED: draw_circle(p, 2.2, Color(0.4, 0.85, 1.0))
+			Level.SHADE: draw_circle(p, 2.0, Color(0.55, 0.45, 0.8, 0.6))
+			Level.SAPPER: draw_circle(p, 2.0, Color(1.0, 0.5, 0.1))
+			Level.DRAKE: draw_circle(p, 4.0, Color(0.85, 0.3, 0.3))
+			Level.NECRO: draw_circle(p, 2.6, Color(0.75, 0.35, 1.0))
 			_: draw_circle(p, 1.8, ENEMY)
 	# What the camera sees
 	if cam:

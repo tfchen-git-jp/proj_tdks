@@ -28,6 +28,7 @@ G = dict(
     eco_plot="資源點", eco_pad="資源", start="開戰",
     west="左路", centre="中路", east="右路",
     b_strong="克制：", b_weak="被克制：", e_weak="弱點：", e_strong="強項：",
+    s_good="適合：", s_bad="不適合：",      # support buildings (v0.2.2, provisional)
     armor="護甲", splash="濺射", interest="利息", berserk="狂暴",
     guide="指南", scores="排行榜", top10="前十名",
     # buildings
@@ -50,6 +51,9 @@ G = dict(
     s_cluster="散彈臼砲塔", s_fire="燃燒臼砲塔", s_glacier="冰封晶塔", s_frostbite="霜傷晶塔",
     s_drums="戰鼓塔", s_standard="英雄戰旗",
     slime="史萊姆", slimeling="分身史萊姆", mage="骷髏法師", captain="隊長",
+    # v0.2.1 (picking page section "New in v0.2.1"): option A until the
+    # user picks.
+    warded="符文兵", shade="暗影", sapper="爆破兵", drake="飛龍", necro="死靈法師",
 )
 # Everyday words used in the texts (not picks): the element words the UI
 # colours must appear verbatim in the sentences (UiText matches them).
@@ -223,6 +227,8 @@ def build():
     t("Weak vs:", g["b_weak"], "building")
     t("Weak vs:", g["e_weak"], "enemy")
     t("Strong vs:", g["e_strong"], "enemy")
+    t("Good with:", g["s_good"], "building")
+    t("Bad with:", g["s_bad"], "building")
 
     # --- buildings --------------------------------------------------------------
     t("Archer Tower", g["archer"])
@@ -256,7 +262,7 @@ def build():
     t("spending: no gold, no interest", "花光%s：沒有%s就沒有%s" % (g["gold"], g["gold"], g["interest"]))
     t("saving up for big upgrades", "存錢準備大升級")
     t("bats (fly over), crossbowmen (shoot from range)", "%s（飛越）、%s（遠距射擊）" % (g["bat"], g["crossbowman"]))
-    t("holding crowds inside tower range", "把敵群擋在塔的射程內")
+    t("grunts, runners, slimes (held in tower range)", "%s、%s、%s（擋在塔的射程內）" % (g["grunt"], g["runner"], g["slime"]))
 
     # --- tower specs (level IV, v0.1.28) ------------------------------------------
     for en, key in [("Sniper Tower", "s_sniper"), ("Repeater Tower", "s_repeater"), ("Great Ballista", "s_great"),
@@ -292,6 +298,7 @@ def build():
     t("runners, bats", "%s、%s" % (g["runner"], g["bat"]))
     t("giants, gate queues, crossbowmen", "%s、%s前的隊伍、%s" % (w["giants"], g["gate"], g["crossbowman"]))
     t("the berserk boss", "%s的%s" % (g["berserk"], w["the_boss"]))
+    t("the boss, armored, bats", "%s、%s、%s" % (w["the_boss"], g["armored"], g["bat"]))
     t("the boss, giants, armored", "%s、%s、%s" % (w["the_boss"], w["giants"], g["armored"]))
     t("a strong hero", "強大的%s" % g["hero"])
     t("a lone hero", "獨自作戰的%s" % g["hero"])
@@ -318,6 +325,23 @@ def build():
     t("All within 4 m walk and attack 40% faster.", "4 公尺內所有敵人移動與攻擊%s 40%%。" % w["haste"])
     t("ballistas, mortars", "%s、%s" % (g["ballista"], g["mortar"]))
     t("archers (armor)", "%s（%s）" % (g["archer"], g["armor"]))
+    for en, key in [("warded", "warded"), ("shade", "shade"), ("shades", "shade"), ("sapper", "sapper"),
+                    ("sappers", "sapper"), ("drake", "drake"), ("drakes", "drake"), ("necromancer", "necro"),
+                    ("necromancers", "necro")]:
+        t(en, g[key])
+    t("Runes turn aside 80% of the hero's damage.", "符文擋下%s 80%% 的傷害。" % g["hero"])
+    t("archers, mortars, ballistas", "%s、%s、%s" % (g["archer"], g["mortar"], g["ballista"]))
+    t("Can't be hit unless near a frost crystal or war banner.", "除非靠近%s或%s，否則無法被攻擊。" % (g["frost_t"], g["banner"]))
+    t("frost, banners (reveal it)", "%s、%s（使其現形）" % (g["frost_t"], g["banner"]))
+    t("gates out of frost and banner reach", "%s與%s範圍外的%s" % (g["frost_t"], g["banner"], g["gate"]))
+    t("Runs at the walls and explodes: a big hit on a gate or the keep.", "衝向城牆自爆：對%s或%s造成重創。" % (g["gate"], g["keep"]))
+    t("archers, the hero", "%s、%s" % (g["archer"], g["hero"]))
+    t("Armored flyer, straight to the keep.", "重甲飛行敵人，直撲%s。" % g["keep"])
+    t("ballistas, archers, the hero", "%s、%s、%s" % (g["ballista"], g["archer"], g["hero"]))
+    t("Raises an ally that falls near it at full HP (then rests 8 s).", "讓附近倒下的同伴滿血復活（之後休息 8 秒）。")
+    t("giants (a second life)", "%s（第二條命）" % w["giants"])
+    t("banners", g["banner"])
+    t("war banner", g["banner"])
     t("Basic foot soldier, comes in big crowds.", "基本步兵，成群出現。")
     t("mortars, archers", "%s、%s" % (g["mortar"], g["archer"]))
     t("nothing, but there are many", "沒有，但數量很多")
@@ -374,8 +398,8 @@ def build():
     t("+2 bolts (40% damage) at other enemies", "多 2 支弩箭（40% 傷害）射向其他敵人")
     t("+3 bolts (40% damage) at other enemies", "多 3 支弩箭（40% 傷害）射向其他敵人")
     t("Bolts fly straight through 1 more enemy", "弩箭直線穿透多 1 個敵人")
-    t("...through 2 more enemies", "……穿透多 2 個敵人")
-    t("...through 3 more enemies", "……穿透多 3 個敵人")
+    t("Bolts fly straight through 2 more enemies", "弩箭直線穿透多 2 個敵人")
+    t("Bolts fly straight through 3 more enemies", "弩箭直線穿透多 3 個敵人")
     t("Bolts bounce to 1 nearby enemy (-25% each bounce)", "弩箭彈向附近 1 個敵人（每次彈射 -25%）")
     t("Bounce to 2 nearby enemies", "彈向附近 2 個敵人")
     t("Bounce to 3 nearby enemies", "彈向附近 3 個敵人")
@@ -403,18 +427,20 @@ def build():
     t("+40% XP; +2% bolt damage per level", "%s +40%%；每級弩箭傷害 +2%%" % g["xp"])
     t("+60% XP; +2% bolt damage per level", "%s +60%%；每級弩箭傷害 +2%%" % g["xp"])
     t("All towers attack 4% faster; twice that within 6 m of you", "所有防禦塔攻擊速度 +4%；你周圍 6 公尺內加倍")
-    t("...8% faster (16% near you)", "……+8%（你附近 +16%）")
-    t("...12% faster (24% near you)", "……+12%（你附近 +24%）")
+    t("All towers attack 8% faster; 16% within 6 m of you", "所有防禦塔攻擊速度 +8%；你周圍 6 公尺內 +16%")
+    t("All towers attack 12% faster; 24% within 6 m of you", "所有防禦塔攻擊速度 +12%；你周圍 6 公尺內 +24%")
     t("Enemies your bolts hit are marked for 4 s: towers deal them +12% damage",
       "被你的弩箭命中的敵人會被標記 4 秒：防禦塔對其傷害 +12%")
-    t("...+20%", "……+20%")
-    t("...+30%", "……+30%")
+    t("Enemies your bolts hit are marked for 4 s: towers deal them +20% damage",
+      "被你的弩箭命中的敵人會被標記 4 秒：防禦塔對其傷害 +20%")
+    t("Enemies your bolts hit are marked for 4 s: towers deal them +30% damage",
+      "被你的弩箭命中的敵人會被標記 4 秒：防禦塔對其傷害 +30%")
     t("All gates +20% HP", "所有%s生命 +20%%" % g["gate"])
     t("All gates +35% HP", "所有%s生命 +35%%" % g["gate"])
     t("All gates +50% HP", "所有%s生命 +50%%" % g["gate"])
     t("Kills near you drop +1 gold (up to 20 a wave)", "在你附近擊殺額外掉落 1 %s（每%s最多 20）" % (g["gold"], g["wave"]))
-    t("...up to 40 a wave", "……每%s最多 40" % g["wave"])
-    t("...up to 60 a wave", "……每%s最多 60" % g["wave"])
+    t("Kills near you drop +1 gold (up to 40 a wave)", "在你附近擊殺額外掉落 1 %s（每%s最多 40）" % (g["gold"], g["wave"]))
+    t("Kills near you drop +1 gold (up to 60 a wave)", "在你附近擊殺額外掉落 1 %s（每%s最多 60）" % (g["gold"], g["wave"]))
 
     # --- relics -------------------------------------------------------------------------
     for en, key in [("Twin Crossbow", "r_twin"), ("Volley", "r_volley"), ("Thunderstrike", "r_thunder"),

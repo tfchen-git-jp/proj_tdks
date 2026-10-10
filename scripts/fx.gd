@@ -13,7 +13,8 @@ const FLAME_CAP := 200
 const ELEM_COLORS := {"": Color(1.0, 0.92, 0.65, 0.55), "fire": Color(1.0, 0.42, 0.08, 1.0),
 	"frost": Color(0.45, 0.85, 1.0, 1.0), "wisp": Color(0.75, 0.45, 1.0, 1.0)}
 ## Flame height per enemy type (Level.ENEMIES order) in metres.
-const BODY_H := [0.95, 1.05, 2.3, 0.8, 0.9, 1.15, 3.4]
+## Body height per enemy type (Level.ENEMIES order), m: flames' size.
+const BODY_H := [0.95, 1.05, 2.3, 0.8, 0.9, 1.15, 3.4, 0.8, 0.4, 1.05, 1.2, 1.05, 0.95, 0.9, 1.4, 1.05]
 const TO_CAMERA := Vector3(0, 0.829, 0.559)
 const CAM_UP := Vector3(0, 0.559, -0.829)  # screen up, in the world (pitch 56)
 

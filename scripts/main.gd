@@ -1022,6 +1022,16 @@ func _apply_events() -> void:
 			"perk":
 				if not _fast_forwarding:
 					_flash(_hero.position)
+			"sapper_blast":
+				sfx.play("mortar_boom", 0.0, 0.8)
+				_shake = maxf(_shake, 0.3)
+				if not _fast_forwarding:
+					_boom(e.pos, 1.6)
+					fx.blast(e.pos, 1.4)
+			"raised":
+				sfx.play("frost_pulse", -2.0, 0.6)
+				if not _fast_forwarding:
+					_pulse(e.pos, 1.6, "raise")
 			"last_stand":
 				sfx.play("upgrade", 0.0, 0.7)
 				_shake = maxf(_shake, 0.3)
@@ -1235,7 +1245,8 @@ func _boom(p: Vector3, r: float) -> void:
 ## Frost pulse: an icy ring growing to the crystal's reach and fading
 ## (Glacier: thick and white; Frostbite: deep blue).
 func _pulse(p: Vector3, r: float, spec := "") -> void:
-	var col: Color = {glacier = Color(0.9, 0.97, 1.0, 0.85), frostbite = Color(0.3, 0.55, 1.0, 0.8)}.get(spec, Color(0.6, 0.9, 1.0, 0.7))
+	var col: Color = {glacier = Color(0.9, 0.97, 1.0, 0.85), frostbite = Color(0.3, 0.55, 1.0, 0.8),
+		raise = Color(0.75, 0.35, 1.0, 0.85)}.get(spec, Color(0.6, 0.9, 1.0, 0.7))
 	var ring := _ring(1.0, col, 0.16 if spec == "glacier" else 0.07)
 	ring.position = p
 	ring.scale = Vector3(0.3, 1, 0.3)
@@ -1491,6 +1502,10 @@ func _draw_enemies() -> void:
 		if h.burn_t[i] > 0.0 and h.flash[i] <= 0.0:  # scorched, flickering
 			var fl := 0.85 + 0.15 * sin(sim.time * 23.0 + float(h.uid[i]))
 			col = Color(1.35 * fl, 0.75 * fl, 0.5 * fl)
+		# A shade is half see-through; more solid while revealed (user:
+		# never fully invisible, that would confuse).
+		if Level.ENEMIES[k].get("cloak", false):
+			col.a = 0.4 if h.hidden[i] else 0.85
 		_put(en.buf, n, Transform3D(b, p), col, clip, frame)
 	_draw_auras()
 	for c in _corpses:
@@ -1534,8 +1549,12 @@ func _draw_auras() -> void:
 		var r := float(e.aura) * (1.0 + 0.03 * sin(sim.time * 4.0 + i))
 		ring.position = Vector3(p.x, 0.0, p.z)
 		ring.scale = Vector3(r, 1, r)
-		(ring.material_override as StandardMaterial3D).albedo_color = Color(0.4, 1.0, 0.45, 0.75) \
-			if e.has("heal") else Color(1.0, 0.65, 0.15, 0.75)
+		var rc := Color(1.0, 0.65, 0.15, 0.75)  # haste: orange
+		if e.has("heal"):
+			rc = Color(0.4, 1.0, 0.45, 0.75)
+		elif e.has("revive"):  # purple; dim while the necromancer rests
+			rc = Color(0.75, 0.35, 1.0, 0.75 if h.rest_t[i] <= 0.0 else 0.25)
+		(ring.material_override as StandardMaterial3D).albedo_color = rc
 	for k in range(n, _aura_rings.size()):
 		_aura_rings[k].visible = false
 

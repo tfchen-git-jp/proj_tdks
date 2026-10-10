@@ -21,16 +21,20 @@ packs. Not published anywhere.
   gold (coins, stacks, ingots) is yours: walk over it, and when the wave
   ends every coin left flies to you.
 - **Build phase:** step onto a spot and its menu pops up. **Tower spots** take
-  any tower (tap one to see its range, tap again to build) (4 levels, shown by a I-IV badge), **gate spots** wall off a lane,
-  **gold plots** take a farm or a bank. Stand on the red **START** pad for 5 s
-  to begin the next wave; walk off to cancel.
-- **Attack phase:** three lanes march on the keep. Enemies batter gates, then
-  the keep itself; lose when the keep's HP runs out, win by clearing 10 waves.
+  any tower (tap one to see its range, tap again to build; 3 levels, shown
+  by a badge, then one of two specializations at level IV), **gate spots**
+  wall off a lane, **gold plots** take a farm or a bank. More spots open
+  as the hero levels up. Anything built can be sold for 40% of what it
+  cost. Stand on the red **START** pad for 5 s to begin the next wave;
+  walk off to cancel.
+- **Combat phase:** three lanes march on the keep. Enemies batter gates (up
+  to four at a time), then the keep itself; lose when the keep's HP runs
+  out, win by clearing 15 waves.
 - **Hero upgrades:** kills near the hero (his or a tower's) give XP, shown
   as "+N XP" over his head. After each
   wave, pick 1 of 3 cards per level (drawing one you own raises its tier;
-  reroll for gold), plus a relic after waves 3, 6 and 9: lightning, a spirit
-  wisp, twin crossbow...
+  reroll for gold), plus a relic after waves 3, 6, 9 and 12: lightning, a
+  spirit wisp, twin crossbow... (relics also have tiers I-III).
 - **Languages:** English and Traditional Chinese (繁體中文); switch from
   the title menu.
 - **Saves and scores:** the game saves at every wave; Continue from the menu.
@@ -38,18 +42,22 @@ packs. Not published anywhere.
 
 | Building | What it does |
 |---|---|
-| Archer Tower | Cheap, quick single-target arrows |
-| Ballista | Slow heavy bolt that pierces a whole line |
-| Mortar | Lobs boulders that splash a group; can't hit up close |
-| Frost Crystal | Pulse that slows walking and attacks nearby |
-| War Banner | No attack; towers and the hero in its ring attack faster |
+| Archer Tower | Cheap, quick single-target arrows (IV: Sniper / Repeater) |
+| Ballista | Slow heavy bolt that pierces a whole line (IV: Great / Harpoon) |
+| Mortar | Lobs boulders that splash a group; can't hit up close (IV: Cluster / Fire) |
+| Frost Crystal | Pulse that slows walking and attacks nearby (IV: Glacier / Frostbite) |
+| War Banner | No attack; towers and the hero in its ring attack faster (IV: War Drums / Hero's Standard) |
 | Farm / Bank | Gold after every wave: a fixed amount, or interest on what you hold (capped) |
 | Gate | Blocks its lane until broken; repaired after each wave |
 
 Enemies: grunts, armoured soldiers (light hits barely scratch them), fast
 runners, giant barbarians (who shove the small ones aside at a gate), bats
-that fly over gates, skeleton crossbowmen that shoot gates from range,
-and the Bone Warlord boss in wave 10. They get tougher every wave.
+and armoured drakes that fly straight over the gates, skeleton crossbowmen
+that shoot gates from range, slimes that burst into slimelings, sappers
+that blow up gates, half-invisible shades only frost crystals and banners
+reveal, runed skeletons the hero barely hurts, and support casters that
+heal, hasten or raise the fallen. A Bone Warlord leads wave 10, two lead
+wave 15. They get tougher every wave.
 
 ## Building and running
 
@@ -59,7 +67,7 @@ and the Bone Warlord boss in wave 10. They get tougher every wave.
   set in Godot's editor settings); copy it to the phone and tap it. Newer
   builds install over older ones.
 - `./build.sh test` runs the headless rule tests (including a bot playing all
-  10 waves), `sim` a balance timeline, `shot` a screenshot; see the top of
+  15 waves), `sim` a balance timeline, `shot` a screenshot; see the top of
   `build.sh`. Development notes: [CLAUDE.md](CLAUDE.md); design:
   [docs/DESIGN.md](docs/DESIGN.md).
 
@@ -78,7 +86,7 @@ and the Bone Warlord boss in wave 10. They get tougher every wave.
 - 3D models (CC0): [Kenney](https://kenney.nl) (Tower Defense Kit, Mini
   Dungeon, Mini Arena, Nature Kit), [Kay Lousberg / KayKit](https://kaylousberg.com)
   (Adventurers, Skeletons, Medieval Hexagon, Forest Nature, Dungeon
-  Remastered) and [Quaternius](https://quaternius.com) (Animated Monsters: bat).
+  Remastered) and [Quaternius](https://quaternius.com) (Animated Monsters: bat, slime, dragon).
 - Sound effects: Kenney and OpenGameArt contributors, CC0; the wave horn is
   "Scary Echoey Horn Esque Sound" by Kat (CC-BY 4.0). Full list in
   [assets/sfx/CREDITS.txt](assets/sfx/CREDITS.txt).

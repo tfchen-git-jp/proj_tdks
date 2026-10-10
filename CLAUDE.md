@@ -10,7 +10,7 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.1.30)
+## The game today (v0.2.2)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
@@ -28,7 +28,8 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   off cancels) and ATTACK (no building). 15 waves (10 until v0.1.26);
   clear them all to win.
   Enemies that reach the keep stand at it and hit it with their dps
-  (queueing like at a gate) until killed; keep HP Level.BASE_HP (600).
+  (queueing like at a gate, up to 4 abreast) until killed; keep HP
+  Level.BASE_HP (600).
 - **Cards / relics reworked in v0.1.30** (measured weak or strong): Long
   Shot (+range and damage beyond 5 m), Ricochet (-25% a bounce, 5 m),
   Swift Boots (+attack speed while moving), Scholar (+XP and +2% bolt
@@ -62,7 +63,7 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   there are 50+ waves or several maps (user).
 - **Menu / saves (scripts/menu.gd, save.gd, confirm.gd):** title screen
   over the drifting map: New game, Continue (user://run.json, written at
-  every wave start and clear; Sim.to_save / from_save, SAVE_VERSION 2),
+  every wave start and clear; Sim.to_save / from_save, SAVE_VERSION 4),
   Scores (top 10 in user://scores.json: waves cleared, then
   Save.score_of = keep HP % x 10 + gold + 50 per hero level,
   XP progress counting its share), Credits, Exit. Esc / Android
@@ -101,7 +102,8 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   building: info, stats, range ring). Archer: Sniper Tower (long reach,
   the enemy with the most HP, ignores armour) / Repeater Tower (two
   arrows a shot). Ballista: Great (huge bolts, pierce 4) / Harpoon
-  (slows all it hits). Mortar: Cluster (5 bomblets) / Fire (burns 4 s,
+  (slows all it hits). Mortar: Cluster (5 bomblets, each enemy hit once a
+  shell: Sim projectile `struck`, v0.2.2) / Fire (burns 4 s,
   credited to the mortar). Frost: Glacier (freezes solid; bosses half)
   / Frostbite (damage, enemies brittle: +50% damage taken). Banner: War
   Drums (towers x2 attack speed, hero nothing) / Hero's Standard (hero
@@ -126,23 +128,34 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   During an attack: the tower the hero stands next to (main.RING_NEAR).
   Level-1 reach: archer 6, ballista 8, mortar 2.5-7, frost 3.8, banner
   4.5 m.
-- **Enemies:** grunt (red), armored (grey, `armor` 1), runner (yellow,
-  fast), brute (giant, KayKit Barbarian, red HP bar), bat (wave 4+, flies
-  at 2.2 m in a straight line from its lane's start to the keep, over
-  gates: Horde.fly_tracks / track_of(i), since v0.1.30; mortar and frost
-  can't target it), crossbowman
-  (wave 5+, skeleton; stops `ranged` 6.5 m short of the gate / keep, out
-  of the queue, and shoots it), Bone Warlord (the
-  boss of waves 10 and 15: own HP (a wave group's `hp` multiplies it:
-  wave 15 sends two at x1.85), armour 2.5; at 75 / 50 / 25% HP calls 6
-  armored men, at 25% goes berserk x1.4 and immune to slows and freezes
-  (Horde.immune); one HP bar each at the top of the HUD), slime (wave 6+,
-  bursts into 4 slimelings where it dies, same toughness: ENEMIES
-  `split`, Sim._drops_from_deaths), bone mage (wave 8+, ranged caster,
-  heals all within 4.5 m 5% max HP/s, green ring), captain (wave 9+,
-  armoured knight, all within 4 m walk and attack 40% faster, orange
-  ring); auras never touch bosses, the best one counts (Horde._auras,
-  haste / healed per enemy). Freeze (Horde.freeze_t), brittle and
+- **Enemies** (first wave in brackets): grunt (red, 1), armored (grey,
+  `armor` 1, 2), runner (yellow, fast, 3), brute (giant, KayKit Barbarian,
+  red HP bar, 4), bat (4; flies at 2.2 m in a straight line from its
+  lane's start to the keep, over gates: Horde.fly_tracks / track_of(i);
+  mortar and frost can't target it), crossbowman (5, skeleton; stops
+  `ranged` 6.5 m short of the gate / keep, out of the queue, and shoots
+  it), slime (6, bursts into 4 slimelings where it dies, same toughness:
+  ENEMIES `split`, Sim._drops_from_deaths), sapper (7, skeleton minion,
+  rushes the wall and explodes: `blast` [40 gate, 20 keep] x sqrt of the
+  wave's HP factor, no gold), bone mage (8, walks in the queue, heals
+  all within 4.5 m 5% max HP/s, green ring), captain (9, armoured
+  knight, all within 4 m walk and attack 40% faster, orange ring), shade
+  (9, half-transparent rogue: untargetable unless inside a frost
+  crystal's or war banner's reach (+1.5 s, Sim.REVEAL_LINGER) or within
+  4 m of the keep (KEEP_REVEAL); dps 8, so an unrevealed gate falls),
+  Bone Warlord (boss of waves 10 and 15, below), drake (11, armoured
+  flyer like the bat, HP bar), warded (12, the hero's damage x0.2 incl.
+  his fire; towers full), necromancer (13, purple ring 5 m: an ally
+  dying in it comes back at full HP, then it rests 8 s, 16 s after a
+  giant; never raises a boss: ENEMIES `revive`, Horde._raise). Support
+  enemies keep pace with their crowd (Horde.escort). Auras never touch
+  bosses, the best one counts (Horde._auras, haste / healed per enemy).
+  **Bone Warlord:** HP 2000 x Level.boss_hp(w, group hp) (grows like
+  everyone's from wave 10 on: wave 15 sends two at x1.6, ~6400 HP each,
+  v0.2.2), armour 2.5; at 75 / 50 / 25% HP calls 6 armored men, at 25%
+  goes berserk x1.4 and immune to slows and freezes (Horde.immune);
+  freezes last half as long on it; one HP bar each at the top of the HUD.
+  Freeze (Horde.freeze_t), brittle and
   Horde.pace(i) (slow x haste, 0 frozen). Armour: each hit loses
   `armor`, never below Level.ARMOR_FLOOR (40%) of it; burning ignores it.
   Every building and enemy has `desc` (~10 words) / `weak` / `strong`,
@@ -150,7 +163,11 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   the "NEW:" card when a wave first brings a type (hud.show_intro,
   Level.new_types) and the menu's Guide page. User rule (2026-10-10):
   UI text short and precise, no story-telling sentences. Buildings list
-  "Strong vs" first, enemies "Weak vs" first (player's point of view).
+  "Strong vs" first, enemies "Weak vs" first (player's point of view);
+  support buildings (`support`: banner and its specs, farm, bank) say
+  "Good with" / "Bad with" (適合／不適合) instead (user, v0.2.2: 克制
+  防禦塔群 read as if the banner countered towers). Every tier of a
+  card / relic has its full sentence (no "..." follow-ons).
   UiText.fmt (scripts/ui_text.gd) puts each unit / building's icon
   (assets/icons, rendered by tools/make_icons.gd: re-run after changing
   a model) in front of its name and colours Strong (green) / Weak (red)
@@ -159,14 +176,17 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   popup buttons carry the building's icon; lane-entrance previews are
   icon + count rows (main._lane_preview). Leaving a spot forgets a
   previewed (tapped once) tower. HP x Level.wave_hp(w) = 1 +
-  0.2 w + 0.05 w^2 since v0.1.28 (Horde.max_hp keeps it for the bars); gold per kill
+  0.2 w + 0.05 w^2 (Horde.max_hp keeps it for the bars); gold per kill
   doesn't grow. Drops: coins (1), coin stacks (5), ingots (20)
   (Sim.gold_pieces). They walk in from beyond the map and are untargetable
   until their lane's start line (red dashes on the road,
   Level.START_LINE_OUT = 2 m outside the hero's walkable area). At a
-  standing gate they queue: the front rank attacks, the rest wait and
-  step up; giants shove small ones aside and a second giant hits over the
-  first one's shoulder.
+  standing gate (and the keep) they queue: up to Horde.FRONT_MAX (4)
+  attack side by side at Horde.FRONT_OFFS across the road (a giant
+  takes the middle two places; user, v0.2.2: was one or two in a line),
+  the ones held within 3 m sidestep to a free place, the rest wait and
+  step up; giants shove small ones aside and a second giant hits over
+  the first one's shoulder (`reach`). Horde._front_rank.
 - **HUD:** keep HP + hero level / XP bar (top left), coins (top right), FPS
   (top centre), wave / phase line under them, minimap (bottom right;
   hidden while a popup is up), build version (bottom left), gate HP bars
@@ -174,18 +194,20 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 - **Sound:** 32 SFX (assets/sfx) + looping BGM (assets/music, -16 dB).
 - **PC build:** the exported exe sizes its window to 90% of the screen
   height (main._fit_pc_window); editor/WSL runs keep 450x1000.
-- **Balance (v0.1.30, tools/meta_report.py):** target set by the user:
-  the standard bot (Bot.PLAN, Bot.SPECS sniper / great / cluster /
-  glacier / standard, Bot.CARD_PRIORITY) wins 60-65%. Last measured 64%
-  with enemy HP x(1 + 0.2w + 0.058w^2) before the v0.1.30 card tuning
-  and the new spot unlocks; RETUNE after the next enemy types (user:
-  re-measuring later). Losses mostly on the wave-15 bosses. Card / relic
-  value: `--force=ID[:N]` puts it N-th in the bot's picks (docs/DESIGN.md
-  "Card and relic value"): tower-wide effects (Rally, Spotter,
-  Engineer) and Explosive Tips came out strongest, hence their small
-  numbers; Long Shot / Swift Boots look weak partly because the bot
-  hardly moves. Spec A/B: `--specs` (DESIGN.md "Spec balance").
-  Older: v0.1.23 (10 waves) 91% standard, ~12% random builds.
+- **Balance: tuned by the user's play-tests since v0.2.2** (user: "our
+  game SHOULD be designed for players"; v0.2.1 felt easy: wave-15
+  warlords died in 10-15 s, Cluster bomblets all hit one warlord). The
+  standard bot (Bot.PLAN, Bot.SPECS sniper / great / cluster / glacier /
+  standard, Bot.CARD_PRIORITY) stands at fixed spots and now loses every
+  game at wave 10 (48 seeds, v0.2.2); it relied on Cluster melting the
+  boss. Its old target, 60-65% (v0.1.28-0.2.1; v0.2.1: 83% after toning
+  the new enemies down), no longer drives tuning. tools/meta_report.py
+  still compares options (A/B within the bot): card / relic value
+  `--force=ID[:N]` (docs/DESIGN.md "Card and relic value"), specs
+  `--specs=kind:spec` ("Spec balance"). Gotcha: the bot's win rate swings
+  30+ points with card changes it picks itself, so re-measure the
+  baseline before comparing. The test full run gives the bot an
+  unbreakable keep: it checks that all 15 waves play through.
 
 ## Localization (v0.1.24)
 
@@ -217,7 +239,13 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   (克制：雜兵), and UiText._find_word took the label's placeholder mark
   for a letter, so that name never got its icon.
 - Level.info: buildings AND tower specs (they have a `cost`) list
-  Strong vs first with the building labels (克制／被克制).
+  Strong vs first with the building labels (克制／被克制); support ones
+  (`support`) use 適合／不適合.
+- **Provisional (not yet on the picking page, the user's to pick):**
+  the v0.2.1 enemy names 符文兵 (warded), 暗影 (shade), 爆破兵
+  (sapper), 飛龍 (drake), 死靈法師 (necromancer) and the v0.2.2 labels
+  適合／不適合 (Good with / Bad with). Add them as rows, then adopt the
+  picks in gen_zh_tw.py G.
 - `tools/loc_check.py` (run by `./build.sh test`): every tr / Loc.t
   literal and table text has an entry, %-slots kept, characters in the
   font, no mainland word, full-width punctuation. `--pot` lists every
@@ -229,17 +257,16 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   labels: buildings 克制／被克制, enemies 弱點／強項 (picks).
 - HUD phase line: BUILD PHASE / COMBAT PHASE (user: "ATTACK" read oddly).
 
-## Next (docs/DESIGN.md "Build order")
+## Next (docs/DESIGN.md "Roadmap" has the full list)
 
-- The user's play-test feedback on 15 waves / specs / new enemies.
-- docs/DESIGN.md "Roadmap": done in v0.1.28: 15 waves, specs + selling,
-  relic tiers. Left: endless mode + mutators (later, user), card
-  evolutions + new relics (Hades-like combos: far future), second map;
-  plus gate-set synergy, Japanese, QoL.
-- Balance leads from the meta report: banner and frost are weak, ballista
-  strong; Rally / Engineer cards weak.
-- More levels / maps (the user designs them); then permanent unlocks and
-  difficulty mutators.
+- The user play-tests v0.2.2 (harder warlords, Cluster nerf, 4-wide
+  gate attacks, stronger shades) and says what is too hard / easy;
+  tune from that, not from the bot.
+- Picking-page rows for the provisional names above.
+- Later (user): endless mode + mutators; card evolutions + new relics;
+  gate-set synergy; second map (the user designs it); Japanese; QoL
+  (2x speed, settings); a bot that moves / drafts like a player, if bot
+  runs are to mean anything again.
 
 ## Architecture
 
@@ -298,7 +325,11 @@ assets_in/INVENTORY.md lists 16 CC0 packs (previews in assets_in/_previews).
   (boss; weapons from separate gltf files via bake_vat `extra`), Mage +
   staff (bone mage), KayKit Adventurers Knight (captain), Quaternius
   Slime (.blend -> GLB with Blender, every action as an NLA track;
-  palette; slimelings = the same VAT at half size, tinted). All
+  palette; slimelings = the same VAT at half size, tinted). v0.2.1:
+  KayKit Skeletons Minion (sapper), KayKit Adventurers Rogue (shade,
+  vat_ghost.gdshader: alpha from the instance colour) and Mage (necro-
+  mancer), Quaternius Animated Monster Pack Dragon (drake, palette);
+  warded = the boss VAT small and tinted. All
   baked to VAT (`--only=a,b` bakes just those); the raw .glb/.gltf are
   left out of exports.
 - Downloaded on the main PC from github.com/KayKit-Game-Assets
@@ -450,6 +481,19 @@ Windows build, never in WSL.
   to 2 m outside the walkable area and marked (user: enemies "in range"
   at the bottom of the centre lane weren't shot); score = keep % x 10 +
   gold for ties on waves.
+- v0.2.2 (the user's first play-test of v0.2.1: "EASILY cleared",
+  warlords dead in 10-15 s): Cluster bomblets hit each enemy once a
+  shell, warlord HP 1300 -> 2000 and grows with the wave
+  (Level.boss_hp), up to 4 enemies hit a wall side by side, shades dps
+  3 -> 8, support buildings labelled Good with / Bad with, full
+  sentences on every card tier. Balance now follows the user's play,
+  not the bot (which loses at wave 10). Fixed: Fx.BODY_H listed only
+  the first 7 enemy types, so a burning slime / captain / new enemy
+  threw every frame and skipped the flames (since v0.1.28; a test
+  checks the sizes now).
+- v0.2.1 (version names restart: build 31 = v0.2.1): sappers, shades,
+  drakes, warded, necromancers; the bot tuned to 83% before the user
+  asked to play-test first.
 - v0.1.30: card / relic measurement and reworks (tools/meta_report.py
   --force), spots unlocked by tactical value up to Lv 17 + 2 gold plots,
   flyers fly straight, support enemies walk with their crowd, Last Stand

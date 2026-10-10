@@ -365,6 +365,14 @@ msgctxt "enemy"
 msgid "Strong vs:"
 msgstr "強項："
 
+msgctxt "building"
+msgid "Good with:"
+msgstr "適合："
+
+msgctxt "building"
+msgid "Bad with:"
+msgstr "不適合："
+
 msgid "Archer Tower"
 msgstr "弓箭塔"
 
@@ -458,8 +466,8 @@ msgstr "存錢準備大升級"
 msgid "bats (fly over), crossbowmen (shoot from range)"
 msgstr "魔蝠（飛越）、骷髏弩手（遠距射擊）"
 
-msgid "holding crowds inside tower range"
-msgstr "把敵群擋在塔的射程內"
+msgid "grunts, runners, slimes (held in tower range)"
+msgstr "雜兵、疾行兵、史萊姆（擋在塔的射程內）"
 
 msgid "Sniper Tower"
 msgstr "狙擊塔"
@@ -568,6 +576,9 @@ msgstr "巨人、城門前的隊伍、骷髏弩手"
 
 msgid "the berserk boss"
 msgstr "狂暴的頭目"
+
+msgid "the boss, armored, bats"
+msgstr "頭目、裝甲兵、魔蝠"
 
 msgid "the boss, giants, armored"
 msgstr "頭目、巨人、裝甲兵"
@@ -679,6 +690,72 @@ msgstr "弩砲塔、臼砲塔"
 
 msgid "archers (armor)"
 msgstr "弓箭塔（護甲）"
+
+msgid "warded"
+msgstr "符文兵"
+
+msgid "shade"
+msgstr "暗影"
+
+msgid "shades"
+msgstr "暗影"
+
+msgid "sapper"
+msgstr "爆破兵"
+
+msgid "sappers"
+msgstr "爆破兵"
+
+msgid "drake"
+msgstr "飛龍"
+
+msgid "drakes"
+msgstr "飛龍"
+
+msgid "necromancer"
+msgstr "死靈法師"
+
+msgid "necromancers"
+msgstr "死靈法師"
+
+msgid "Runes turn aside 80% of the hero's damage."
+msgstr "符文擋下英雄 80% 的傷害。"
+
+msgid "archers, mortars, ballistas"
+msgstr "弓箭塔、臼砲塔、弩砲塔"
+
+msgid "Can't be hit unless near a frost crystal or war banner."
+msgstr "除非靠近冰晶塔或戰旗塔，否則無法被攻擊。"
+
+msgid "frost, banners (reveal it)"
+msgstr "冰晶塔、戰旗塔（使其現形）"
+
+msgid "gates out of frost and banner reach"
+msgstr "冰晶塔與戰旗塔範圍外的城門"
+
+msgid "Runs at the walls and explodes: a big hit on a gate or the keep."
+msgstr "衝向城牆自爆：對城門或主堡造成重創。"
+
+msgid "archers, the hero"
+msgstr "弓箭塔、英雄"
+
+msgid "Armored flyer, straight to the keep."
+msgstr "重甲飛行敵人，直撲主堡。"
+
+msgid "ballistas, archers, the hero"
+msgstr "弩砲塔、弓箭塔、英雄"
+
+msgid "Raises an ally that falls near it at full HP (then rests 8 s)."
+msgstr "讓附近倒下的同伴滿血復活（之後休息 8 秒）。"
+
+msgid "giants (a second life)"
+msgstr "巨人（第二條命）"
+
+msgid "banners"
+msgstr "戰旗塔"
+
+msgid "war banner"
+msgstr "戰旗塔"
 
 msgid "Basic foot soldier, comes in big crowds."
 msgstr "基本步兵，成群出現。"
@@ -938,11 +1015,11 @@ msgstr "多 3 支弩箭（40% 傷害）射向其他敵人"
 msgid "Bolts fly straight through 1 more enemy"
 msgstr "弩箭直線穿透多 1 個敵人"
 
-msgid "...through 2 more enemies"
-msgstr "……穿透多 2 個敵人"
+msgid "Bolts fly straight through 2 more enemies"
+msgstr "弩箭直線穿透多 2 個敵人"
 
-msgid "...through 3 more enemies"
-msgstr "……穿透多 3 個敵人"
+msgid "Bolts fly straight through 3 more enemies"
+msgstr "弩箭直線穿透多 3 個敵人"
 
 msgid "Bolts bounce to 1 nearby enemy (-25% each bounce)"
 msgstr "弩箭彈向附近 1 個敵人（每次彈射 -25%）"
@@ -1019,20 +1096,20 @@ msgstr "經驗值 +60%；每級弩箭傷害 +2%"
 msgid "All towers attack 4% faster; twice that within 6 m of you"
 msgstr "所有防禦塔攻擊速度 +4%；你周圍 6 公尺內加倍"
 
-msgid "...8% faster (16% near you)"
-msgstr "……+8%（你附近 +16%）"
+msgid "All towers attack 8% faster; 16% within 6 m of you"
+msgstr "所有防禦塔攻擊速度 +8%；你周圍 6 公尺內 +16%"
 
-msgid "...12% faster (24% near you)"
-msgstr "……+12%（你附近 +24%）"
+msgid "All towers attack 12% faster; 24% within 6 m of you"
+msgstr "所有防禦塔攻擊速度 +12%；你周圍 6 公尺內 +24%"
 
 msgid "Enemies your bolts hit are marked for 4 s: towers deal them +12% damage"
 msgstr "被你的弩箭命中的敵人會被標記 4 秒：防禦塔對其傷害 +12%"
 
-msgid "...+20%"
-msgstr "……+20%"
+msgid "Enemies your bolts hit are marked for 4 s: towers deal them +20% damage"
+msgstr "被你的弩箭命中的敵人會被標記 4 秒：防禦塔對其傷害 +20%"
 
-msgid "...+30%"
-msgstr "……+30%"
+msgid "Enemies your bolts hit are marked for 4 s: towers deal them +30% damage"
+msgstr "被你的弩箭命中的敵人會被標記 4 秒：防禦塔對其傷害 +30%"
 
 msgid "All gates +20% HP"
 msgstr "所有城門生命 +20%"
@@ -1046,11 +1123,11 @@ msgstr "所有城門生命 +50%"
 msgid "Kills near you drop +1 gold (up to 20 a wave)"
 msgstr "在你附近擊殺額外掉落 1 黃金（每波最多 20）"
 
-msgid "...up to 40 a wave"
-msgstr "……每波最多 40"
+msgid "Kills near you drop +1 gold (up to 40 a wave)"
+msgstr "在你附近擊殺額外掉落 1 黃金（每波最多 40）"
 
-msgid "...up to 60 a wave"
-msgstr "……每波最多 60"
+msgid "Kills near you drop +1 gold (up to 60 a wave)"
+msgstr "在你附近擊殺額外掉落 1 黃金（每波最多 60）"
 
 msgid "Twin Crossbow"
 msgstr "雙聯弩"

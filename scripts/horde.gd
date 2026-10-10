@@ -33,6 +33,9 @@ var freeze_t := PackedFloat32Array()  # seconds frozen solid (Glacier): no walki
 var brittle := PackedFloat32Array()  # extra damage taken (Frostbite) ...
 var brittle_t := PackedFloat32Array()  # ... for this many seconds
 var immune := PackedByteArray()  # 1 = slows and freezes don't work (the berserk boss)
+var hidden := PackedByteArray()  # 1 = a cloaked shade nobody reveals: untargetable (Sim._reveal)
+var reveal_t := PackedFloat32Array()  # s it stays revealed after leaving a revealing tower's reach
+var rest_t := PackedFloat32Array()  # a necromancer's rest before it can raise again, s
 var mark_v := PackedFloat32Array()  # Spotter: extra damage from towers ...
 var mark_t := PackedFloat32Array()  # ... for this many seconds
 ## Per enemy this step: the best haste from a captain nearby (walk and
@@ -66,6 +69,9 @@ var keep_shield := 0.0
 var keep_saved := false
 ## Walls saved this step (their positions, for the view).
 var saved: Array[Vector3] = []
+## This step's sapper blasts and necromancer raisings (positions, view).
+var blasts: Array[Vector3] = []
+var raised: Array[Vector3] = []
 ## The keep: every lane ends at it. Enemies that get there stop and attack
 ## it like a gate (queueing the same way) until killed; one HP pool.
 var keep_hp := 1e9
@@ -96,6 +102,13 @@ const KEEP_REACH := 1.0
 const SHOVE_SPEED := 3.0
 const SHOVE_EDGE := Level.ROAD_HALF_WIDTH + 0.1
 const HEAVY_CENTRING := 0.5
+## At most FRONT_MAX enemies hit a gate or the keep at once (a giant
+## counts twice), side by side at these offsets (user, v0.2.2: was one or
+## two in a line); the next ones held within FRONT_DRAW m sidestep to a
+## free place.
+const FRONT_MAX := 4
+const FRONT_OFFS: Array[float] = [-1.05, -0.35, 0.35, 1.05]
+const FRONT_DRAW := 3.0
 
 
 func _init(lane_tracks: Array[Track], seed_value := 1) -> void:
@@ -144,6 +157,9 @@ func spawn(type: int, ln: int, hp_mult := 1.0, at_d := -1.0, at_off := INF) -> v
 	brittle.push_back(0.0)
 	brittle_t.push_back(0.0)
 	immune.push_back(0)
+	hidden.push_back(1 if e.get("cloak", false) else 0)
+	reveal_t.push_back(0.0)
+	rest_t.push_back(0.0)
 	mark_v.push_back(0.0)
 	mark_t.push_back(0.0)
 	haste.push_back(0.0)
@@ -187,7 +203,7 @@ func index_of(id: int) -> int:
 
 ## Can towers and the hero hit it yet (past its lane's start line)?
 func targetable(i: int) -> bool:
-	return hp[i] > 0.0 and d[i] >= (fly_entry[lane[i]] if _flies(i) else entry[lane[i]])
+	return hp[i] > 0.0 and not hidden[i] and d[i] >= (fly_entry[lane[i]] if _flies(i) else entry[lane[i]])
 
 
 func _flies(i: int) -> bool:
@@ -217,9 +233,34 @@ func damage(i: int, amount: float, flashes := true, armored := true) -> bool:
 	if flashes:
 		flash[i] = 0.12
 	if hp[i] <= 0.0:
+		if _raise(i):
+			return false
 		killed += 1
 		deaths.push_back({pos = pos[i], kind = kind[i], d = d[i], lane = lane[i], off = off[i], mult = mult[i],
 			fwd = forward(i)})
+		return true
+	return false
+
+
+## A necromancer within reach and rested raises enemy i, dying, back to
+## full HP (user, v0.2.1: no corpses kept; the fall is undone). Never a
+## boss or a necromancer. Returns true if it did.
+func _raise(i: int) -> bool:
+	var ei: Dictionary = Level.ENEMIES[kind[i]]
+	if ei.get("boss", false) or ei.has("revive"):
+		return false
+	for j in count():
+		var ej: Dictionary = Level.ENEMIES[kind[j]]
+		if j == i or hp[j] <= 0.0 or not ej.has("revive") or rest_t[j] > 0.0:
+			continue
+		var r := float(ej.aura)
+		if Vector2(pos[i].x - pos[j].x, pos[i].z - pos[j].z).length() > r:
+			continue
+		hp[i] = max_hp[i]
+		burn_t[i] = 0.0
+		burn_dps[i] = 0.0
+		rest_t[j] = float(ej.revive[1 if ei.get("heavy", false) else 0])
+		raised.push_back(pos[i])
 		return true
 	return false
 
@@ -302,7 +343,9 @@ func step(dt: float) -> void:
 		if burn_t[i] > 0.0:
 			burn_t[i] -= dt
 			var before := dealt
-			var died := damage(i, burn_dps[i] * dt, false, false)
+			# The hero's fire is turned aside by wards like its bolts.
+			var ward := float(Level.ENEMIES[kind[i]].get("ward", 0.0)) if burn_src[i] == 0 else 0.0
+			var died := damage(i, burn_dps[i] * (1.0 - ward) * dt, false, false)
 			if burn_src[i] == 1:
 				burn_mortar += dealt - before
 			else:
@@ -317,6 +360,8 @@ func step(dt: float) -> void:
 		freeze_t[i] = maxf(freeze_t[i] - dt, 0.0)
 		brittle_t[i] -= dt
 		mark_t[i] -= dt
+		reveal_t[i] -= dt
+		rest_t[i] -= dt
 		var nd := d[i] + maxf(spd[i], escort[i]) * pace(i) * dt
 		blocked[i] = 0
 		var stop := d[i] + 1e9
@@ -340,6 +385,7 @@ func step(dt: float) -> void:
 	# 3. Gate / keep damage, animation phase, positions.
 	shots.clear()
 	saved.clear()
+	blasts.clear()
 	keep_shield = maxf(keep_shield - dt, 0.0)
 	for g in gate_shield.size():
 		gate_shield[g] = maxf(gate_shield[g] - dt, 0.0)
@@ -350,28 +396,17 @@ func step(dt: float) -> void:
 		# Frost slows attacks as much as walking (swing and damage); a
 		# captain's haste speeds both up.
 		var pc := pace(i)
+		# A sapper at its wall (or held in the queue close to it) explodes.
+		if e.has("blast") and blocked[i] != 0 and _wall_gap(i) < 2.5:
+			var g0 := gate_of(i)
+			var boom := float(e.blast[0 if g0 >= 0 else 1]) * sqrt(mult[i])
+			wall_dmg[kind[i]] += _hit_wall(g0, boom)
+			blasts.push_back(pos[i])
+			hp[i] = 0.0  # gone: no gold, no XP (it is not in `deaths`)
+			continue
 		if blocked[i] == 1:
 			var dmg := float(e.dps) * power[i] * pc * dt
-			var g := gate_of(i)
-			if g >= 0:
-				if gate_shield[g] > 0.0:
-					dmg = 0.0
-				elif gate_hp[g] - dmg <= 0.0 and last_stand > 0.0 and not gate_saved[g]:
-					dmg = maxf(gate_hp[g] - 1.0, 0.0)
-					gate_saved[g] = 1
-					gate_shield[g] = last_stand
-					saved.push_back(tracks[gate_lane[g]].point(gate_d[g]))
-				gate_hp[g] -= dmg
-			else:
-				if keep_shield > 0.0:
-					dmg = 0.0
-				elif keep_hp - dmg <= 0.0 and last_stand > 0.0 and not keep_saved:
-					dmg = maxf(keep_hp - 1.0, 0.0)
-					keep_saved = true
-					keep_shield = last_stand
-					saved.push_back(Level.KEEP_POS)
-				keep_hp -= dmg
-			wall_dmg[kind[i]] += dmg
+			wall_dmg[kind[i]] += _hit_wall(gate_of(i), dmg)
 		if blocked[i] == 0:
 			phase[i] += spd[i] * pc * dt * 7.0
 		else:
@@ -384,6 +419,38 @@ func step(dt: float) -> void:
 		if e.get("flies", false):
 			pos[i].y += float(e.fly_h) + 0.18 * sin(phase[i] * 0.5)
 	_compact()
+
+
+## Damage `dmg` to gate slot g (or the keep, g < 0), Last Stand included.
+## Returns the damage done.
+func _hit_wall(g: int, dmg: float) -> float:
+	if g >= 0:
+		if gate_shield[g] > 0.0:
+			return 0.0
+		if gate_hp[g] - dmg <= 0.0 and last_stand > 0.0 and not gate_saved[g]:
+			dmg = maxf(gate_hp[g] - 1.0, 0.0)
+			gate_saved[g] = 1
+			gate_shield[g] = last_stand
+			saved.push_back(tracks[gate_lane[g]].point(gate_d[g]))
+		gate_hp[g] -= dmg
+		return dmg
+	if keep_shield > 0.0:
+		return 0.0
+	if keep_hp - dmg <= 0.0 and last_stand > 0.0 and not keep_saved:
+		dmg = maxf(keep_hp - 1.0, 0.0)
+		keep_saved = true
+		keep_shield = last_stand
+		saved.push_back(Level.KEEP_POS)
+	keep_hp -= dmg
+	return dmg
+
+
+## How far enemy i is from the wall it walks at (its gate or the keep), m.
+func _wall_gap(i: int) -> float:
+	var g := gate_of(i)
+	if g >= 0:
+		return gate_d[g] - d[i]
+	return track_of(i).length + KEEP_REACH - d[i]
 
 
 ## A new wave: Last Stand (s, 0 = none) is ready again on every wall.
@@ -534,6 +601,59 @@ func _queue(ln: int, gd: float, slot: int, prev: PackedFloat32Array, dt: float) 
 			var stop_gap := _keep_gap(i) + KEEP_REACH if keep else gap[i]
 			blocked[i] = 1 if reach > 0.0 and gd - d[i] <= stop_gap + reach else 2
 		placed.push_back(i)
+	_front_rank(near, dt)
+
+
+## The front rank at a wall (`near`, front first): up to FRONT_MAX attack,
+## each sliding to a place of FRONT_OFFS (giants take the middle two); held
+## ones close behind sidestep to a free place, then step up.
+func _front_rank(near: Array, dt: float) -> void:
+	var used := 0
+	var free: Array[float] = FRONT_OFFS.duplicate()
+	# Giants first: they shove their way in, light ones make room.
+	var order: Array = []
+	for v in near:
+		if Level.ENEMIES[kind[int(v.y)]].get("heavy", false):
+			order.push_back(v)
+	for v in near:
+		if not Level.ENEMIES[kind[int(v.y)]].get("heavy", false):
+			order.push_back(v)
+	for v in order:
+		var i := int(v.y)
+		if blocked[i] != 1:
+			continue
+		var heavy: bool = Level.ENEMIES[kind[i]].get("heavy", false)
+		var w := 2 if heavy else 1
+		if used + w > FRONT_MAX:
+			blocked[i] = 2  # no room: waits its turn
+			continue
+		used += w
+		if heavy:
+			free.erase(FRONT_OFFS[1])
+			free.erase(FRONT_OFFS[2])
+			continue
+		var s := _nearest_place(free, off[i])
+		if not is_inf(s):
+			free.erase(s)
+			off[i] = move_toward(off[i], s, SHOVE_SPEED * 0.5 * dt)
+	for v in near:
+		if used >= FRONT_MAX or free.is_empty():
+			return
+		var i := int(v.y)
+		if blocked[i] != 2 or Level.ENEMIES[kind[i]].get("heavy", false) or _wall_gap(i) > FRONT_DRAW:
+			continue
+		var s := _nearest_place(free, off[i])
+		free.erase(s)
+		used += 1
+		off[i] = move_toward(off[i], s, SHOVE_SPEED * dt)
+
+
+func _nearest_place(places: Array[float], o: float) -> float:
+	var best := INF
+	for s in places:
+		if is_inf(best) or absf(s - o) < absf(best - o):
+			best = s
+	return best
 
 
 ## Index of the targetable enemy nearest to `p` within `r`, or -1.
@@ -661,6 +781,7 @@ func _compact() -> void:
 		mult[i] = mult[last]; freeze_t[i] = freeze_t[last]; brittle[i] = brittle[last]
 		brittle_t[i] = brittle_t[last]; immune[i] = immune[last]; haste[i] = haste[last]; healed[i] = healed[last]
 		escort[i] = escort[last]; mark_v[i] = mark_v[last]; mark_t[i] = mark_t[last]
+		hidden[i] = hidden[last]; reveal_t[i] = reveal_t[last]; rest_t[i] = rest_t[last]
 		d[i] = d[last]; off[i] = off[last]; spd[i] = spd[last]; gap[i] = gap[last]
 		phase[i] = phase[last]; flash[i] = flash[last]; slow[i] = slow[last]
 		slow_t[i] = slow_t[last]; blocked[i] = blocked[last]; pos[i] = pos[last]
@@ -670,7 +791,7 @@ func _compact() -> void:
 		power.resize(last); stage.resize(last)
 		mult.resize(last); freeze_t.resize(last); brittle.resize(last); brittle_t.resize(last)
 		immune.resize(last); haste.resize(last); healed.resize(last); escort.resize(last)
-		mark_v.resize(last); mark_t.resize(last)
+		mark_v.resize(last); mark_t.resize(last); hidden.resize(last); reveal_t.resize(last); rest_t.resize(last)
 		d.resize(last); off.resize(last); spd.resize(last); gap.resize(last)
 		phase.resize(last); flash.resize(last); slow.resize(last)
 		slow_t.resize(last); blocked.resize(last); pos.resize(last)

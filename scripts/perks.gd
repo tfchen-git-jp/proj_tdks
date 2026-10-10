@@ -38,7 +38,8 @@ const CARDS := {
 		desc = ["+1 bolt (40% damage) at another enemy", "+2 bolts (40% damage) at other enemies",
 			"+3 bolts (40% damage) at other enemies"]},
 	pierce = {name = "Piercing Bolts", v = [1, 2, 3],
-		desc = ["Bolts fly straight through 1 more enemy", "...through 2 more enemies", "...through 3 more enemies"]},
+		desc = ["Bolts fly straight through 1 more enemy", "Bolts fly straight through 2 more enemies",
+			"Bolts fly straight through 3 more enemies"]},
 	ricochet = {name = "Ricochet", v = [1, 2, 3],
 		desc = ["Bolts bounce to 1 nearby enemy (-25% each bounce)", "Bounce to 2 nearby enemies", "Bounce to 3 nearby enemies"]},
 	# v0.1.30: measured the strongest card (was half damage, 0.9/1.2/1.5 m).
@@ -63,14 +64,16 @@ const CARDS := {
 			"+60% XP; +2% bolt damage per level"]},
 	# Tower-wide cards scale with the whole build: small numbers.
 	rally = {name = "Rally", v = [0.04, 0.08, 0.12],
-		desc = ["All towers attack 4% faster; twice that within 6 m of you", "...8% faster (16% near you)",
-			"...12% faster (24% near you)"]},
+		desc = ["All towers attack 4% faster; twice that within 6 m of you", "All towers attack 8% faster; 16% within 6 m of you",
+			"All towers attack 12% faster; 24% within 6 m of you"]},
 	spotter = {name = "Spotter", v = [0.12, 0.2, 0.3],
-		desc = ["Enemies your bolts hit are marked for 4 s: towers deal them +12% damage", "...+20%", "...+30%"]},
+		desc = ["Enemies your bolts hit are marked for 4 s: towers deal them +12% damage", "Enemies your bolts hit are marked for 4 s: towers deal them +20% damage",
+			"Enemies your bolts hit are marked for 4 s: towers deal them +30% damage"]},
 	engineer = {name = "Engineer", v = [0.2, 0.35, 0.5],
 		desc = ["All gates +20% HP", "All gates +35% HP", "All gates +50% HP"]},
 	bounty = {name = "Bounty", v = [20, 40, 60],
-		desc = ["Kills near you drop +1 gold (up to 20 a wave)", "...up to 40 a wave", "...up to 60 a wave"]},
+		desc = ["Kills near you drop +1 gold (up to 20 a wave)", "Kills near you drop +1 gold (up to 40 a wave)",
+			"Kills near you drop +1 gold (up to 60 a wave)"]},
 }
 ## Rally's doubled ring around the hero; Spotter's mark (s).
 const AURA := 6.0

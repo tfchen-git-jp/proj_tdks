@@ -28,6 +28,9 @@ const ICON_WORDS := [
 	["bone mages", "mage"], ["bone mage", "mage"], ["captains", "captain"], ["captain", "captain"],
 	["crowds", "grunt"], ["a strong hero", "hero"], ["a lone hero", "hero"], ["the berserk boss", "boss"],
 	["Sniper", "archer"], ["Repeater", "archer"], ["Harpoon", "ballista"],
+	["warded", "warded"], ["shades", "shade"], ["shade", "shade"], ["sappers", "sapper"], ["sapper", "sapper"],
+	["drakes", "drake"], ["drake", "drake"], ["necromancers", "necro"], ["necromancer", "necro"],
+	["banners", "banner"], ["war banner", "banner"],
 ]
 ## Coloured words (no icon): word -> colour. Checked after the icons.
 const COLOR_WORDS := [
@@ -58,6 +61,8 @@ static func fmt(text: String, px := 26) -> String:
 	labels[Loc.tc("Strong vs:", "enemy")] = STRONG
 	labels[Loc.tc("Weak vs:", "building")] = WEAK
 	labels[Loc.tc("Weak vs:", "enemy")] = WEAK
+	labels[Loc.tc("Good with:", "building")] = STRONG
+	labels[Loc.tc("Bad with:", "building")] = WEAK
 	# One pass over labels and words, longest first, through placeholder
 	# marks, so a replacement is never matched again (被克制 holds 克制).
 	var marks := {}

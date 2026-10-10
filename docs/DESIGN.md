@@ -12,8 +12,12 @@ keeps the decisions, the original analysis and what is left to build.
   enemies per lane).
 - **Build between every wave** (Thronefall style); no building during an
   attack. A level = 15 waves (10 until v0.1.26; user 2026-10-10: the new
-  wave 10 easier than the old one, wave 15 harder; the standard bot
-  should win 60-65%).
+  wave 10 easier than the old one, wave 15 harder).
+- **Balance is set by human play** (user, v0.2.1-0.2.2: "our game SHOULD
+  be designed for players"). The standard bot's 60-65% target
+  (v0.1.28-0.2.1) is dropped: it stands at fixed spots and relied on
+  Cluster melting the boss; it now loses at wave 10. Bot runs remain for
+  A/B comparisons between options.
 - **Build popup appears when the hero stands on a spot** (no tapping the
   map); tap a button in it to build or upgrade.
 - **Gold:** walk over dropped gold during a wave, and when the wave ends
@@ -30,10 +34,15 @@ keeps the decisions, the original analysis and what is left to build.
   tower only offers Sell).
 - **Enemies attack only walls** (gates, then the keep), never the hero or
   towers: no building HP, no hero death.
-- **Spots unlock with the hero's level** (5 tower + 1 gold at level 1,
-  1-2 more per level); gates come in two sets of three (one per lane),
-  the inner set at level 3, the outer one nearer the lane mouths at
-  level 8. Idea for later: synergy when a whole gate set stands.
+- **Spots unlock with the hero's level, by tactical value** (user,
+  v0.1.30): one-lane spots and the keep's flanks first (4 tower + 1 gold
+  at level 1), spots reaching two lanes from level 6, the crossroads spot
+  (all three lanes) last at level 17; 5 gold plots (1, 4, 7, 12, 15).
+  Gates come in two sets of three (one per lane), the inner set at
+  level 3, the outer one nearer the lane mouths at level 9. Idea for
+  later: synergy when a whole gate set stands.
+- **Walls take up to 4 attackers at once**, side by side (a giant counts
+  as two; user, v0.2.2: one or two in a line was too easy on gates).
 - Economy plots take a farm (fixed income) or a bank (interest on held
   gold, capped).
 - **Hero upgrades** (rogue-like): XP from kills near the hero, whoever
@@ -44,10 +53,19 @@ keeps the decisions, the original analysis and what is left to build.
   unlocks until there are many more waves / maps.
 - **Bosses** (user, v0.1.28): the Bone Warlord calls armored men (three
   times), and berserk it shrugs off slows and freezes. Wave 10 has one,
-  wave 15 two tougher ones.
+  wave 15 two tougher ones. v0.2.2: its HP grows with the wave like
+  everyone's (the wave-15 pair died in 10-15 s), and a Cluster shell's
+  bomblets hit it only once.
 - **Support enemies** the player wants to kill first (user): bone mages
-  heal, captains hasten everyone near them; slimes burst into
-  slimelings (the "spider and spiderlings" idea).
+  heal, captains hasten everyone near them, necromancers raise an ally
+  dying near them at full HP (cooldown; never a boss); they walk with
+  their crowd. Slimes burst into slimelings (the "spider and
+  spiderlings" idea).
+- **Enemies that force a mix** (user, v0.1.30 ideas, built v0.2.1):
+  warded (the hero does 20%), shades (half-transparent, only hittable
+  near a frost crystal or banner, or by the keep; they break gates
+  without one), sappers (explode on gates and the keep), drakes
+  (armoured flyers).
 - Main menu with Continue (saved at every wave), top-10 scores (waves,
   then keep HP % x 10 + gold), credits; Esc / back always asks first.
 
@@ -133,10 +151,14 @@ summoning / commanding.
    crossbowmen), a wave-10 boss with phases.
 5. DONE (v0.1.15): hero upgrade cards and relics (scripts/perks.gd).
 6. DONE (v0.1.11-0.1.16): 10 waves, bot balance (loses ~1 run in 6),
-   score + top 10. TODO: more levels / maps, then permanent unlocks and
+   score + top 10. Since: 15 waves (v0.1.28), balance by play-tests
+   (v0.2.2). TODO: more levels / maps, then permanent unlocks and
    difficulty mutators.
 
 ## Spec balance (v0.1.28)
+
+(Measured before v0.2.2 cut Cluster's damage to a single target: its
+bomblets hit one enemy once a shell now.)
 
 The standard bot takes Sniper / Great / Cluster / Glacier (it builds no
 banner) and wins 62% of 96 seeds. Swapping one tower kind to its other
@@ -151,6 +173,8 @@ Frostbite strengthened. Banner specs untested by the bot. Random builds
 win ~6%.
 
 ## Card and relic value (v0.1.29 measurement)
+
+(Before the v0.1.30 reworks of the weak and strong ones; not re-measured.)
 
 tools/meta_report.py --fixed --force=ID: the standard bot (62%) takes
 that card / relic first whenever offered (96 seeds each). A minus means
@@ -167,7 +191,10 @@ gold left over at the end is only the plan running out.
 
 ## Roadmap (agreed 2026-10-10; batch 1 done in v0.1.18)
 
-1. DONE: armour, flyers (bats), ranged siege (crossbowmen), wave-10 boss.
+0. NOW: the user play-tests v0.2.2; tune from that.
+1. DONE: armour, flyers (bats), ranged siege (crossbowmen), wave-10 boss;
+   v0.1.28 slimes, bone mages, captains; v0.2.1 warded, shades, sappers,
+   drakes, necromancers.
 2. Later (user, v0.1.28: not now): endless mode (after the last wave, ever-tougher waves; score = wave
    reached) + 2-3 mutators chosen before a run ("enemies +30% speed",
    "no gates", "keep 50% HP"), each adding a score bonus.
@@ -183,9 +210,10 @@ gold left over at the end is only the plan running out.
 Smaller ideas noted along the way:
 - Gate-set synergy: a bonus while all three gates of a set stand (user).
 - Japanese localization after TC (user); same picking-page process.
-- Balance leads from tools/meta_report.py: banner and frost weak, ballista
-  strong; Rally / Engineer cards weak; maybe count slow / buff as
-  contributions in the report.
+- DONE (v0.1.30): card / relic reworks from tools/meta_report.py
+  --force. Maybe count slow / buff as contributions in the report.
+- A bot that moves and drafts like a player, if bot runs are to say
+  anything about difficulty again.
 - Quality of life: 2x speed button, per-wave summary, first-run tips,
   settings (volume, FPS counter, vibration).
 - Later: a hero weapon choice before a run (crossbow / longbow / staff)
