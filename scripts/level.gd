@@ -135,7 +135,9 @@ const BUILDINGS := {
 			{cost = 55, rate = 0.2, cap = 45}]},
 	gate = {name = "Gate", spot = "gate", desc = "Blocks its lane until broken; rebuilt each wave.",
 		weak = "bats (fly over), crossbowmen (shoot from range)", strong = "grunts, runners, slimes (held in tower range)",
-		levels = [{cost = 30, hp = 220.0}, {cost = 40, hp = 420.0}, {cost = 60, hp = 700.0}]},
+		# User, v0.2.4: gates too strong: 70% of the HP (220 / 420 / 700) at
+		# twice the cost (30 / 40 / 60).
+		levels = [{cost = 60, hp = 154.0}, {cost = 80, hp = 294.0}, {cost = 120, hp = 490.0}]},
 }
 const TOWER_KINDS := ["archer", "ballista", "mortar", "frost", "banner"]
 
@@ -246,8 +248,8 @@ const ENEMIES := [
 	{name = "slimeling", plural = "slimelings", hp = 3.0, speed = 2.2, radius = 0.24, gold = 1, xp = 1, dps = 1.5,
 		desc = "Small and quick, born from a slime.", weak = "mortars, frost, Repeater", strong = "single big shots"},
 	{name = "bone mage", plural = "bone mages", hp = 10.0, speed = 1.2, radius = 0.3, gold = 4, xp = 4, dps = 1.0,
-		cycle = 1.4, aura = 4.5, heal = 0.05,
-		desc = "Heals all within 4.5 m, 5% HP a second. Kill it first.", weak = "the hero, Sniper", strong = "gate queues"},
+		cycle = 1.4, aura = 4.5, heal = 0.18,
+		desc = "Heals all within 4.5 m, 18% HP a second. Kill it first.", weak = "the hero, Sniper", strong = "gate queues"},
 	{name = "captain", plural = "captains", hp = 26.0, speed = 1.3, radius = 0.36, gold = 5, xp = 5, dps = 5.0,
 		armor = 1.0, aura = 4.0, haste = 0.4,
 		desc = "All within 4 m walk and attack 40% faster.", weak = "ballistas, mortars", strong = "archers (armor)"},
@@ -256,8 +258,9 @@ const ENEMIES := [
 	# a frost crystal's or war banner's reach (Sim._reveal). blast: [gate,
 	# keep] damage when it reaches a wall and explodes, x sqrt(the wave's
 	# toughness); an exploded sapper gives nothing. revive: a necromancer
-	# raises an ally dying within its aura to full HP, then waits [s after
-	# a small one, s after a giant]; never a boss or another necromancer.
+	# raises any ally dying within its aura to full HP, no cooldown, but
+	# each enemy only once (user, v0.2.4: was 8 / 16 s of rest); never a
+	# boss or another necromancer.
 	{name = "warded", plural = "warded", hp = 16.0, speed = 1.3, radius = 0.32, gold = 4, xp = 4, dps = 4.0,
 		ward = 0.8,
 		desc = "Runes turn aside 80% of the hero's damage.", weak = "archers, mortars, ballistas", strong = "the hero"},
@@ -274,8 +277,8 @@ const ENEMIES := [
 		desc = "Armored flyer, straight to the keep.", weak = "ballistas, archers, the hero",
 		strong = "gates, mortars, frost (can't reach it)"},
 	{name = "necromancer", plural = "necromancers", hp = 16.0, speed = 1.2, radius = 0.32, gold = 6, xp = 6, dps = 2.0,
-		aura = 5.0, revive = [8.0, 16.0],
-		desc = "Raises an ally that falls near it at full HP (then rests 8 s).", weak = "the hero, Sniper",
+		aura = 5.0, revive = true,
+		desc = "Raises allies that fall near it at full HP, each only once.", weak = "the hero, Sniper",
 		strong = "giants (a second life)"},
 ]
 ## A hit on an armoured enemy does at least this share of its damage.

@@ -38,7 +38,9 @@ packs. Not published anywhere.
 - **Languages:** English and Traditional Chinese (繁體中文); switch from
   the title menu.
 - **Saves and scores:** the game saves at every wave; Continue from the menu.
-  The top 10 rank by waves cleared, then keep HP and gold left.
+  The top 10 rank by waves cleared, then keep HP and gold left. The end
+  screen shows damage dealt and taken, and on a second page your build:
+  relics, cards and buildings.
 
 | Building | What it does |
 |---|---|
@@ -82,6 +84,9 @@ wave 15. They get tougher every wave.
 - Compatibility renderer (OpenGL ES 3) on every platform.
 
 ## Credits
+
+- Game design and direction: David Chen JP; programmed with Claude
+  (Anthropic) as the coding assistant.
 
 - 3D models (CC0): [Kenney](https://kenney.nl) (Tower Defense Kit, Mini
   Dungeon, Mini Arena, Nature Kit), [Kay Lousberg / KayKit](https://kaylousberg.com)

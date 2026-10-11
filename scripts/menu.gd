@@ -127,36 +127,71 @@ func _guide_page() -> Control:
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 14)
 	scroll.add_child(list)
-	# [name, info dict, icon]; a heading has no dict. Towers list their two
-	# level-IV specs right after them.
-	var entries := [[tr("BUILDINGS"), null, ""]]
+	# [name, info dict, icon, branch]; a heading has no dict. Towers list
+	# their two level-IV specs right after them as branches of a tree
+	# (branch: "" a root, "mid" / "last" a spec under the tower above).
+	var entries := [[tr("BUILDINGS"), null, "", ""]]
 	for k in Level.BUILDINGS:
-		entries.push_back([tr(String(Level.BUILDINGS[k].name)), Level.BUILDINGS[k], k])
-		for sp in Level.BUILDINGS[k].get("specs", []):
-			entries.push_back([tr("Lv 4: %s") % tr(String(sp.name)), sp, k])
+		entries.push_back([tr(String(Level.BUILDINGS[k].name)), Level.BUILDINGS[k], k, ""])
+		var specs: Array = Level.BUILDINGS[k].get("specs", [])
+		for i in specs.size():
+			entries.push_back([tr("Lv 4: %s") % tr(String(specs[i].name)), specs[i], k,
+				"last" if i == specs.size() - 1 else "mid"])
 	entries.push_back([tr("ENEMIES"), null, ""])
 	for k in Level.ENEMIES.size():
-		entries.push_back([Level.ename(k), Level.ENEMIES[k], Models.enemy_icon(k)])
+		entries.push_back([Level.ename(k), Level.ENEMIES[k], Models.enemy_icon(k), ""])
 	for it in entries:
 		if it[1] == null:
 			var head := _label(it[0], 34)
 			head.add_theme_color_override("font_color", TITLE_GOLD)
 			list.add_child(head)
 			continue
-		# Name with its own icon, then the three info lines.
-		var name := UiText.label(30)
+		# Name with its own icon, then the three info lines; a spec sits
+		# indented under its tower, joined to it by tree lines.
+		var branch: String = it[3]
+		var width := 620 - (TREE_INDENT if branch != "" else 0)
+		var entry := VBoxContainer.new()
+		entry.add_theme_constant_override("separation", 4)
+		var name := UiText.label(26 if branch != "" else 30)
 		var icon_key: String = it[2]
-		name.text = ("[img=44x44]%s%s.png[/img] " % [UiText.ICONS, icon_key] if icon_key != "" else "") + String(it[0])
-		name.custom_minimum_size = Vector2(620, 0)
-		list.add_child(name)
+		var px := 36 if branch != "" else 44
+		name.text = ("[img=%dx%d]%s%s.png[/img] " % [px, px, UiText.ICONS, icon_key] if icon_key != "" else "") + String(it[0])
+		name.custom_minimum_size = Vector2(width, 0)
+		entry.add_child(name)
 		var body := UiText.label(22)
 		UiText.set_text(body, Level.info(it[1]), 26)
-		body.custom_minimum_size = Vector2(620, 0)
+		body.custom_minimum_size = Vector2(width, 0)
 		body.modulate = Color(1, 1, 1, 0.9)
-		list.add_child(body)
+		entry.add_child(body)
+		if branch == "":
+			list.add_child(entry)
+			continue
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 0)
+		var lines := Control.new()
+		lines.custom_minimum_size = Vector2(TREE_INDENT, 0)
+		lines.draw.connect(func() -> void: _tree_lines(lines, branch == "last", name.size.y * 0.5))
+		row.add_child(lines)
+		row.add_child(entry)
+		list.add_child(row)
 	box.add_child(scroll)
 	box.add_child(_button(tr("Back"), Color(0.35, 0.35, 0.4), func() -> void: show_page("main")))
 	return _centered(box)
+
+
+## Guide tree: how far a spec sits in from its tower, px.
+const TREE_INDENT := 44
+
+
+## A spec's tree lines: down from the tower above (through the list's
+## gap), across to the spec's name; a "mid" branch carries on down to the
+## next spec.
+func _tree_lines(c: Control, last: bool, mid_y: float) -> void:
+	var x := 18.0
+	var col := Color(1.0, 0.85, 0.45, 0.7)
+	var bottom := mid_y if last else c.size.y + 14.0
+	c.draw_line(Vector2(x, -14.0), Vector2(x, bottom), col, 3.0)
+	c.draw_line(Vector2(x, mid_y), Vector2(TREE_INDENT - 4.0, mid_y), col, 3.0)
 
 
 func _credits_page() -> Control:
@@ -178,12 +213,14 @@ func _credits_page() -> Control:
 
 
 const CREDITS := """RogueShot Tower Defense
-Made with Godot Engine 4.7 (godotengine.org), by directing Claude.
+Game design and direction: David Chen JP
+Programmed with Claude (Anthropic) as the coding assistant
+Made with Godot Engine 4.7 (godotengine.org)
 
 3D MODELS (CC0)
-Kay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian, captain), Skeletons (crossbowmen, bone mages, Bone Warlord), Medieval Hexagon (archer tower, windmill, market, keep, flag, gate), Dungeon Remastered (coins), Forest Nature (rocks)
+Kay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian, captain, shade, necromancer), Skeletons (crossbowmen, bone mages, sappers, warded, Bone Warlord), Medieval Hexagon (archer and sniper towers, fire mortar, windmill, market, keep, flags, gate), Dungeon Remastered (coins), Forest Nature (rocks)
 Kenney (kenney.nl): Tower Defense Kit, Mini Dungeon, Mini Arena, Nature Kit
-Quaternius (quaternius.com): Animated Monsters (bat, slime)
+Quaternius (quaternius.com): Animated Monsters (bat, slime, drake)
 
 SOUND (CC0 unless noted)
 Kenney: RPG Audio, Impact Sounds, Interface Sounds, Casino Audio, Sci-fi Sounds, Music Jingles

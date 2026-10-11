@@ -10,7 +10,7 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.2.2)
+## The game today (v0.2.7)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
@@ -56,8 +56,10 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   cards x 3 tiers (drawing an owned one = next tier, maxed ones leave the
   pool; Scholar +XP replaced Magnet in v0.1.17), 6 relics, also tiered
   I-III since v0.1.28 (Perks.RELICS `v` per tier, Sim.rv(); Sim.relics
-  is id -> tier). Reroll 10,
-  20, 30... gold. Cards have their own dice
+  is id -> tier; a held relic's card says "RELIC II"). Reroll 10,
+  20, 30... gold; a relic offer's rerolls 50, 100, 150... (counted apart,
+  Sim.relic_rerolls, v0.2.3). Giant Slayer hits every `heavy` enemy
+  (giants and the boss). Cards have their own dice
   (Sim._card_rng, saved). Visuals in scripts/fx.gd (+ shaders/flame,
   glow). Enemies attack only walls (user). No permanent unlocks until
   there are 50+ waves or several maps (user).
@@ -72,7 +74,11 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   Save v4 (v0.1.28): buildings [id, kind, level, spec, spent], relics
   {id: tier}; v3 saves load (level-IV towers become the first spec,
   relics tier I).
-  End screen: waves, keep, gold, hero level, score, and two tables with
+  End screen: waves, keep, gold, hero level, score; a "Your build"
+  button flips to page two (v0.2.4, main._end_build, `--end-build`):
+  relics and cards with tiers in pick order, the buildings standing,
+  grouped by kind and level / spec ("Glacier Tower x2"). Page one: two
+  tables with
   icons: damage dealt (hero incl. relics and burning, then archer,
   ballista, mortar, frost: Sim.dealt_by) and damage taken by gates and
   keep per enemy type (Horde.wall_dmg); Play again / Main menu. Debug args (main.DEBUG_ARGS) skip
@@ -111,7 +117,16 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   spec), Level.bstats(b), Level.max_levels(kind). Every built spot also
   offers Sell (Sim.sell: SELL_REFUND 40% of `spent`, Confirm yes / no;
   gates too). tools/meta_report.py `--specs=archer:repeater` A/Bs a spec
-  against Bot.SPECS.
+  against Bot.SPECS. Each spec has its own look (v0.2.5,
+  Models.spec_tower, user-approved lineup `--demo=specs [--kind=K]
+  [--near=X]`): Sniper = KayKit tower_B red roof, Repeater = square
+  tower + Kenney turret, Great = taller + big ballista, Harpoon =
+  ballista loaded with a procedural trident (Models.trident_mesh /
+  bow_mesh, flat vertex colours) and firing tridents (main._trident_mm),
+  Cluster = cannon, Fire = KayKit red catapult tower, Glacier = icy-
+  tinted crystals + snow crystals, Frostbite = violet crystals, spikes
+  (Models._tint), War Drums = two red flags, Hero's Standard = a big
+  gold flag.
 - **Buildings** (Level.BUILDINGS; towers 4 levels, farm / bank / gate 3;
   a bronze/silver/gold/ruby I-IV badge faces the camera on each): Archer
   (cheap, single target), Ballista (bolt piercing a line), Mortar (lobbed
@@ -121,7 +136,8 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   per gold than another level-1 farm), Bank (interest on held gold
   after each wave: rate 10/15/20% by level, the best bank's rate counts;
   each bank adds 12/25/45 to the cap),
-  Gate (blocks its lane, has HP, repaired after
+  Gate (blocks its lane, has HP 154 / 294 / 490, costs 60 / 80 / 120
+  (user, v0.2.4: 70% of the HP at twice the price), repaired after
   each wave). Range rings: on an empty tower spot the first tap on a
   tower previews its reach (blue; a mortar's dead zone red), the second
   builds; a built tower shows its reach and the next level's (gold).
@@ -138,16 +154,17 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   ENEMIES `split`, Sim._drops_from_deaths), sapper (7, skeleton minion,
   rushes the wall and explodes: `blast` [40 gate, 20 keep] x sqrt of the
   wave's HP factor, no gold), bone mage (8, walks in the queue, heals
-  all within 4.5 m 5% max HP/s, green ring), captain (9, armoured
+  all within 4.5 m 18% max HP/s (was 5% until v0.2.4), green ring), captain (9, armoured
   knight, all within 4 m walk and attack 40% faster, orange ring), shade
   (9, half-transparent rogue: untargetable unless inside a frost
   crystal's or war banner's reach (+1.5 s, Sim.REVEAL_LINGER) or within
   4 m of the keep (KEEP_REVEAL); dps 8, so an unrevealed gate falls),
   Bone Warlord (boss of waves 10 and 15, below), drake (11, armoured
   flyer like the bat, HP bar), warded (12, the hero's damage x0.2 incl.
-  his fire; towers full), necromancer (13, purple ring 5 m: an ally
-  dying in it comes back at full HP, then it rests 8 s, 16 s after a
-  giant; never raises a boss: ENEMIES `revive`, Horde._raise). Support
+  his fire; towers full), necromancer (13, purple ring 5 m: any ally
+  dying in it comes back at full HP, no cooldown, but each enemy only
+  once (Horde.risen, a pale purple tint; user, v0.2.4: was 8 / 16 s of
+  rest); never raises a boss: ENEMIES `revive`, Horde._raise). Support
   enemies keep pace with their crowd (Horde.escort). Auras never touch
   bosses, the best one counts (Horde._auras, haste / healed per enemy).
   **Bone Warlord:** HP 2000 x Level.boss_hp(w, group hp) (grows like
@@ -190,7 +207,8 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 - **HUD:** keep HP + hero level / XP bar (top left), coins (top right), FPS
   (top centre), wave / phase line under them, minimap (bottom right;
   hidden while a popup is up), build version (bottom left), gate HP bars
-  (blue), giant HP bars (red), boss HP bar (under the wave line).
+  (blue), HP bars over `big` enemies (giants, drakes: red), boss HP bars
+  (under the wave line).
 - **Sound:** 32 SFX (assets/sfx) + looping BGM (assets/music, -16 dB).
 - **PC build:** the exported exe sizes its window to 90% of the screen
   height (main._fit_pc_window); editor/WSL runs keep 450x1000.
@@ -259,14 +277,16 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 
 ## Next (docs/DESIGN.md "Roadmap" has the full list)
 
-- The user play-tests v0.2.2 (harder warlords, Cluster nerf, 4-wide
-  gate attacks, stronger shades) and says what is too hard / easy;
+- The user keeps play-testing (v0.2.4-0.2.7 "feel more challenging"
+  after the warlord / Cluster / 4-wide gate / shade changes and the
+  healer, necromancer and gate buffs) and says what is too hard / easy;
   tune from that, not from the bot.
 - Picking-page rows for the provisional names above.
 - Later (user): endless mode + mutators; card evolutions + new relics;
   gate-set synergy; second map (the user designs it); Japanese; QoL
-  (2x speed, settings); a bot that moves / drafts like a player, if bot
-  runs are to mean anything again.
+  (2x speed, settings, a pause-screen list of the cards and relics held
+  during a run); a bot that moves / drafts like a player, if bot runs
+  are to mean anything again.
 
 ## Architecture
 
@@ -338,7 +358,9 @@ assets_in/INVENTORY.md lists 16 CC0 packs (previews in assets_in/_previews).
   assets_in/INVENTORY.md (that lives on the other PC). Gold ingot is
   procedural (Models.ingot_mesh).
 - Towers: Kenney Tower Defense Kit (round/square stacks, ballista,
-  catapult, crystals, arrow/boulder ammo); KayKit Hexagon (archer tower,
+  catapult, crystals, arrow/boulder ammo; v0.2.5 more parts from the
+  full kit at kenney.nl: b/c variants, roofs, cannon, turret, crystal
+  details); KayKit Hexagon (archer tower,
   windmill farm, market bank, lumbermill keep, flag, stone gate). Pines:
   Kenney Nature (recoloured). Rocks: KayKit Forest. Coin and coin stacks:
   KayKit Dungeon.
@@ -374,7 +396,7 @@ is a separate install the user can delete.
 ## Build / test (`./build.sh`, see its header)
 
 `check` (import + parse every script), `test` (headless rule tests incl. a
-full bot win), `sim [--seed=N] [--idle] [--nopicks]` (balance timeline,
+full 15-wave bot run with an unbreakable keep and 99999 gold), `sim [--seed=N] [--idle] [--nopicks]` (balance timeline,
 ~5 s), `shot
 NAME ARGS` (WSL screenshot; refuses to launch unless all scripts parse),
 `export` + `native ARGS` (Windows exe), `apk`, `install`, `adb ARGS`,
@@ -386,7 +408,8 @@ Game args (after `--`): `--auto --ff=SEC --speed=X (0 = freeze) --seed=N
 --noshadow --mute --notree --drops --ff-idle --build=S:K[:N],... --load
 --page=scores|credits|guide --play --newgame --perks=ID[:T],... --offer[=cards]
 --preview=KIND
---lightning --ask --demo=anim|hero|clips --clips=A,B
+--lightning --ask --demo=anim|hero|clips|specs --clips=A,B --kind=K --near=X
+--end-build
 --bowrot=X,Y,Z` (main.gd header explains each). `--demo=clips` (raw
 hero clips side by side) is how the carry pitch was picked; render it
 with `--resolution 1500x600`. `--bench` prints [prof] per-section ms and
@@ -481,6 +504,22 @@ Windows build, never in WSL.
   to 2 m outside the walkable area and marked (user: enemies "in range"
   at the bottom of the centre lane weren't shot); score = keep % x 10 +
   gold for ties on waves.
+- v0.2.6: credits name the user (David Chen JP, game design and direction;
+  Claude as coding assistant) and every model source; the Guide shows
+  each tower's two specs as an indented tree (menu._tree_lines); the
+  end screen sits on a wooden notice board (88% opaque, Hud._draw_planks)
+  above everything, boss bars hidden once the game is over.
+- v0.2.5: level-IV specs get their own models (lineup approved by the
+  user; Harpoon reworked to shoot tridents). Extra KayKit Hexagon
+  files (tower_B / catapult towers, red / yellow / green flags, weapon
+  rack) fetched from github.com/KayKit-Game-Assets.
+- v0.2.4 (user's enemy buffs): bone mages heal 18%/s, necromancers
+  raise every ally once with no cooldown, gates 70% HP at twice the
+  cost; the end screen's build page. The test full run also gets
+  99999 gold (healed crowds at an unbreakable keep never died).
+- v0.2.3 (play-test notes): relic rerolls from 50, relic tier on its
+  card and a full sentence per tier, Giant Slayer text names the boss,
+  gate messages say inner / outer (左路內城門).
 - v0.2.2 (the user's first play-test of v0.2.1: "EASILY cleared",
   warlords dead in 10-15 s): Cluster bomblets hit each enemy once a
   shell, warlord HP 1300 -> 2000 and grows with the wave

@@ -906,7 +906,8 @@ func _enemies_v021() -> void:
 	var hit: float = 1e4 - h.gate_hp[1]
 	_ok(blasts == 1 and h.count() == 0 and h.killed == killed and h.deaths.is_empty(), "a sapper blows itself up at the gate")
 	_ok(is_equal_approx(hit, float(Level.ENEMIES[Level.SAPPER].blast[0])), "...for %d damage" % hit)
-	# Necromancer: an ally dying near it comes back at full HP, then it rests.
+	# Necromancer: an ally dying near it comes back at full HP, at once
+	# for every ally, but each only once.
 	var n = HordeS.new(_lane_tracks(), 74)
 	n.spawn(Level.NECRO, 1)
 	n.spawn(Level.GRUNT, 1)
@@ -915,7 +916,8 @@ func _enemies_v021() -> void:
 		n.d[k] = 30.0
 		n.pos[k] = n.tracks[1].point(30.0, n.off[k])
 	_ok(not n.damage(1, 99.0) and n.hp[1] == n.max_hp[1] and n.raised.size() == 1, "a grunt falling by the necromancer is raised")
-	_ok(n.damage(2, 99.0), "the next one dies: it rests")
+	_ok(not n.damage(2, 99.0) and n.hp[2] == n.max_hp[2], "the next one too: no cooldown")
+	_ok(n.damage(1, 99.0), "a raised grunt falls for good the second time")
 	var bs = HordeS.new(_lane_tracks(), 75)
 	bs.spawn(Level.NECRO, 1)
 	bs.spawn(Level.BOSS, 1, 1.0)
@@ -977,6 +979,15 @@ func _feedback_v022() -> void:
 	var once: float = hp0 - s.horde.hp[i]
 	_ok(once > 0.0 and once <= 50.0, "five bomblets on one warlord hit it once (%.0f damage)" % once)
 	_ok(Fx.BODY_H.size() == Level.ENEMIES.size(), "every enemy type has a flame height (Fx.BODY_H)")
+	# Relic rerolls: 50, 100 ..., counted apart from card rerolls.
+	var r = SimS.new(84)
+	r.coins = 1000
+	r.offer_relic = true
+	r._roll(true)
+	_ok(r.reroll_cost() == 50 and r.reroll() and r.coins == 950 and r.reroll_cost() == 100 and r.rerolls == 0,
+		"a relic reroll costs 50, then 100; card rerolls untouched")
+	r.offer_relic = false
+	_ok(r.reroll_cost() == Perks.REROLL_COST, "...a card reroll still starts at %d" % Perks.REROLL_COST)
 	_ok(Level.boss_hp(Level.BOSS_WAVE, 1.0) == 1.0 and Level.boss_hp(14, 1.6) > 3.0, "the wave-15 warlords are tougher than the first")
 
 
@@ -1023,12 +1034,13 @@ func _layout() -> void:
 
 ## A whole game by the standard bot, all 15 waves to the win screen. Since
 ## v0.2.2 the game is tuned for human play (the bot, standing still, loses
-## most games), so its keep can't fall here: this checks the full path,
+## most games), so its keep can't fall and it is rich: this checks the full path,
 ## not the balance (tools/meta_report.py measures that).
 func _full_run() -> void:
 	var s = SimS.new(1017)
 	s.base_hp = 1e6
 	s.horde.keep_hp = 1e6
+	s.coins = 99999  # its whole plan at once, or a crowd healed at the keep never ends
 	var bot = BotS.new(s)
 	while s.state == "play" and s.time < 4000.0:
 		s.step(DT, bot.move())

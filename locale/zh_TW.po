@@ -118,11 +118,26 @@ msgstr "英雄"
 msgid "None"
 msgstr "無"
 
+msgid "Your build"
+msgstr "本局配置"
+
+msgid "Results"
+msgstr "戰績"
+
+msgid "Relics"
+msgstr "聖物"
+
+msgid "Cards"
+msgstr "升級卡"
+
+msgid "Buildings"
+msgstr "建築"
+
 msgid "\nNew top-10 entry: #%d"
 msgstr "\n新紀錄：第 %d 名"
 
-msgid "RogueShot Tower Defense\nMade with Godot Engine 4.7 (godotengine.org), by directing Claude.\n\n3D MODELS (CC0)\nKay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian, captain), Skeletons (crossbowmen, bone mages, Bone Warlord), Medieval Hexagon (archer tower, windmill, market, keep, flag, gate), Dungeon Remastered (coins), Forest Nature (rocks)\nKenney (kenney.nl): Tower Defense Kit, Mini Dungeon, Mini Arena, Nature Kit\nQuaternius (quaternius.com): Animated Monsters (bat, slime)\n\nSOUND (CC0 unless noted)\nKenney: RPG Audio, Impact Sounds, Interface Sounds, Casino Audio, Sci-fi Sounds, Music Jingles\nOpenGameArt: artisticdude (bow, freeze spell), Vehicle / Jan Schupke (Tinysized SFX), bart (ice spells), rubberduck (creature SFX), Joth (chunky explosion), qubodup (dull explosion), fvcalderan (fanfare), 0new4y (game-over trumpet)\nWave horn: \"Scary Echoey Horn Esque Sound\" by Kat, CC-BY 4.0 (opengameart.org)\n\nMUSIC\n\"RPG City\" by phantasticbeats (Pixabay)\n\nThanks for playing!"
-msgstr "俠盜塔防遊戲\n以 Godot Engine 4.7（godotengine.org）製作，由 Claude 協力開發。\n\n3D 模型（CC0）\nKay Lousberg（kaylousberg.com）：KayKit Adventurers（英雄、巨人、隊長）、Skeletons（骷髏弩手、骷髏法師、骷髏戰閥）、Medieval Hexagon（弓箭塔、風車、市集、主堡、旗幟、城門）、Dungeon Remastered（金幣）、Forest Nature（岩石）\nKenney（kenney.nl）：Tower Defense Kit、Mini Dungeon、Mini Arena、Nature Kit\nQuaternius（quaternius.com）：Animated Monsters（魔蝠、史萊姆）\n\n音效（除另註明外皆為 CC0）\nKenney：RPG Audio、Impact Sounds、Interface Sounds、Casino Audio、Sci-fi Sounds、Music Jingles\nOpenGameArt：artisticdude（弓、冰凍法術）、Vehicle / Jan Schupke（Tinysized SFX）、bart（冰系法術）、rubberduck（生物音效）、Joth（爆炸）、qubodup（悶響爆炸）、fvcalderan（號角曲）、0new4y（失敗號角）\n波次號角：Kat〈Scary Echoey Horn Esque Sound〉，CC-BY 4.0（opengameart.org）\n\n音樂\nphantasticbeats〈RPG City〉（Pixabay）\n\n感謝遊玩！"
+msgid "RogueShot Tower Defense\nGame design and direction: David Chen JP\nProgrammed with Claude (Anthropic) as the coding assistant\nMade with Godot Engine 4.7 (godotengine.org)\n\n3D MODELS (CC0)\nKay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian, captain, shade, necromancer), Skeletons (crossbowmen, bone mages, sappers, warded, Bone Warlord), Medieval Hexagon (archer and sniper towers, fire mortar, windmill, market, keep, flags, gate), Dungeon Remastered (coins), Forest Nature (rocks)\nKenney (kenney.nl): Tower Defense Kit, Mini Dungeon, Mini Arena, Nature Kit\nQuaternius (quaternius.com): Animated Monsters (bat, slime, drake)\n\nSOUND (CC0 unless noted)\nKenney: RPG Audio, Impact Sounds, Interface Sounds, Casino Audio, Sci-fi Sounds, Music Jingles\nOpenGameArt: artisticdude (bow, freeze spell), Vehicle / Jan Schupke (Tinysized SFX), bart (ice spells), rubberduck (creature SFX), Joth (chunky explosion), qubodup (dull explosion), fvcalderan (fanfare), 0new4y (game-over trumpet)\nWave horn: \"Scary Echoey Horn Esque Sound\" by Kat, CC-BY 4.0 (opengameart.org)\n\nMUSIC\n\"RPG City\" by phantasticbeats (Pixabay)\n\nThanks for playing!"
+msgstr "俠盜塔防遊戲\n遊戲設計與製作：David Chen JP\n程式協力：Claude（Anthropic）\n以 Godot Engine 4.7（godotengine.org）製作\n\n3D 模型（CC0）\nKay Lousberg（kaylousberg.com）：KayKit Adventurers（英雄、巨人、隊長、暗影、死靈法師）、Skeletons（骷髏弩手、骷髏法師、爆破兵、符文兵、骷髏戰閥）、Medieval Hexagon（弓箭塔、狙擊塔、燃燒臼砲塔、風車、市集、主堡、旗幟、城門）、Dungeon Remastered（金幣）、Forest Nature（岩石）\nKenney（kenney.nl）：Tower Defense Kit、Mini Dungeon、Mini Arena、Nature Kit\nQuaternius（quaternius.com）：Animated Monsters（魔蝠、史萊姆、飛龍）\n\n音效（除另註明外皆為 CC0）\nKenney：RPG Audio、Impact Sounds、Interface Sounds、Casino Audio、Sci-fi Sounds、Music Jingles\nOpenGameArt：artisticdude（弓、冰凍法術）、Vehicle / Jan Schupke（Tinysized SFX）、bart（冰系法術）、rubberduck（生物音效）、Joth（爆炸）、qubodup（悶響爆炸）、fvcalderan（號角曲）、0new4y（失敗號角）\n波次號角：Kat〈Scary Echoey Horn Esque Sound〉，CC-BY 4.0（opengameart.org）\n\n音樂\nphantasticbeats〈RPG City〉（Pixabay）\n\n感謝遊玩！"
 
 msgid "KEEP"
 msgstr "主堡"
@@ -163,8 +178,11 @@ msgstr "賞金 +%d 黃金"
 msgid "Last Stand! Invulnerable for %d s"
 msgstr "背水一戰！無敵 %d 秒"
 
-msgid "The %s gate fell!"
-msgstr "%s城門被攻破了！"
+msgid "The inner %s gate fell!"
+msgstr "%s內城門被攻破了！"
+
+msgid "The outer %s gate fell!"
+msgstr "%s外城門被攻破了！"
 
 msgid "Berserk!"
 msgstr "狂暴！"
@@ -676,8 +694,8 @@ msgstr "臼砲塔、冰晶塔、連弩塔"
 msgid "single big shots"
 msgstr "單發重擊"
 
-msgid "Heals all within 4.5 m, 5% HP a second. Kill it first."
-msgstr "治療 4.5 公尺內所有敵人，每秒 5% 生命。優先擊殺！"
+msgid "Heals all within 4.5 m, 18% HP a second. Kill it first."
+msgstr "治療 4.5 公尺內所有敵人，每秒 18% 生命。優先擊殺！"
 
 msgid "the hero, Sniper"
 msgstr "英雄、狙擊塔"
@@ -745,8 +763,8 @@ msgstr "重甲飛行敵人，直撲主堡。"
 msgid "ballistas, archers, the hero"
 msgstr "弩砲塔、弓箭塔、英雄"
 
-msgid "Raises an ally that falls near it at full HP (then rests 8 s)."
-msgstr "讓附近倒下的同伴滿血復活（之後休息 8 秒）。"
+msgid "Raises allies that fall near it at full HP, each only once."
+msgstr "讓附近倒下的同伴滿血復活，每個只能復活一次。"
 
 msgid "giants (a second life)"
 msgstr "巨人（第二條命）"
@@ -1066,14 +1084,14 @@ msgstr "爆擊機率 20%"
 msgid "30% critical chance"
 msgstr "爆擊機率 30%"
 
-msgid "+40% damage to giants"
-msgstr "對巨人傷害 +40%"
+msgid "+40% damage to giants and the boss"
+msgstr "對巨人與頭目傷害 +40%"
 
-msgid "+80% damage to giants"
-msgstr "對巨人傷害 +80%"
+msgid "+80% damage to giants and the boss"
+msgstr "對巨人與頭目傷害 +80%"
 
-msgid "+120% damage to giants"
-msgstr "對巨人傷害 +120%"
+msgid "+120% damage to giants and the boss"
+msgstr "對巨人與頭目傷害 +120%"
 
 msgid "+10% move speed, and +10% attack speed while moving"
 msgstr "移動速度 +10%，移動中攻擊速度 +10%"
@@ -1148,55 +1166,55 @@ msgid "Last Stand"
 msgstr "背水一戰"
 
 msgid "Every shot fires a second volley at 50% damage right after the first."
-msgstr "每次射擊後，緊接著再射出一輪 50% 傷害的弩箭。"
+msgstr "每次射擊後，緊接著再射出第二輪弩箭（50% 傷害）。"
 
-msgid "Second volley at 70% damage"
-msgstr "第二輪 70% 傷害"
+msgid "Every shot fires a second volley at 70% damage right after the first."
+msgstr "每次射擊後，緊接著再射出第二輪弩箭（70% 傷害）。"
 
-msgid "Second volley at 90% damage"
-msgstr "第二輪 90% 傷害"
+msgid "Every shot fires a second volley at 90% damage right after the first."
+msgstr "每次射擊後，緊接著再射出第二輪弩箭（90% 傷害）。"
 
 msgid "Every 6th shot also looses a bolt at each of the 4 nearest enemies."
 msgstr "每第 6 次射擊，額外向最近的 4 個敵人各射一箭。"
 
-msgid "Every 5th shot, 5 enemies"
-msgstr "每第 5 次射擊，5 個敵人"
+msgid "Every 5th shot also looses a bolt at each of the 5 nearest enemies."
+msgstr "每第 5 次射擊，額外向最近的 5 個敵人各射一箭。"
 
-msgid "Every 4th shot, 6 enemies"
-msgstr "每第 4 次射擊，6 個敵人"
+msgid "Every 4th shot also looses a bolt at each of the 6 nearest enemies."
+msgstr "每第 4 次射擊，額外向最近的 6 個敵人各射一箭。"
 
 msgid "Every 8 s lightning strikes the toughest enemy near you and chains through 4 more."
 msgstr "每 8 秒，閃電擊中你附近最強的敵人，並連鎖到另外 4 個。"
 
-msgid "Every 6 s, chains through 5 more"
-msgstr "每 6 秒，連鎖到另外 5 個"
+msgid "Every 6 s lightning strikes the toughest enemy near you and chains through 5 more."
+msgstr "每 6 秒，閃電擊中你附近最強的敵人，並連鎖到另外 5 個。"
 
-msgid "Every 4.5 s, chains through 7 more"
-msgstr "每 4.5 秒，連鎖到另外 7 個"
+msgid "Every 4.5 s lightning strikes the toughest enemy near you and chains through 7 more."
+msgstr "每 4.5 秒，閃電擊中你附近最強的敵人，並連鎖到另外 7 個。"
 
 msgid "A wisp circles you and shoots bolts with all your bolt cards (80% damage)."
 msgstr "追射妖精繞著你飛行，射出帶有你所有弩箭卡效果的弩箭（80% 傷害）。"
 
-msgid "The wisp shoots 40% faster"
-msgstr "追射妖精射速 +40%"
+msgid "A wisp circles you and shoots bolts with all your bolt cards (80% damage), 40% faster."
+msgstr "追射妖精繞著你飛行，射出帶有你所有弩箭卡效果的弩箭（80% 傷害），射速 +40%。"
 
-msgid "The wisp shoots twice as fast"
-msgstr "追射妖精射速加倍"
+msgid "A wisp circles you and shoots bolts with all your bolt cards (80% damage), twice as fast."
+msgstr "追射妖精繞著你飛行，射出帶有你所有弩箭卡效果的弩箭（80% 傷害），射速加倍。"
 
 msgid "Every 60th kill near you drops a gold ingot (20)."
 msgstr "在你附近每擊殺 60 個敵人，掉落一塊金條（20）。"
 
-msgid "Every 45th kill"
-msgstr "每擊殺 45 個"
+msgid "Every 45th kill near you drops a gold ingot (20)."
+msgstr "在你附近每擊殺 45 個敵人，掉落一塊金條（20）。"
 
-msgid "Every 30th kill"
-msgstr "每擊殺 30 個"
+msgid "Every 30th kill near you drops a gold ingot (20)."
+msgstr "在你附近每擊殺 30 個敵人，掉落一塊金條（20）。"
 
 msgid "Once per wave, a gate or the keep about to fall becomes invulnerable for 3 s."
 msgstr "每波一次：即將被攻破的城門或主堡無敵 3 秒。"
 
-msgid "Invulnerable for 5 s"
-msgstr "無敵 5 秒"
+msgid "Once per wave, a gate or the keep about to fall becomes invulnerable for 5 s."
+msgstr "每波一次：即將被攻破的城門或主堡無敵 5 秒。"
 
-msgid "Invulnerable for 7 s"
-msgstr "無敵 7 秒"
+msgid "Once per wave, a gate or the keep about to fall becomes invulnerable for 7 s."
+msgstr "每波一次：即將被攻破的城門或主堡無敵 7 秒。"

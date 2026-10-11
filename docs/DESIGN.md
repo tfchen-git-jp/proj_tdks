@@ -43,6 +43,10 @@ keeps the decisions, the original analysis and what is left to build.
   later: synergy when a whole gate set stands.
 - **Walls take up to 4 attackers at once**, side by side (a giant counts
   as two; user, v0.2.2: one or two in a line was too easy on gates).
+  Gates have 70% of their old HP at twice the cost (user, v0.2.4).
+- **Level-IV specs look different** (v0.2.5, lineup approved by the user):
+  parts and colours from the same CC0 kits; the Harpoon Ballista shoots
+  tridents.
 - Economy plots take a farm (fixed income) or a bank (interest on held
   gold, capped).
 - **Hero upgrades** (rogue-like): XP from kills near the hero, whoever
@@ -58,7 +62,8 @@ keeps the decisions, the original analysis and what is left to build.
   bomblets hit it only once.
 - **Support enemies** the player wants to kill first (user): bone mages
   heal, captains hasten everyone near them, necromancers raise an ally
-  dying near them at full HP (cooldown; never a boss); they walk with
+  dying near them at full HP (each enemy only once, no cooldown since
+  v0.2.4; never a boss); they walk with
   their crowd. Slimes burst into slimelings (the "spider and
   spiderlings" idea).
 - **Enemies that force a mix** (user, v0.1.30 ideas, built v0.2.1):
@@ -191,7 +196,8 @@ gold left over at the end is only the plan running out.
 
 ## Roadmap (agreed 2026-10-10; batch 1 done in v0.1.18)
 
-0. NOW: the user play-tests v0.2.2; tune from that.
+0. NOW: the user play-tests (v0.2.7: "more challenging" after the
+   v0.2.2-0.2.4 enemy buffs); tune from that.
 1. DONE: armour, flyers (bats), ranged siege (crossbowmen), wave-10 boss;
    v0.1.28 slimes, bone mages, captains; v0.2.1 warded, shades, sappers,
    drakes, necromancers.
@@ -215,7 +221,9 @@ Smaller ideas noted along the way:
 - A bot that moves and drafts like a player, if bot runs are to say
   anything about difficulty again.
 - Quality of life: 2x speed button, per-wave summary, first-run tips,
-  settings (volume, FPS counter, vibration).
+  settings (volume, FPS counter, vibration), the cards and relics held
+  listed on the pause screen. DONE (v0.2.4): the run's build on the end
+  screen.
 - Later: a hero weapon choice before a run (crossbow / longbow / staff)
   and one active hero skill; permanent unlocks once there are 50+ waves
   or several maps.

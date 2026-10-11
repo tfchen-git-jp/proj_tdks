@@ -20,6 +20,7 @@ extends Node3D
 ##   --newgame         open the menu, then press New game (restart path)
 ##   --load            start from the saved run (as Continue does)
 ##   --perks=ID[:T],…  start with these cards (tier T) / relics
+##   --end-build       the end screen opens on its second page (the build)
 ##   --lightning       strike + set the crowd ablaze every 0.35 s (FX shots)
 ##   --offer[=cards]   open the picker: a relic (unless =cards), then two level-ups
 ##   --preview=KIND    the hero's empty tower spot previews KIND's range
@@ -29,6 +30,7 @@ extends Node3D
 ##   --mute            no sound (screenshots, benchmarks)
 ##   --demo=anim|hero  enemy clip lineup / hero animation lineup
 ##   --demo=clips --clips=A,B  raw hero clips side by side
+##   --demo=specs [--kind=K]  level III, then the two level-IV specs (one kind, or all)
 
 const DT := 1.0 / 60.0
 const CAM_PITCH := 56.0
@@ -85,6 +87,8 @@ var _pay_mm: MultiMesh
 var _pay_buf := PackedFloat32Array()
 var _flying_pay: Array[Dictionary] = []  # coin visuals hero -> spot
 var _arrow_mm: MultiMesh
+var _trident_mm: MultiMesh  # the Harpoon Ballista's shots
+var _trident_buf := PackedFloat32Array()
 var _arrow_buf := PackedFloat32Array()
 var _rock_mm: MultiMesh
 var _rock_buf := PackedFloat32Array()
@@ -384,6 +388,7 @@ func _build_scene() -> void:
 		_drop_buf.push_back(PackedFloat32Array())
 	_pay_mm = _multimesh(coin, 64, null, false)
 	_arrow_mm = _multimesh(Models.arrow_mesh(), PROJ_CAP, null, false)
+	_trident_mm = _multimesh(Models.trident_mesh(), 32, null, false)
 	_rock_mm = _multimesh(Models.boulder_mesh(), 64, null, false)
 	fx = Fx.new()
 	add_child(fx)
@@ -464,6 +469,8 @@ func _warm_up() -> void:
 	add_child(holder)
 	for kind in Level.BUILDINGS:
 		holder.add_child(Models.building(kind, 0)[0])
+		for sp in Level.BUILDINGS[kind].get("specs", []):
+			holder.add_child(Models.spec_tower(kind, String(sp.id))[0])
 	var dust := _dust()
 	holder.add_child(dust)
 	dust.emitting = true
@@ -601,7 +608,48 @@ func _demo_clips() -> void:
 	cam.position = Vector3(0, 1.0, 7.0)
 
 
+## --demo=specs [--kind=K]: level III, then the two level-IV specs, side by
+## side (one tower kind; all kinds in rows without --kind), named.
+func _demo_specs() -> void:
+	var one := _args.has("kind")
+	cam.rotation_degrees = Vector3(-46 if one else -34, 0, 0)
+	cam.position = Vector3(0, 10.4, 17.6) if one else Vector3(0, 12.0, 31.0)
+	if _args.has("near"):  # --near=X: close on the tower at x = X
+		cam.rotation_degrees = Vector3(-52, 0, 0)
+		cam.position = Vector3(float(_args.near), 7.4, 12.6)
+	if not _demo_heroes.is_empty():
+		return
+	_hero.visible = false
+	hud.visible = false
+	var row := 0
+	for kind in Level.TOWER_KINDS:
+		if one and kind != _args.kind:
+			continue
+		var looks := [[Models.building(kind, 2), tr(String(Level.BUILDINGS[kind].name)) + " III"]]
+		for sp in Level.BUILDINGS[kind].specs:
+			looks.push_back([Models.spec_tower(kind, String(sp.id)), tr(String(sp.name))])
+		for c in looks.size():
+			var root: Node3D = looks[c][0][0]
+			root.position = Vector3((c - 1) * (3.0 if one else 3.4), 0, 9.0 + row * 3.6)
+			add_child(root)
+			if not one:
+				var l := Label3D.new()
+				l.text = looks[c][1]
+				l.font_size = 64
+				l.pixel_size = 0.006
+				l.outline_size = 14
+				l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+				l.position = root.position + Vector3(0, 0.0, 1.2)
+				add_child(l)
+			_demo_heroes.push_back(root)
+		row += 1
+
+
 func _process(delta: float) -> void:
+	if _args.get("demo") == "specs":
+		_demo_specs()
+		_tick_tools(delta)
+		return
 	if _args.get("demo") == "clips":
 		_demo_clips()
 		_tick_tools(delta)
@@ -657,7 +705,9 @@ func _game_over() -> void:
 	var score := Save.score_of(sim.base_hp / Level.BASE_HP, sim.coins, sim.level, xp_frac)
 	hud.show_end(won, tr("Waves cleared: %d / %d\nKeep %d%%  +  gold %d  +  hero Lv %d\nScore %d") % [cleared,
 		Level.WAVES.size(), keep, sim.coins, sim.level, score]
-		+ (tr("\nNew top-10 entry: #%d") % rank if rank > 0 else ""), _end_tables())
+		+ (tr("\nNew top-10 entry: #%d") % rank if rank > 0 else ""), _end_tables(), _end_build())
+	if _args.has("end-build"):
+		hud._end_page(true)
 	sfx.play("victory" if won else "defeat")
 
 
@@ -686,6 +736,48 @@ func _end_tables() -> Array:
 			by.push_back([Models.enemy_icon(k), Level.ename(k), v,
 				100.0 * v / maxf(taken, 1.0)])
 	return [[tr("Damage dealt"), dealt], [tr("Damage taken (gates and keep)"), by]]
+
+
+## The end screen's second page (user, v0.2.4): relics and cards with
+## their tiers, in the order picked, and the buildings standing at the
+## end grouped by kind and level ("Glacier Tower x2", "Ballista III x1").
+func _end_build() -> Array:
+	var relics := []
+	for id in sim.relics:
+		var nm: String = Perks.RELICS[id].name
+		relics.push_back(["", tr(nm), Models.ROMAN[int(sim.relics[id]) - 1], Color(0.85, 0.6, 1.0)])
+	var cards := []
+	for id in sim.perks:
+		var nm: String = Perks.CARDS[id].name
+		var c := UiText.color_of(nm)
+		cards.push_back(["", tr(nm), Models.ROMAN[int(sim.perks[id]) - 1], Color.html(c) if c != "" else Color.WHITE])
+	var groups := {}
+	var order := []
+	for kind in Level.BUILDINGS:
+		for sid in sim.buildings:
+			var b: Dictionary = sim.buildings[sid]
+			if b.kind != kind:
+				continue
+			var key := "%s:%d:%s" % [kind, b.level, b.spec]
+			if not groups.has(key):
+				var label: String
+				if b.spec != "":
+					label = tr(String(Level.spec_of(kind, b.spec).name))
+				else:
+					label = tr(String(Level.BUILDINGS[kind].name)) + " " + Models.ROMAN[int(b.level)]
+				groups[key] = [kind, label, 0]
+				order.push_back(key)
+			groups[key][2] += 1
+	order.sort_custom(func(a: String, b: String) -> bool:
+		var ga: Array = groups[a]
+		var gb: Array = groups[b]
+		var ka := Level.BUILDINGS.keys().find(ga[0])
+		var kb := Level.BUILDINGS.keys().find(gb[0])
+		return ka < kb or (ka == kb and a > b))
+	var built := []
+	for key in order:
+		built.push_back([groups[key][0], groups[key][1], "x%d" % groups[key][2]])
+	return [[tr("Relics"), relics], [tr("Cards"), cards], [tr("Buildings"), built]]
 
 
 ## Behind the title menu: a slow drift over the map.
@@ -1075,7 +1167,9 @@ func _apply_events() -> void:
 			"gate_broken":
 				_shake = 0.4
 				sfx.play("gate_break")
-				hud.message(tr("The %s gate fell!") % tr(Level.LANE_NAMES[e.lane]).to_lower(), 2.0)
+				# Inner (slots 0-2) or outer set: "The outer west gate fell!".
+				var which: String = tr("The inner %s gate fell!") if int(e.spot.slot) < 3 else tr("The outer %s gate fell!")
+				hud.message(which % tr(Level.LANE_NAMES[e.lane]).to_lower(), 2.0)
 			"wave_start":
 				if _persist:
 					Save.save_run(sim.checkpoint)
@@ -1125,7 +1219,9 @@ func _on_built(e: Dictionary) -> void:
 	var spot: Dictionary = e.spot
 	if _built.has(spot.id):
 		(_built[spot.id].root as Node3D).queue_free()
-	var got := Models.building(e.kind, e.level)
+	# Level IV: the spec's own look (Models.spec_tower).
+	var spec := String(e.get("spec", ""))
+	var got := Models.spec_tower(e.kind, spec) if spec != "" else Models.building(e.kind, e.level)
 	var root := Node3D.new()
 	root.add_child(got[0])
 	if e.kind == "gate":
@@ -1499,6 +1595,8 @@ func _draw_enemies() -> void:
 			col = Color(1.3, 1.1, 0.75)
 		elif h.mark_t[i] > 0.0:  # Spotter's mark: a golden glint
 			col = Color(1.45, 1.35, 0.7)
+		elif h.risen[i]:  # raised once by a necromancer: a pale purple
+			col = Color(1.15, 0.8, 1.35)
 		if h.burn_t[i] > 0.0 and h.flash[i] <= 0.0:  # scorched, flickering
 			var fl := 0.85 + 0.15 * sin(sim.time * 23.0 + float(h.uid[i]))
 			col = Color(1.35 * fl, 0.75 * fl, 0.5 * fl)
@@ -1552,8 +1650,8 @@ func _draw_auras() -> void:
 		var rc := Color(1.0, 0.65, 0.15, 0.75)  # haste: orange
 		if e.has("heal"):
 			rc = Color(0.4, 1.0, 0.45, 0.75)
-		elif e.has("revive"):  # purple; dim while the necromancer rests
-			rc = Color(0.75, 0.35, 1.0, 0.75 if h.rest_t[i] <= 0.0 else 0.25)
+		elif e.has("revive"):  # purple
+			rc = Color(0.75, 0.35, 1.0, 0.75)
 		(ring.material_override as StandardMaterial3D).albedo_color = rc
 	for k in range(n, _aura_rings.size()):
 		_aura_rings[k].visible = false
@@ -1617,8 +1715,11 @@ func _draw_projectiles() -> void:
 	if _arrow_buf.size() != _arrow_mm.instance_count * 12:
 		_arrow_buf.resize(_arrow_mm.instance_count * 12)
 		_rock_buf.resize(_rock_mm.instance_count * 12)
+	if _trident_buf.size() != _trident_mm.instance_count * 12:
+		_trident_buf.resize(_trident_mm.instance_count * 12)
 	var na := 0
 	var nr := 0
+	var nt := 0
 	for p in sim.projectiles:
 		var pt := float(p.t) - (1.0 - _alpha) * DT  # between sim steps, like the crowd
 		if pt < 0.0 or p.kind == "wisp":  # held-back Twin volley; wisp shots are glows only (Fx)
@@ -1630,12 +1731,18 @@ func _draw_projectiles() -> void:
 				_put12(_rock_buf, nr, Transform3D(spin, at))
 				nr += 1
 			continue
-		if na >= _arrow_mm.instance_count:
-			continue
 		var ahead := Sim.proj_pos(p, pt + 0.02)
 		var dir := ahead - at
 		if dir.length() < 0.0001:
 			dir = (p.to as Vector3) - (p.from as Vector3)
+		if p.kind == "ballista" and not (p.get("harpoon", []) as Array).is_empty():
+			if nt < _trident_mm.instance_count:  # tip (+z) forward
+				_put12(_trident_buf, nt, Transform3D(Basis.looking_at(dir.normalized(), Vector3.UP, true)
+					.scaled(Vector3.ONE * 1.6), at))
+				nt += 1
+			continue
+		if na >= _arrow_mm.instance_count:
+			continue
 		var s: float = {bolt = 1.2, arrow = 1.5, ballista = 2.6}[p.kind]
 		var basis := Basis.looking_at(dir.normalized(), Vector3.UP).scaled(Vector3.ONE * s)
 		_put12(_arrow_buf, na, Transform3D(basis, at))
@@ -1658,6 +1765,8 @@ func _draw_projectiles() -> void:
 	_arrow_mm.visible_instance_count = na
 	_rock_mm.buffer = _rock_buf
 	_rock_mm.visible_instance_count = nr
+	_trident_mm.buffer = _trident_buf
+	_trident_mm.visible_instance_count = nt
 
 
 func _draw_pay(delta: float) -> void:
@@ -1697,8 +1806,9 @@ func _sync_buildings(delta: float) -> void:
 				bv.reload = maxf(bv.reload - delta, 0.0)
 				if bv.extra:
 					bv.extra.visible = bv.reload <= 0.0
-			"mortar":
-				bv.head.rotation.y = atan2(b.aim.x, b.aim.z)
+			"mortar", "archer":  # the Repeater's turret aims; the Fire Mortar has no head
+				if bv.head:
+					bv.head.rotation.y = atan2(b.aim.x, b.aim.z)
 			"frost":
 				bv.head.rotation.y += delta * 0.8
 			"farm":

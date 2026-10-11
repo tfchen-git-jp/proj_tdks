@@ -19,6 +19,9 @@ const RELIC_WAVES := [3, 6, 9, 12]
 const OFFER_SIZE := 3
 ## Rerolls cost REROLL_COST, then 2x, 3x ... (over the whole run).
 const REROLL_COST := 10
+## A relic offer's rerolls cost more and count apart (user, v0.2.3): 50,
+## 100, 150 ...
+const RELIC_REROLL_COST := 50
 const MAX_TIER := 3
 
 ## Cards. v: the value per tier; desc: per tier, shown for the tier you'd
@@ -52,7 +55,8 @@ const CARDS := {
 	crit = {name = "Keen Eye", v = [0.1, 0.2, 0.3],
 		desc = ["10% chance of a 2.5x critical hit", "20% critical chance", "30% critical chance"]},
 	slayer = {name = "Giant Slayer", v = [1.4, 1.8, 2.2],
-		desc = ["+40% damage to giants", "+80% damage to giants", "+120% damage to giants"]},
+		desc = ["+40% damage to giants and the boss", "+80% damage to giants and the boss",
+			"+120% damage to giants and the boss"]},
 	boots = {name = "Swift Boots", v = [0.1, 0.2, 0.3],
 		desc = ["+10% move speed, and +10% attack speed while moving", "+20% move speed and attack speed while moving",
 			"+30% move speed and attack speed while moving"]},
@@ -87,24 +91,30 @@ const FAR := 5.0
 const RELICS := {
 	twin = {name = "Twin Crossbow", v = [0.5, 0.7, 0.9],
 		desc = ["Every shot fires a second volley at 50% damage right after the first.",
-			"Second volley at 70% damage", "Second volley at 90% damage"]},
+			"Every shot fires a second volley at 70% damage right after the first.",
+			"Every shot fires a second volley at 90% damage right after the first."]},
 	volley = {name = "Volley", v = [[6, 4], [5, 5], [4, 6]],
 		desc = ["Every 6th shot also looses a bolt at each of the 4 nearest enemies.",
-			"Every 5th shot, 5 enemies", "Every 4th shot, 6 enemies"]},
+			"Every 5th shot also looses a bolt at each of the 5 nearest enemies.",
+			"Every 4th shot also looses a bolt at each of the 6 nearest enemies."]},
 	thunder = {name = "Thunderstrike", v = [[8.0, 5], [6.0, 6], [4.5, 8]],
 		desc = ["Every 8 s lightning strikes the toughest enemy near you and chains through 4 more.",
-			"Every 6 s, chains through 5 more", "Every 4.5 s, chains through 7 more"]},
+			"Every 6 s lightning strikes the toughest enemy near you and chains through 5 more.",
+			"Every 4.5 s lightning strikes the toughest enemy near you and chains through 7 more."]},
 	wisp = {name = "Spirit Wisp", v = [0.5, 0.35, 0.25],
-		desc = ["A wisp circles you and shoots bolts with all your bolt cards (80% damage).", "The wisp shoots 40% faster",
-			"The wisp shoots twice as fast"]},
+		desc = ["A wisp circles you and shoots bolts with all your bolt cards (80% damage).",
+			"A wisp circles you and shoots bolts with all your bolt cards (80% damage), 40% faster.",
+			"A wisp circles you and shoots bolts with all your bolt cards (80% damage), twice as fast."]},
 	# Was every 40/30/20 kills: measured the best pick by far (v0.1.29).
 	midas = {name = "Midas Touch", v = [60, 45, 30],
-		desc = ["Every 60th kill near you drops a gold ingot (20).", "Every 45th kill", "Every 30th kill"]},
+		desc = ["Every 60th kill near you drops a gold ingot (20).", "Every 45th kill near you drops a gold ingot (20).",
+			"Every 30th kill near you drops a gold ingot (20)."]},
 	# Last Stand (user, v0.1.30): a gate or the keep about to fall turns
 	# invulnerable for v s instead, once per wave each (Horde.last_stand).
 	laststand = {name = "Last Stand", v = [3.0, 5.0, 7.0],
 		desc = ["Once per wave, a gate or the keep about to fall becomes invulnerable for 3 s.",
-			"Invulnerable for 5 s", "Invulnerable for 7 s"]},
+			"Once per wave, a gate or the keep about to fall becomes invulnerable for 5 s.",
+			"Once per wave, a gate or the keep about to fall becomes invulnerable for 7 s."]},
 }
 const THUNDER_RANGE := 9.0
 const THUNDER_JUMP := 4.5  # m between chained enemies

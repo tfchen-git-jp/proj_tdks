@@ -40,6 +40,8 @@ var _cards_reroll: Button
 var _cards_key := ""
 var _end_info: Label
 var _end_stats: VBoxContainer
+var _end_build: VBoxContainer  # the second page: cards, relics, buildings
+var _end_toggle: Button
 var _end_label: Label
 var _joy: Control
 var _touch := -1
@@ -228,13 +230,26 @@ func _ready() -> void:
 	_end.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_end.visible = false
 	_root.add_child(_end)
+	# A wooden notice board behind the results (user, v0.2.6: mostly solid,
+	# so nothing on the map or HUD reads through it).
+	var board := PanelContainer.new()
+	var wood := _box(Color(0.42, 0.27, 0.15, 0.88), 16, Color(0.24, 0.14, 0.07, 0.95), 6)
+	wood.content_margin_left = 26
+	wood.content_margin_right = 26
+	wood.content_margin_top = 22
+	wood.content_margin_bottom = 26
+	wood.shadow_color = Color(0, 0, 0, 0.45)
+	wood.shadow_size = 12
+	board.add_theme_stylebox_override("panel", wood)
+	board.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	board.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	board.grow_vertical = Control.GROW_DIRECTION_BOTH
+	board.draw.connect(func() -> void: _draw_planks(board))
+	_end.add_child(board)
 	var box := VBoxContainer.new()
-	box.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 24)
-	box.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	box.grow_vertical = Control.GROW_DIRECTION_BOTH
-	_end.add_child(box)
+	box.add_theme_constant_override("separation", 22)
+	board.add_child(box)
 	_build_cards()
 	_end_label = _label("", 72)
 	_end_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -254,6 +269,23 @@ func _ready() -> void:
 	_end_stats = VBoxContainer.new()
 	_end_stats.add_theme_constant_override("separation", 6)
 	sbox.add_child(_end_stats)
+	# Page two (user, v0.2.4): the run's build, behind a toggle.
+	var bbox := PanelContainer.new()
+	bbox.add_theme_stylebox_override("panel", sst)
+	bbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	bbox.visible = false
+	box.add_child(bbox)
+	_end_build = VBoxContainer.new()
+	_end_build.add_theme_constant_override("separation", 6)
+	bbox.add_child(_end_build)
+	_end_toggle = Button.new()
+	_end_toggle.add_theme_font_size_override("font_size", 30)
+	_end_toggle.add_theme_stylebox_override("normal", _box(Color(0.35, 0.25, 0.5), 18, Color(1, 1, 1, 0.8), 3))
+	_end_toggle.add_theme_stylebox_override("hover", _box(Color(0.42, 0.3, 0.58), 18, Color.WHITE, 3))
+	_end_toggle.add_theme_stylebox_override("pressed", _box(Color(0.28, 0.2, 0.4), 18, Color.WHITE, 3))
+	_end_toggle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_end_toggle.pressed.connect(func() -> void: _end_page(not bbox.visible))
+	box.add_child(_end_toggle)
 	var again := Button.new()
 	again.text = "  " + tr("Play again") + "  "
 	again.add_theme_font_size_override("font_size", 44)
@@ -369,7 +401,9 @@ func _card(v: Dictionary, k: int) -> Button:
 		name.add_theme_color_override("font_color", Color.html(elem))
 	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head.add_child(name)
-	var badge := _label(tr("RELIC") if relic else (tr("NEW") if tier == 0 else Models.ROMAN[tier]), 30)
+	# A relic you hold already offers its next tier: "RELIC II".
+	var rname: String = tr("RELIC") + ("" if tier == 0 else " " + Models.ROMAN[tier])
+	var badge := _label(rname if relic else (tr("NEW") if tier == 0 else Models.ROMAN[tier]), 30)
 	badge.add_theme_color_override("font_color", Color(0.85, 0.6, 1.0) if relic
 		else (Color(0.6, 1.0, 0.6) if tier == 0 else Models.BADGE_COLORS[tier].lightened(0.2)))
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -493,6 +527,8 @@ func set_gate_bars(bars: Array) -> void:
 ## hp fraction, berserk].
 ## bosses: [[name, hp fraction, berserk], ...] (one bar each, stacked).
 func set_boss(bosses: Array) -> void:
+	if _end.visible:
+		bosses = []  # the game is over: no bars over the end screen
 	while _boss_bars.size() < bosses.size():
 		var k := _boss_bars.size()
 		var root := Control.new()
@@ -666,7 +702,9 @@ func message(text: String, seconds := 3.0) -> void:
 ## tables: [[title, [[icon, name, value, share %], ...]], ...] ([] hides).
 ## Each table is a grid -- icon + name, value, share -- so the columns line
 ## up in any language; the panel sits centred, as wide as its content.
-func show_end(won: bool, info := "", tables := []) -> void:
+## build: page two, [[title, [[icon ("" none), name, right text], ...]], ...]
+## shown two entries a row.
+func show_end(won: bool, info := "", tables := [], build := []) -> void:
 	_touch = -1
 	_update_move()
 	_end_label.text = tr("VICTORY!") if won else tr("DEFEAT")
@@ -710,9 +748,69 @@ func show_end(won: bool, info := "", tables := []) -> void:
 		_intro.visible = false
 	_msg_t = 0.0
 	_msg.modulate.a = 0.0
+	for c in _end_build.get_children():
+		c.queue_free()
+	for t in build:
+		if _end_build.get_child_count() > 0:
+			_end_build.add_child(Control.new())
+		var head := _label(String(t[0]), 26)
+		head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		head.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
+		_end_build.add_child(head)
+		var grid := GridContainer.new()
+		grid.columns = 4  # two entries a row: name, value
+		grid.add_theme_constant_override("h_separation", 14)
+		grid.add_theme_constant_override("v_separation", 4)
+		grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		_end_build.add_child(grid)
+		if (t[1] as Array).is_empty():
+			grid.add_child(_label(tr("None"), 22))
+		for r in t[1]:
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 6)
+			if String(r[0]) != "":
+				var icon := TextureRect.new()
+				icon.texture = load(UiText.ICONS + String(r[0]) + ".png")
+				icon.custom_minimum_size = Vector2(30, 30)
+				icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+				row.add_child(icon)
+			var name := _label(String(r[1]), 22)
+			if r.size() > 3:
+				name.add_theme_color_override("font_color", r[3])
+			row.add_child(name)
+			grid.add_child(row)
+			var v := _label(String(r[2]), 22)
+			v.modulate = Color(1, 1, 1, 0.8)
+			grid.add_child(v)
+	_end_toggle.visible = not build.is_empty()
+	_end_page(false)
 	(_end_stats.get_parent() as Control).visible = not tables.is_empty()
+	set_boss([])
+	_root.move_child(_end, -1)  # above the HP bars and messages
 	_end.visible = true
 	minimap.visible = false
+
+
+## The end screen's page: the results (false) or the build (true).
+func _end_page(build: bool) -> void:
+	_end_build.get_parent().visible = build
+	(_end_stats.get_parent() as Control).visible = not build and _end_stats.get_child_count() > 0
+	_end_toggle.text = "  " + (tr("Results") if build else tr("Your build")) + "  "
+
+
+## The notice board's planks (dark seams across it) and a nail in each corner.
+func _draw_planks(board: Control) -> void:
+	var w := board.size.x
+	var h := board.size.y
+	var y := 64.0
+	while y < h - 20.0:
+		board.draw_line(Vector2(8, y), Vector2(w - 8, y), Color(0.2, 0.11, 0.05, 0.45), 3.0)
+		board.draw_line(Vector2(8, y + 3), Vector2(w - 8, y + 3), Color(0.6, 0.42, 0.26, 0.25), 1.5)
+		y += 64.0
+	for p in [Vector2(20, 20), Vector2(w - 20, 20), Vector2(20, h - 20), Vector2(w - 20, h - 20)]:
+		board.draw_circle(p, 6.0, Color(0.55, 0.55, 0.6))
+		board.draw_circle(p - Vector2(1.5, 1.5), 2.5, Color(0.85, 0.85, 0.9))
 
 
 func hide_end() -> void:

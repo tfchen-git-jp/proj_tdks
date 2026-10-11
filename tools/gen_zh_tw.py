@@ -111,29 +111,38 @@ def build():
     t("Damage taken (gates and keep)", "受到的傷害（%s與%s）" % (g["gate"], g["keep"]))
     t("Hero", g["hero"])
     t("None", "無")
+    t("Your build", "本局配置")
+    t("Results", "戰績")
+    t("Relics", g["relic"])
+    t("Cards", "升級卡")
+    t("Buildings", "建築")
     t("\nNew top-10 entry: #%d", "\n新紀錄：第 %d 名")
-    t("RogueShot Tower Defense\nMade with Godot Engine 4.7 (godotengine.org), by directing Claude.\n\n3D MODELS (CC0)\n"
-      "Kay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian, captain), Skeletons (crossbowmen, bone mages, Bone Warlord), "
-      "Medieval Hexagon (archer tower, windmill, market, keep, flag, gate), Dungeon Remastered (coins), Forest Nature (rocks)\n"
+    t("RogueShot Tower Defense\nGame design and direction: David Chen JP\nProgrammed with Claude (Anthropic) as the coding assistant\n"
+      "Made with Godot Engine 4.7 (godotengine.org)\n\n3D MODELS (CC0)\n"
+      "Kay Lousberg (kaylousberg.com): KayKit Adventurers (hero, barbarian, captain, shade, necromancer), "
+      "Skeletons (crossbowmen, bone mages, sappers, warded, Bone Warlord), "
+      "Medieval Hexagon (archer and sniper towers, fire mortar, windmill, market, keep, flags, gate), "
+      "Dungeon Remastered (coins), Forest Nature (rocks)\n"
       "Kenney (kenney.nl): Tower Defense Kit, Mini Dungeon, Mini Arena, Nature Kit\n"
-      "Quaternius (quaternius.com): Animated Monsters (bat, slime)\n\nSOUND (CC0 unless noted)\n"
+      "Quaternius (quaternius.com): Animated Monsters (bat, slime, drake)\n\nSOUND (CC0 unless noted)\n"
       "Kenney: RPG Audio, Impact Sounds, Interface Sounds, Casino Audio, Sci-fi Sounds, Music Jingles\n"
       "OpenGameArt: artisticdude (bow, freeze spell), Vehicle / Jan Schupke (Tinysized SFX), bart (ice spells), "
       "rubberduck (creature SFX), Joth (chunky explosion), qubodup (dull explosion), fvcalderan (fanfare), "
       "0new4y (game-over trumpet)\nWave horn: \"Scary Echoey Horn Esque Sound\" by Kat, CC-BY 4.0 (opengameart.org)\n\n"
       "MUSIC\n\"RPG City\" by phantasticbeats (Pixabay)\n\nThanks for playing!",
-      "%s\n以 Godot Engine 4.7（godotengine.org）製作，由 Claude 協力開發。\n\n3D 模型（CC0）\n"
-      "Kay Lousberg（kaylousberg.com）：KayKit Adventurers（%s、%s、%s）、Skeletons（%s、%s、%s）、"
-      "Medieval Hexagon（%s、風車、市集、%s、旗幟、%s）、Dungeon Remastered（金幣）、Forest Nature（岩石）\n"
+      "%s\n遊戲設計與製作：David Chen JP\n程式協力：Claude（Anthropic）\n以 Godot Engine 4.7（godotengine.org）製作\n\n3D 模型（CC0）\n"
+      "Kay Lousberg（kaylousberg.com）：KayKit Adventurers（%s、%s、%s、%s、%s）、Skeletons（%s、%s、%s、%s、%s）、"
+      "Medieval Hexagon（%s、%s、%s、風車、市集、%s、旗幟、%s）、Dungeon Remastered（金幣）、Forest Nature（岩石）\n"
       "Kenney（kenney.nl）：Tower Defense Kit、Mini Dungeon、Mini Arena、Nature Kit\n"
-      "Quaternius（quaternius.com）：Animated Monsters（%s、%s）\n\n音效（除另註明外皆為 CC0）\n"
+      "Quaternius（quaternius.com）：Animated Monsters（%s、%s、%s）\n\n音效（除另註明外皆為 CC0）\n"
       "Kenney：RPG Audio、Impact Sounds、Interface Sounds、Casino Audio、Sci-fi Sounds、Music Jingles\n"
       "OpenGameArt：artisticdude（弓、冰凍法術）、Vehicle / Jan Schupke（Tinysized SFX）、bart（冰系法術）、"
       "rubberduck（生物音效）、Joth（爆炸）、qubodup（悶響爆炸）、fvcalderan（號角曲）、"
       "0new4y（失敗號角）\n波次號角：Kat〈Scary Echoey Horn Esque Sound〉，CC-BY 4.0（opengameart.org）\n\n"
       "音樂\nphantasticbeats〈RPG City〉（Pixabay）\n\n感謝遊玩！"
-      % (g["title"], g["hero"], g["brute"], g["captain"], g["crossbowman"], g["mage"], g["boss"], g["archer"], g["keep"],
-         g["gate"], g["bat"], g["slime"]))
+      % (g["title"], g["hero"], g["brute"], g["captain"], g["shade"], g["necro"],
+         g["crossbowman"], g["mage"], g["sapper"], g["warded"], g["boss"],
+         g["archer"], g["s_sniper"], g["s_fire"], g["keep"], g["gate"], g["bat"], g["slime"], g["drake"]))
 
     # --- HUD, phases, messages ----------------------------------------------
     t("KEEP", g["keep"])
@@ -149,7 +158,8 @@ def build():
     t("+%d gold from Midas Touch", "%s +%%d %s" % (g["r_midas"], g["gold"]))
     t("+%d gold from Bounty", "%s +%%d %s" % (g["c_bounty"], g["gold"]))
     t("Last Stand! Invulnerable for %d s", "%s！無敵 %%d 秒" % g["r_laststand"])
-    t("The %s gate fell!", "%%s%s被攻破了！" % g["gate"])
+    t("The inner %s gate fell!", "%%s內%s被攻破了！" % g["gate"])
+    t("The outer %s gate fell!", "%%s外%s被攻破了！" % g["gate"])
     t("Berserk!", g["berserk"] + "！")
     t("BERSERK", g["berserk"])
     t("The Warlord calls for help!", "%s召喚援軍！" % g["boss"])
@@ -320,7 +330,7 @@ def build():
     t("Small and quick, born from a slime.", "又小又快，由%s分裂而來。" % g["slime"])
     t("mortars, frost, Repeater", "%s、%s、%s" % (g["mortar"], g["frost_t"], g["s_repeater"]))
     t("single big shots", "單發重擊")
-    t("Heals all within 4.5 m, 5% HP a second. Kill it first.", "%s 4.5 公尺內所有敵人，每秒 5%% 生命。優先擊殺！" % w["heal"])
+    t("Heals all within 4.5 m, 18% HP a second. Kill it first.", "%s 4.5 公尺內所有敵人，每秒 18%% 生命。優先擊殺！" % w["heal"])
     t("the hero, Sniper", "%s、%s" % (g["hero"], g["s_sniper"]))
     t("All within 4 m walk and attack 40% faster.", "4 公尺內所有敵人移動與攻擊%s 40%%。" % w["haste"])
     t("ballistas, mortars", "%s、%s" % (g["ballista"], g["mortar"]))
@@ -338,7 +348,7 @@ def build():
     t("archers, the hero", "%s、%s" % (g["archer"], g["hero"]))
     t("Armored flyer, straight to the keep.", "重甲飛行敵人，直撲%s。" % g["keep"])
     t("ballistas, archers, the hero", "%s、%s、%s" % (g["ballista"], g["archer"], g["hero"]))
-    t("Raises an ally that falls near it at full HP (then rests 8 s).", "讓附近倒下的同伴滿血復活（之後休息 8 秒）。")
+    t("Raises allies that fall near it at full HP, each only once.", "讓附近倒下的同伴滿血復活，每個只能復活一次。")
     t("giants (a second life)", "%s（第二條命）" % w["giants"])
     t("banners", g["banner"])
     t("war banner", g["banner"])
@@ -417,9 +427,9 @@ def build():
     t("10% chance of a 2.5x critical hit", "10%% 機率造成 2.5 倍%s" % w["critical"])
     t("20% critical chance", "%s機率 20%%" % w["critical"])
     t("30% critical chance", "%s機率 30%%" % w["critical"])
-    t("+40% damage to giants", "對%s傷害 +40%%" % w["giants"])
-    t("+80% damage to giants", "對%s傷害 +80%%" % w["giants"])
-    t("+120% damage to giants", "對%s傷害 +120%%" % w["giants"])
+    t("+40% damage to giants and the boss", "對%s與%s傷害 +40%%" % (w["giants"], w["the_boss"]))
+    t("+80% damage to giants and the boss", "對%s與%s傷害 +80%%" % (w["giants"], w["the_boss"]))
+    t("+120% damage to giants and the boss", "對%s與%s傷害 +120%%" % (w["giants"], w["the_boss"]))
     t("+10% move speed, and +10% attack speed while moving", "移動速度 +10%，移動中攻擊速度 +10%")
     t("+20% move speed and attack speed while moving", "移動速度與移動中攻擊速度 +20%")
     t("+30% move speed and attack speed while moving", "移動速度與移動中攻擊速度 +30%")
@@ -446,27 +456,27 @@ def build():
     for en, key in [("Twin Crossbow", "r_twin"), ("Volley", "r_volley"), ("Thunderstrike", "r_thunder"),
                     ("Spirit Wisp", "r_wisp"), ("Midas Touch", "r_midas"), ("Last Stand", "r_laststand")]:
         t(en, g[key])
-    t("Every shot fires a second volley at 50% damage right after the first.", "每次射擊後，緊接著再射出一輪 50% 傷害的弩箭。")
-    t("Second volley at 70% damage", "第二輪 70% 傷害")
-    t("Second volley at 90% damage", "第二輪 90% 傷害")
-    t("Every 6th shot also looses a bolt at each of the 4 nearest enemies.", "每第 6 次射擊，額外向最近的 4 個敵人各射一箭。")
-    t("Every 5th shot, 5 enemies", "每第 5 次射擊，5 個敵人")
-    t("Every 4th shot, 6 enemies", "每第 4 次射擊，6 個敵人")
-    t("Every 8 s lightning strikes the toughest enemy near you and chains through 4 more.",
-      "每 8 秒，%s擊中你附近最強的敵人，並連鎖到另外 4 個。" % w["lightning"])
-    t("Every 6 s, chains through 5 more", "每 6 秒，連鎖到另外 5 個")
-    t("Every 4.5 s, chains through 7 more", "每 4.5 秒，連鎖到另外 7 個")
+    for pct in [50, 70, 90]:
+        t("Every shot fires a second volley at %d%% damage right after the first." % pct,
+          "每次射擊後，緊接著再射出第二輪弩箭（%d%% 傷害）。" % pct)
+    for nth, n in [(6, 4), (5, 5), (4, 6)]:
+        t("Every %dth shot also looses a bolt at each of the %d nearest enemies." % (nth, n),
+          "每第 %d 次射擊，額外向最近的 %d 個敵人各射一箭。" % (nth, n))
+    for sec, n in [("8", 4), ("6", 5), ("4.5", 7)]:
+        t("Every %s s lightning strikes the toughest enemy near you and chains through %d more." % (sec, n),
+          "每 %s 秒，%s擊中你附近最強的敵人，並連鎖到另外 %d 個。" % (sec, w["lightning"], n))
     t("A wisp circles you and shoots bolts with all your bolt cards (80% damage).",
       "%s繞著你飛行，射出帶有你所有弩箭卡效果的弩箭（80%% 傷害）。" % g["r_wisp"])
-    t("The wisp shoots 40% faster", "%s射速 +40%%" % g["r_wisp"])
-    t("The wisp shoots twice as fast", "%s射速加倍" % g["r_wisp"])
-    t("Every 60th kill near you drops a gold ingot (20).", "在你附近每擊殺 60 個敵人，掉落一塊%s（20）。" % w["ingot"])
-    t("Every 45th kill", "每擊殺 45 個")
-    t("Every 30th kill", "每擊殺 30 個")
-    t("Once per wave, a gate or the keep about to fall becomes invulnerable for 3 s.",
-      "每%s一次：即將被攻破的%s或%s無敵 3 秒。" % (g["wave"], g["gate"], g["keep"]))
-    t("Invulnerable for 5 s", "無敵 5 秒")
-    t("Invulnerable for 7 s", "無敵 7 秒")
+    t("A wisp circles you and shoots bolts with all your bolt cards (80% damage), 40% faster.",
+      "%s繞著你飛行，射出帶有你所有弩箭卡效果的弩箭（80%% 傷害），射速 +40%%。" % g["r_wisp"])
+    t("A wisp circles you and shoots bolts with all your bolt cards (80% damage), twice as fast.",
+      "%s繞著你飛行，射出帶有你所有弩箭卡效果的弩箭（80%% 傷害），射速加倍。" % g["r_wisp"])
+    for n in [60, 45, 30]:
+        t("Every %dth kill near you drops a gold ingot (20)." % n,
+          "在你附近每擊殺 %d 個敵人，掉落一塊%s（20）。" % (n, w["ingot"]))
+    for sec in [3, 5, 7]:
+        t("Once per wave, a gate or the keep about to fall becomes invulnerable for %d s." % sec,
+          "每%s一次：即將被攻破的%s或%s無敵 %d 秒。" % (g["wave"], g["gate"], g["keep"], sec))
     return T
 
 

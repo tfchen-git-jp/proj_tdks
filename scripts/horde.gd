@@ -35,7 +35,7 @@ var brittle_t := PackedFloat32Array()  # ... for this many seconds
 var immune := PackedByteArray()  # 1 = slows and freezes don't work (the berserk boss)
 var hidden := PackedByteArray()  # 1 = a cloaked shade nobody reveals: untargetable (Sim._reveal)
 var reveal_t := PackedFloat32Array()  # s it stays revealed after leaving a revealing tower's reach
-var rest_t := PackedFloat32Array()  # a necromancer's rest before it can raise again, s
+var risen := PackedByteArray()  # 1: raised once by a necromancer (never again)
 var mark_v := PackedFloat32Array()  # Spotter: extra damage from towers ...
 var mark_t := PackedFloat32Array()  # ... for this many seconds
 ## Per enemy this step: the best haste from a captain nearby (walk and
@@ -159,7 +159,7 @@ func spawn(type: int, ln: int, hp_mult := 1.0, at_d := -1.0, at_off := INF) -> v
 	immune.push_back(0)
 	hidden.push_back(1 if e.get("cloak", false) else 0)
 	reveal_t.push_back(0.0)
-	rest_t.push_back(0.0)
+	risen.push_back(0)
 	mark_v.push_back(0.0)
 	mark_t.push_back(0.0)
 	haste.push_back(0.0)
@@ -242,16 +242,16 @@ func damage(i: int, amount: float, flashes := true, armored := true) -> bool:
 	return false
 
 
-## A necromancer within reach and rested raises enemy i, dying, back to
-## full HP (user, v0.2.1: no corpses kept; the fall is undone). Never a
-## boss or a necromancer. Returns true if it did.
+## A necromancer within reach raises enemy i, dying, back to full HP
+## (user, v0.2.1: no corpses kept; the fall is undone). Each enemy only
+## once; never a boss or a necromancer. Returns true if it did.
 func _raise(i: int) -> bool:
 	var ei: Dictionary = Level.ENEMIES[kind[i]]
-	if ei.get("boss", false) or ei.has("revive"):
+	if ei.get("boss", false) or ei.has("revive") or risen[i]:
 		return false
 	for j in count():
 		var ej: Dictionary = Level.ENEMIES[kind[j]]
-		if j == i or hp[j] <= 0.0 or not ej.has("revive") or rest_t[j] > 0.0:
+		if j == i or hp[j] <= 0.0 or not ej.has("revive"):
 			continue
 		var r := float(ej.aura)
 		if Vector2(pos[i].x - pos[j].x, pos[i].z - pos[j].z).length() > r:
@@ -259,7 +259,7 @@ func _raise(i: int) -> bool:
 		hp[i] = max_hp[i]
 		burn_t[i] = 0.0
 		burn_dps[i] = 0.0
-		rest_t[j] = float(ej.revive[1 if ei.get("heavy", false) else 0])
+		risen[i] = 1
 		raised.push_back(pos[i])
 		return true
 	return false
@@ -361,7 +361,6 @@ func step(dt: float) -> void:
 		brittle_t[i] -= dt
 		mark_t[i] -= dt
 		reveal_t[i] -= dt
-		rest_t[i] -= dt
 		var nd := d[i] + maxf(spd[i], escort[i]) * pace(i) * dt
 		blocked[i] = 0
 		var stop := d[i] + 1e9
@@ -781,7 +780,7 @@ func _compact() -> void:
 		mult[i] = mult[last]; freeze_t[i] = freeze_t[last]; brittle[i] = brittle[last]
 		brittle_t[i] = brittle_t[last]; immune[i] = immune[last]; haste[i] = haste[last]; healed[i] = healed[last]
 		escort[i] = escort[last]; mark_v[i] = mark_v[last]; mark_t[i] = mark_t[last]
-		hidden[i] = hidden[last]; reveal_t[i] = reveal_t[last]; rest_t[i] = rest_t[last]
+		hidden[i] = hidden[last]; reveal_t[i] = reveal_t[last]; risen[i] = risen[last]
 		d[i] = d[last]; off[i] = off[last]; spd[i] = spd[last]; gap[i] = gap[last]
 		phase[i] = phase[last]; flash[i] = flash[last]; slow[i] = slow[last]
 		slow_t[i] = slow_t[last]; blocked[i] = blocked[last]; pos[i] = pos[last]
@@ -791,7 +790,7 @@ func _compact() -> void:
 		power.resize(last); stage.resize(last)
 		mult.resize(last); freeze_t.resize(last); brittle.resize(last); brittle_t.resize(last)
 		immune.resize(last); haste.resize(last); healed.resize(last); escort.resize(last)
-		mark_v.resize(last); mark_t.resize(last); hidden.resize(last); reveal_t.resize(last); rest_t.resize(last)
+		mark_v.resize(last); mark_t.resize(last); hidden.resize(last); reveal_t.resize(last); risen.resize(last)
 		d.resize(last); off.resize(last); spd.resize(last); gap.resize(last)
 		phase.resize(last); flash.resize(last); slow.resize(last)
 		slow_t.resize(last); blocked.resize(last); pos.resize(last)

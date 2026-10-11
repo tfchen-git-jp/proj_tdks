@@ -56,6 +56,7 @@ var relics := {}  # relic id -> tier owned (1..MAX_TIER)
 var offer: Array = []  # the card / relic ids on offer now (build phase)
 var offer_relic := false
 var rerolls := 0
+var relic_rerolls := 0
 var _card_rng := RandomNumberGenerator.new()
 var _shots := 0  # for Volley
 var _thunder_cd := 0.0
@@ -339,6 +340,8 @@ func hero_speed() -> float:
 
 
 func reroll_cost() -> int:
+	if offer_relic:
+		return Perks.RELIC_REROLL_COST * (relic_rerolls + 1)
 	return Perks.REROLL_COST * (rerolls + 1)
 
 
@@ -412,7 +415,10 @@ func reroll() -> bool:
 	if offer.is_empty() or coins < reroll_cost():
 		return false
 	coins -= reroll_cost()
-	rerolls += 1
+	if offer_relic:
+		relic_rerolls += 1
+	else:
+		rerolls += 1
 	_roll(offer_relic)
 	return true
 
@@ -494,7 +500,7 @@ func to_save() -> Dictionary:
 		base_hp = base_hp, time = time, hero = [hero_pos.x, hero_pos.z], buildings = bl,
 		rng = str(_rng.state), hrng = str(horde._rng.state), killed = horde.killed,
 		xp = xp, level = level, pending_levels = pending_levels, pending_relics = pending_relics,
-		perks = perks, relics = relics, offer = offer, offer_relic = offer_relic, rerolls = rerolls,
+		perks = perks, relics = relics, offer = offer, offer_relic = offer_relic, rerolls = rerolls, relic_rerolls = relic_rerolls,
 		crng = str(_card_rng.state), shots = _shots, near_kills = _near_kills}
 
 
@@ -532,6 +538,7 @@ static func from_save(d: Dictionary) -> Sim:
 	s.offer = Array(d.offer)
 	s.offer_relic = bool(d.offer_relic)
 	s.rerolls = int(d.rerolls)
+	s.relic_rerolls = int(d.get("relic_rerolls", 0))
 	s._card_rng.state = int(d.crng)
 	s._shots = int(d.shots)
 	s._near_kills = int(d.near_kills)

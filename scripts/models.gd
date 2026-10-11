@@ -219,6 +219,201 @@ static func building(kind: String, level: int) -> Array:
 	return out
 
 
+## A level-IV tower's own look (spec id), from the same CC0 kits: Kenney
+## Tower Defense Kit parts and KayKit Hexagon buildings in other colours.
+## Returns [root, head (turns to aim) or null, spinner or null]; an
+## unknown spec falls back to the level-III model, grown.
+static func spec_tower(kind: String, spec: String) -> Array:
+	var out: Array = []
+	match spec:
+		"sniper":  # a taller lookout, red roofs
+			var t := _stack([HEX + "building_tower_B_red.gltf"], 1.3)
+			out = [t, null, null]
+		"repeater":  # square tower, rotary turret
+			var t := _stack([TD + "tower-square-bottom-a.glb", TD + "tower-square-middle-b.glb",
+				TD + "tower-square-top-a.glb"], TOWER_SCALE)
+			var head: Node3D = scene(TD + "weapon-turret.glb").instantiate()
+			head.position.y = float(t.get_meta("top")) - 0.05
+			t.add_child(head)
+			out = [t, head, null]
+		"great":  # taller, wide crenellated top, a bigger bolt thrower
+			var t := _stack([TD + "tower-round-bottom-b.glb", TD + "tower-round-middle-a.glb",
+				TD + "tower-round-middle-a.glb", TD + "tower-round-top-b.glb"], TOWER_SCALE)
+			var head: Node3D = scene(TD + "weapon-ballista.glb").instantiate()
+			head.scale = Vector3.ONE * 1.35
+			head.position.y = float(t.get_meta("top")) - 0.12
+			t.add_child(head)
+			out = [t, head, null]
+		"harpoon":  # the ballista loaded with a trident (user, v0.2.4)
+			var t := _stack([TD + "tower-round-bottom-a.glb", TD + "tower-round-middle-b.glb",
+				TD + "tower-round-top-a.glb"], TOWER_SCALE)
+			var head: Node3D = scene(TD + "weapon-ballista.glb").instantiate()
+			head.position.y = float(t.get_meta("top")) - 0.12
+			t.add_child(head)
+			var kit: Node3D = head.find_child("arrow", true, false)
+			kit.visible = false  # Kenney's bow + bolt are one mesh: ours replace both
+			var bow := MeshInstance3D.new()
+			bow.mesh = bow_mesh()
+			bow.position = kit.position
+			head.add_child(bow)
+			var tri := MeshInstance3D.new()
+			tri.mesh = trident_mesh()
+			tri.scale = Vector3.ONE * 1.15
+			tri.position = kit.position + Vector3(0, 0.03, 0.0)
+			head.add_child(tri)
+			out = [t, head, tri]
+		"cluster":  # square tower, cannon
+			var t := _stack([TD + "tower-square-bottom-b.glb", TD + "tower-square-middle-a.glb",
+				TD + "tower-square-top-b.glb"], TOWER_SCALE)
+			var head: Node3D = scene(TD + "weapon-cannon.glb").instantiate()
+			head.position.y = float(t.get_meta("top")) - 0.05
+			t.add_child(head)
+			out = [t, head, null]
+		"fire":  # KayKit's red catapult tower
+			var t := _stack([HEX + "building_tower_catapult_red.gltf"], 1.3)
+			out = [t, null, null]
+		"glacier":  # icy white-blue crystals ringed with snow crystals
+			var t := _stack([TD + "tower-round-bottom-a.glb", TD + "tower-round-middle-a.glb",
+				TD + "tower-round-crystals.glb"], TOWER_SCALE)
+			_tint(t.get_child(2), Color(0.75, 1.1, 1.45))
+			for k in 3:
+				var c: Node3D = scene(TD + "snow-detail-crystal-large.glb").instantiate()
+				var a := TAU * k / 3.0 + 0.4
+				c.position = Vector3(cos(a) * 0.45, 0.0, sin(a) * 0.45)
+				c.rotation.y = a
+				t.add_child(c)
+			out = [t, t.get_child(2), null]
+		"frostbite":  # jagged base, deep violet crystals, crystal spikes
+			var t := _stack([TD + "tower-round-bottom-c.glb", TD + "tower-round-middle-c.glb",
+				TD + "tower-round-crystals.glb"], TOWER_SCALE)
+			_tint(t.get_child(2), Color(0.55, 0.35, 0.9))
+			for k in 4:
+				var c: Node3D = scene(TD + "detail-crystal.glb").instantiate()
+				var a := TAU * k / 4.0 + 0.4
+				c.position = Vector3(cos(a) * 0.5, 0.0, sin(a) * 0.5)
+				c.scale = Vector3.ONE * 0.8
+				_tint(c, Color(0.55, 0.35, 0.9))
+				t.add_child(c)
+			out = [t, t.get_child(2), null]
+		"drums":  # two red war flags
+			var t := _stack([TD + "tower-round-bottom-b.glb", TD + "tower-round-base.glb"], TOWER_SCALE)
+			for k in 2:
+				var flag: Node3D = scene(HEX + "flag_red.gltf").instantiate()
+				flag.scale = Vector3.ONE * 5.5 / TOWER_SCALE
+				flag.position = Vector3(-0.22 + 0.44 * k, float(t.get_meta("top")), 0.0)
+				flag.rotation.y = PI * 0.5 * (1 - 2 * k) - 0.3
+				t.add_child(flag)
+			out = [t, t.get_child(2), null]
+		"standard":  # one tall golden standard
+			var t := _stack([TD + "tower-round-bottom-a.glb", TD + "tower-round-middle-a.glb",
+				TD + "tower-round-base.glb"], TOWER_SCALE)
+			var flag: Node3D = scene(HEX + "flag_yellow.gltf").instantiate()
+			flag.scale = Vector3.ONE * 6.5 / TOWER_SCALE
+			flag.position.y = float(t.get_meta("top"))
+			flag.rotation.y = PI * 0.5
+			t.add_child(flag)
+			out = [t, flag, null]
+		_:
+			return building(kind, 3)
+	var root: Node3D = out[0]
+	root.scale *= 1.0 + 0.08 * 3
+	_no_receive_shadows(root)
+	return out
+
+
+## Kenney-palette colours for the procedural pieces.
+const KIT_STEEL := Color(0.72, 0.76, 0.95)
+const KIT_WOOD := Color(0.55, 0.32, 0.2)
+const KIT_ORANGE := Color(1.0, 0.56, 0.38)
+
+
+## A trident along +z (tip forward), ~1 m: wooden shaft, steel head of
+## three barbed prongs on a crossbar. The harpoon ballista's shot.
+static func trident_mesh() -> Mesh:
+	var st := _vc_begin()
+	_box(st, Vector3(-0.025, -0.025, -0.42), Vector3(0.025, 0.025, 0.2), KIT_WOOD)
+	_box(st, Vector3(-0.15, -0.03, 0.18), Vector3(0.15, 0.03, 0.24), KIT_STEEL)
+	for x in [-0.125, 0.0, 0.125]:
+		var top := 0.46 if x == 0.0 else 0.4
+		_box(st, Vector3(x - 0.022, -0.022, 0.24), Vector3(x + 0.022, 0.022, top), KIT_STEEL)
+		_spike(st, Vector3(x, 0, top), 0.045, 0.1, KIT_STEEL)
+	return _vc_commit(st)
+
+
+## The ballista's bow: two limbs swept back from the middle.
+static func bow_mesh() -> Mesh:
+	var st := _vc_begin()
+	_box(st, Vector3(-0.07, -0.05, -0.06), Vector3(0.07, 0.05, 0.06), KIT_ORANGE)
+	for sgn in [-1.0, 1.0]:
+		var t := Transform3D(Basis(Vector3.UP, sgn * 0.45), Vector3(sgn * 0.05, 0, 0))
+		_box(st, Vector3(minf(0.0, sgn * 0.3), -0.04, -0.035), Vector3(maxf(0.0, sgn * 0.3), 0.04, 0.035), KIT_ORANGE, t)
+	return _vc_commit(st)
+
+
+static func _vc_begin() -> SurfaceTool:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	return st
+
+
+static func _vc_commit(st: SurfaceTool) -> Mesh:
+	var m := st.commit()
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.8
+	mat.disable_receive_shadows = true
+	m.surface_set_material(0, mat)
+	return m
+
+
+## A flat-shaded box a..b (transformed by t) in colour c.
+static func _box(st: SurfaceTool, a: Vector3, b: Vector3, c: Color, t := Transform3D.IDENTITY) -> void:
+	var p := []
+	for k in 8:
+		p.push_back(t * Vector3(b.x if k & 1 else a.x, b.y if k & 2 else a.y, b.z if k & 4 else a.z))
+	# Faces as corner indices, counter-clockwise seen from outside.
+	for f in [[0, 2, 3, 1], [4, 5, 7, 6], [0, 1, 5, 4], [2, 6, 7, 3], [0, 4, 6, 2], [1, 3, 7, 5]]:
+		_quad(st, p[f[0]], p[f[1]], p[f[2]], p[f[3]], c)
+
+
+## A four-sided point from a square base (half width w) at `base`, length h along +z.
+static func _spike(st: SurfaceTool, base: Vector3, w: float, h: float, c: Color) -> void:
+	var tip := base + Vector3(0, 0, h)
+	var q := [base + Vector3(-w, -w, 0), base + Vector3(w, -w, 0), base + Vector3(w, w, 0), base + Vector3(-w, w, 0)]
+	for k in 4:
+		_tri(st, q[k], q[(k + 1) % 4], tip, c)
+	_quad(st, q[0], q[3], q[2], q[1], c)
+
+
+static func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c2: Vector3, d: Vector3, c: Color) -> void:
+	_tri(st, a, b, c2, c)
+	_tri(st, a, c2, d, c)
+
+
+## One flat triangle; Godot's front face is clockwise, so it is added reversed.
+static func _tri(st: SurfaceTool, a: Vector3, b: Vector3, c2: Vector3, c: Color) -> void:
+	var n := (b - a).cross(c2 - a).normalized()
+	for v in [a, c2, b]:
+		st.set_color(c)
+		st.set_normal(n)
+		st.add_vertex(v)
+
+
+## Multiply every mesh colour under `n` by `c` (a palette tint on copies
+## of the materials: the shared model keeps its colours).
+static func _tint(n: Node, c: Color) -> void:
+	var meshes := n.find_children("*", "MeshInstance3D", true, false)
+	if n is MeshInstance3D:
+		meshes.push_back(n)
+	for mi in meshes:
+		var m := (mi as MeshInstance3D).mesh.surface_get_material(0)
+		if m is BaseMaterial3D:
+			var d := (m as BaseMaterial3D).duplicate() as BaseMaterial3D
+			d.albedo_color = d.albedo_color * c
+			d.disable_receive_shadows = true  # as _no_receive_shadows
+			(mi as MeshInstance3D).material_override = d
+
+
 ## Model files stacked bottom to top (each placed on the previous one's
 ## top), the whole scaled by `s`.
 static func _stack(paths: Array, s: float) -> Node3D:
