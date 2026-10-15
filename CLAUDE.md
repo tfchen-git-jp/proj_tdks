@@ -6,11 +6,13 @@ TD" on 2026-10-09 -- the hero is a rogue, not a king).
 A 3D low-poly **tower defense for Android (and PC)**, made with Godot 4.7 by
 directing Claude. It started as a recreation of the TD level in Kingshot's
 ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
-(`ref/yt_bHMSu6iMIYI.mp4`, design in `docs/DESIGN.md`). Personal use: the
-user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
-(private). The user designs later levels.
+(`ref/yt_bHMSu6iMIYI.mp4`, design in `docs/DESIGN.md`). A hobby project for
+the user and friends, no store release. Repo: github.com/tfchen-git-jp/proj_tdks,
+PUBLIC since 2026-10-15 (keep private details in the gitignored
+CLAUDE.local.md; the BGM is never committed); builds are shared as GitHub
+releases (see "Releasing"). The user designs later levels.
 
-## The game today (v0.2.9)
+## The game today (v0.2.10)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
@@ -393,6 +395,15 @@ frame in INSTANCE_CUSTOM. One MultiMesh per type, 20 floats per instance
 written in one buffer per frame (main.gd `_put`); corpses share it.
 
 ## Releasing a build to the phone
+
+Public releases (first: v0.2.10, 2026-10-15): `./build.sh release` builds
+the files into D:\wsl_scratch\proj_tdks\release\; Claude commits the
+bump, tags vX and pushes the tag; the user creates the GitHub release on
+that tag in the browser (gh is not logged in here), with notes and both
+files, label None (not pre-release). Friends download from
+github.com/tfchen-git-jp/proj_tdks/releases/latest.
+
+Phone builds:
 
 `./build.sh apk` bumps build_number.txt -> Android versionCode and the
 "v0.2.N" shown bottom-left (build.sh VERSION_MINOR / MINOR_FROM: builds 1-30 were v0.1.1-0.1.30, build 31 = v0.2.1), writes `D:\wsl_scratch\proj_tdks\rogueshot_td.apk`

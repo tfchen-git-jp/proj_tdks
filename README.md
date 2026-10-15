@@ -7,7 +7,8 @@ and grows stronger with rogue-like upgrade cards. It started as a recreation of 
 level in *Kingshot*'s ads and now follows *Thronefall*'s defense system.
 
 A personal project, built by directing Claude (Claude Code) with free CC0 asset
-packs. Not published anywhere.
+packs. Downloads (Android APK, Windows zip):
+[Releases](https://github.com/tfchen-git-jp/proj_tdks/releases/latest).
 
 | | | | |
 |:--:|:--:|:--:|:--:|
