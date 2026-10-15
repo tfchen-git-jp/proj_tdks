@@ -25,3 +25,11 @@ __pycache__/
 
 # Font tool cache (12 MB source font, tools/make_font.py)
 tools/.cache/
+
+# Background music: Pixabay licence forbids standalone redistribution, so
+# it is never committed (copy at D:\wsl_scratch\proj_tdks\bgm_city.mp3)
+assets/music/*.mp3
+assets/music/*.mp3.import
+
+# Machine- and account-specific notes for Claude (paths, devices, links)
+CLAUDE.local.md

@@ -32,6 +32,8 @@ extends Node3D
 ##   --demo=clips --clips=A,B  raw hero clips side by side
 ##   --demo=specs [--kind=K]  level III, then the two level-IV specs (one kind, or all)
 
+## Background music: local only, gitignored (see CLAUDE.md "Assets").
+const BGM := "res://assets/music/bgm_city.mp3"
 const DT := 1.0 / 60.0
 const CAM_PITCH := 56.0
 const CAM_FOV := 38.0  # horizontal (KEEP_WIDTH): same map width on every phone

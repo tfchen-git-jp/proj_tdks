@@ -109,8 +109,18 @@ t_shot() {
   [[ -f "$ROOT/renders/$name.png" ]] && grn "shot saved" || { red "no shot produced"; tail -20 "$LOGS/shot_$name.log"; return 1; }
 }
 
+## The BGM is gitignored (Pixabay licence: no standalone redistribution):
+## a fresh clone builds a silent game unless it is copied in.
+BGM="$ROOT/assets/music/bgm_city.mp3"
+check_bgm() {
+  [[ -f "$BGM" ]] && return 0
+  red "WARNING: no BGM at assets/music/bgm_city.mp3 -- this build will be silent."
+  red "  Copy it from $DIST/bgm_city.mp3, or download \"RPG City\" (phantasticbeats) from Pixabay."
+}
+
 t_export() {
   t_check || return 1
+  check_bgm
   info "exporting Windows build -> $EXE"
   timeout 600 "$GODOT" --headless --path "$ROOT" --export-release "Windows Desktop" "$EXE" > "$LOGS/export.log" 2>&1
   [[ -f "$EXE" ]] || { red "export FAILED"; tail -30 "$LOGS/export.log"; return 1; }
@@ -148,6 +158,7 @@ bump_version() {
 t_apk() {
   bump_version
   t_check || return 1
+  check_bgm
   info "exporting Android debug APK -> $APK"
   rm -f "$APK"
   timeout 600 "$GODOT" --headless --path "$ROOT" --export-debug "Android" "$APK" > "$LOGS/apk.log" 2>&1

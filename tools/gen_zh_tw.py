@@ -3,9 +3,8 @@
 
     python3 tools/gen_zh_tw.py && python3 tools/make_font.py && tools/loc_check.py
 
-G is the glossary: the user's picks from the picking page
-(https://claude.ai/artifact/PRIVATE-LINK, store `picks`; see
-CLAUDE.md "Localization"). Every sentence below is written with G, so a
+G is the glossary: the user's picks from the picking page (an artifact,
+store `picks`; see CLAUDE.md "Localization"). Every sentence below is written with G, so a
 changed pick changes every text that uses it. Wording rules: Taiwan usage
 (tools/loc_check.py MAINLAND), full-width punctuation after Chinese, a
 space between Chinese and a number or Latin word ("第 3 波", "Lv 5").

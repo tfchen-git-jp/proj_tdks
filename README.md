@@ -98,11 +98,12 @@ wave 15. They get tougher every wave.
 - Font: [Noto Sans TC](https://fonts.google.com/noto/specimen/Noto+Sans+TC)
   (SIL Open Font License, `assets/fonts/OFL.txt`).
 - Music: "RPG City" by phantasticbeats via [Pixabay](https://pixabay.com)
-  (Pixabay Content License; included for the game only).
+  (Pixabay Content License). Its licence forbids sharing the file on its
+  own, so it is not in this repository: download it from Pixabay and save
+  it as `assets/music/bgm_city.mp3`, or the game plays without music.
 - Engine: [Godot Engine](https://godotengine.org) (MIT).
 
 ## License
 
 The code is under the [MIT License](LICENSE). The assets keep their own
-licences (see Credits; the background music may not be redistributed on
-its own).
+licences (see Credits; the background music is not included).
