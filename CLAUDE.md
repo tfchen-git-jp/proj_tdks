@@ -10,7 +10,7 @@ ads (`ref/yt_BQE4bvmtvDo.mp4`) and now follows Thronefall's defense system
 user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 (private). The user designs later levels.
 
-## The game today (v0.2.7)
+## The game today (v0.2.9)
 
 - **Hero:** hooded crossbow rogue on a floating joystick (touch anywhere,
   drag; mouse drag on PC, WASD too). Auto-shoots the nearest enemy in range,
@@ -88,11 +88,14 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 - **Map:** three lanes (west, centre, east) converging on the keep at the
   top. 32 spots: 21 tower, 6 gate, 5 economy ("GOLD": farm or bank).
   Spots unlock with the hero's level (Level.SPOTS `lv`; Sim.unlocked),
-  since v0.1.30 by TACTICAL value (user, 2026-10-11), spread to Lv 17:
-  one-lane spots and the keep's flanks first (Lv 1: k_west, k_east,
-  x_e1, x_w2 + gold f_1), spots reaching two lanes from Lv 6, the best
-  last, the crossroads spot x_w4 (all three lanes) at Lv 17; gold plots
-  at 1, 4, 7, 12, 15 (f_4 / f_5 in the back-west corner).
+  since v0.1.30 by TACTICAL value (user, 2026-10-11): one-lane spots
+  and the keep's flanks first (Lv 1: k_west, k_east, x_e1, x_w2 + gold
+  f_1), the crossroads spot x_w4 (all three lanes) last. v0.2.8 (user:
+  play-tests stalled at wave 10 short of spots, the centre lane had
+  none early): centre spots from Lv 2 (gc_t; x_c2 Lv 4, x_c1 Lv 5),
+  every tower spot open by Lv 14 (x_w4; was 17; the hero is ~12-13 at
+  wave 10); gold plots at 1, 4, 7, 12, 15 (f_4 / f_5 in the back-west
+  corner).
   tools/spot_value.gd measures each spot's road in reach per lane. Gates come in two
   sets of three, one per lane, unlocked together: inner set (Lv 3, side by
   side across the middle, z ~9) and outer set (Lv 9, z ~21, nearer the
@@ -136,8 +139,8 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   per gold than another level-1 farm), Bank (interest on held gold
   after each wave: rate 10/15/20% by level, the best bank's rate counts;
   each bank adds 12/25/45 to the cap),
-  Gate (blocks its lane, has HP 154 / 294 / 490, costs 60 / 80 / 120
-  (user, v0.2.4: 70% of the HP at twice the price), repaired after
+  Gate (blocks its lane, has HP 154 / 294 / 490, costs 45 / 60 / 90
+  (user, v0.2.4: 70% of the HP at twice the price; v0.2.8: x0.75, was 60 / 80 / 120), repaired after
   each wave). Range rings: on an empty tower spot the first tap on a
   tower previews its reach (blue; a mortar's dead zone red), the second
   builds; a built tower shows its reach and the next level's (gold).
@@ -504,6 +507,11 @@ Windows build, never in WSL.
   to 2 m outside the walkable area and marked (user: enemies "in range"
   at the bottom of the centre lane weren't shot); score = keep % x 10 +
   gold for ties on waves.
+- v0.2.8 (play-tests: losses at wave 10 for want of tower spots):
+  spots unlock earlier, centre lane from Lv 2; gates cost 45 / 60 / 90.
+  Gotcha: the test full run stalls for good on most seeds (a bone mage
+  heals a crowd at the unbreakable keep; the bot's hero shoots the
+  nearest, never the mage): seed 1017 only passed by luck, now 1021.
 - v0.2.6: credits name the user (David Chen JP, game design and direction;
   Claude as coding assistant) and every model source; the Guide shows
   each tower's two specs as an indented tree (menu._tree_lines); the

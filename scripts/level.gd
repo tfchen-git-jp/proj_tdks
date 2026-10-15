@@ -136,59 +136,61 @@ const BUILDINGS := {
 	gate = {name = "Gate", spot = "gate", desc = "Blocks its lane until broken; rebuilt each wave.",
 		weak = "bats (fly over), crossbowmen (shoot from range)", strong = "grunts, runners, slimes (held in tower range)",
 		# User, v0.2.4: gates too strong: 70% of the HP (220 / 420 / 700) at
-		# twice the cost (30 / 40 / 60).
-		levels = [{cost = 60, hp = 154.0}, {cost = 80, hp = 294.0}, {cost = 120, hp = 490.0}]},
+		# twice the cost (30 / 40 / 60). v0.2.8 (user): 60 / 80 / 120 -> 45 / 60 / 90 (x0.75).
+		levels = [{cost = 45, hp = 154.0}, {cost = 60, hp = 294.0}, {cost = 90, hp = 490.0}]},
 }
 const TOWER_KINDS := ["archer", "ballista", "mortar", "frost", "banner"]
 
 ## Building spots. kind: tower / gate / eco (farm or bank); gates also
 ## name their lane.
 ## lv: the hero level that unlocks the spot. Since v0.1.30 (user,
-## 2026-10-11) by TACTICAL value, not distance from the keep: spots that
-## reach one lane (or only the end of the roads by the keep) open first,
-## spots reaching two lanes later, the crossroads spot x_w4 (all three)
-## last; spread up to level 17 (the hero reaches ~20 in 15 waves). Measure
-## with tools/spot_value.gd. Gates come in sets, one per lane, all
-## unlocked together; `slot` is the gate's Horde slot (0-2 the inner set
-## near the middle of the map, 3-5 the outer set nearer the lane mouths).
+## 2026-10-11) by TACTICAL value: one-lane spots and the keep's flanks
+## first, the crossroads spot x_w4 (all three lanes) last. v0.2.8 (user,
+## play-tests stalled at wave 10 short of tower spots): the centre lane
+## gets spots from level 2 (gc_t, then x_c2 / x_c1), every spot opens
+## two to five levels sooner, all by level 14 (the hero is ~12-13 at
+## wave 10). Measure with tools/spot_value.gd. Gates come in sets, one
+## per lane, all unlocked together; `slot` is the gate's Horde slot (0-2
+## the inner set near the middle of the map, 3-5 the outer set nearer
+## the lane mouths).
 const SPOTS := [
-	# Level 1: one-lane spots and the keep's flanks (low tactical value).
+	# Level 1: one-lane spots and the keep's flanks.
 	{id = "f_1", kind = "eco", lv = 1, pos = Vector3(-7.5, 0, -11.0)},
 	{id = "k_east", kind = "tower", lv = 1, pos = Vector3(3.6, 0, -7.2)},
 	{id = "k_west", kind = "tower", lv = 1, pos = Vector3(-4.6, 0, -8.6)},
 	{id = "x_e1", kind = "tower", lv = 1, pos = Vector3(5.8, 0, -1.4)},
 	{id = "x_w2", kind = "tower", lv = 1, pos = Vector3(-11.2, 0, 2.6)},
-	{id = "w_out", kind = "tower", lv = 2, pos = Vector3(-13.6, 0, 9.5)},
+	# Level 2: the first centre-lane spot, behind the inner centre gate.
+	{id = "gc_t", kind = "tower", lv = 2, pos = Vector3(-5.2, 0, 15.6)},
 	{id = "x_w5", kind = "tower", lv = 2, pos = Vector3(-10.9, 0, 5.8)},
 	# Level 3: the inner gates, side by side across the middle of the map.
 	{id = "g_c1", kind = "gate", lane = 1, slot = 1, lv = 3, pos = Vector3(-5.0, 0, 9.2)},
 	{id = "g_e1", kind = "gate", lane = 2, slot = 2, lv = 3, pos = Vector3(2.0, 0, 9.8)},
 	{id = "g_w1", kind = "gate", lane = 0, slot = 0, lv = 3, pos = Vector3(-11.4, 0, 8.7)},
 	{id = "f_2", kind = "eco", lv = 4, pos = Vector3(-10.5, 0, -4.5)},
-	{id = "x_w3", kind = "tower", lv = 4, pos = Vector3(-13.2, 0, 15.1)},
-	{id = "gw_t", kind = "tower", lv = 5, pos = Vector3(-13.6, 0, 23.6)},
-	{id = "x_w6", kind = "tower", lv = 5, pos = Vector3(-13.7, 0, 27.6)},
-	# From level 6: spots covering two lanes, the best last.
-	{id = "x_w1", kind = "tower", lv = 6, pos = Vector3(-8.2, 0, 29.6)},
+	{id = "x_c2", kind = "tower", lv = 4, pos = Vector3(0.3, 0, 7.6)},
+	{id = "w_out", kind = "tower", lv = 4, pos = Vector3(-13.6, 0, 9.5)},
+	{id = "x_c1", kind = "tower", lv = 5, pos = Vector3(-5.2, 0, 25.1)},
+	{id = "x_w3", kind = "tower", lv = 5, pos = Vector3(-13.2, 0, 15.1)},
+	{id = "c_far", kind = "tower", lv = 6, pos = Vector3(0.9, 0, 28.5)},
+	{id = "gw_t", kind = "tower", lv = 6, pos = Vector3(-13.6, 0, 23.6)},
 	{id = "f_3", kind = "eco", lv = 7, pos = Vector3(5.2, 0, -10.4)},
-	{id = "x_c1", kind = "tower", lv = 7, pos = Vector3(-5.2, 0, 25.1)},
-	{id = "c_far", kind = "tower", lv = 8, pos = Vector3(0.9, 0, 28.5)},
+	{id = "x_w1", kind = "tower", lv = 7, pos = Vector3(-8.2, 0, 29.6)},
+	{id = "x_w6", kind = "tower", lv = 7, pos = Vector3(-13.7, 0, 27.6)},
+	{id = "w_mid", kind = "tower", lv = 8, pos = Vector3(-6.0, 0, 20.0)},
 	# Level 9: the outer gates, nearer the lane mouths.
 	{id = "g_c2", kind = "gate", lane = 1, slot = 4, lv = 9, pos = Vector3(-3.9, 0, 20.7)},
 	{id = "g_e2", kind = "gate", lane = 2, slot = 5, lv = 9, pos = Vector3(6.5, 0, 20.2)},
 	{id = "g_w2", kind = "gate", lane = 0, slot = 3, lv = 9, pos = Vector3(-14.0, 0, 21.0)},
-	{id = "w_mid", kind = "tower", lv = 9, pos = Vector3(-6.0, 0, 20.0)},
-	{id = "gc_t", kind = "tower", lv = 10, pos = Vector3(-5.2, 0, 15.6)},
-	{id = "x_e2", kind = "tower", lv = 11, pos = Vector3(2.3, 0, 17.6)},
+	{id = "x_e2", kind = "tower", lv = 9, pos = Vector3(2.3, 0, 17.6)},
+	{id = "ge_t", kind = "tower", lv = 10, pos = Vector3(1.5, 0, 22.2)},
+	{id = "e_mid", kind = "tower", lv = 11, pos = Vector3(1.6, 0, 12.6)},
+	{id = "e_in", kind = "tower", lv = 12, pos = Vector3(1.1, 0, 2.6)},
 	{id = "f_4", kind = "eco", lv = 12, pos = Vector3(-12.5, 0, -11.5)},
-	{id = "ge_t", kind = "tower", lv = 12, pos = Vector3(1.5, 0, 22.2)},
-	{id = "x_c2", kind = "tower", lv = 13, pos = Vector3(0.3, 0, 7.6)},
-	{id = "e_mid", kind = "tower", lv = 14, pos = Vector3(1.6, 0, 12.6)},
-	{id = "e_in", kind = "tower", lv = 15, pos = Vector3(1.1, 0, 2.6)},
+	{id = "w_in", kind = "tower", lv = 13, pos = Vector3(-4.6, 0, 3.6)},
+	# Level 14: the crossroads spot that reaches all three lanes.
+	{id = "x_w4", kind = "tower", lv = 14, pos = Vector3(-3.7, 0, -1.4)},
 	{id = "f_5", kind = "eco", lv = 15, pos = Vector3(-13.0, 0, -8.0)},
-	{id = "w_in", kind = "tower", lv = 16, pos = Vector3(-4.6, 0, 3.6)},
-	# Level 17: the crossroads spot that reaches all three lanes.
-	{id = "x_w4", kind = "tower", lv = 17, pos = Vector3(-3.7, 0, -1.4)},
 ]
 ## Gate slots in Horde (one standing gate per slot).
 const GATE_SLOTS := 6
