@@ -90,7 +90,7 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   Spots unlock with the hero's level (Level.SPOTS `lv`; Sim.unlocked),
   since v0.1.30 by TACTICAL value (user, 2026-10-11): one-lane spots
   and the keep's flanks first (Lv 1: k_west, k_east, x_e1, x_w2 + gold
-  f_1), the crossroads spot x_w4 (all three lanes) last. v0.2.8 (user:
+  f_1), the crossroads spot x_w4 (all three lanes) last. v0.2.9 (user:
   play-tests stalled at wave 10 short of spots, the centre lane had
   none early): centre spots from Lv 2 (gc_t; x_c2 Lv 4, x_c1 Lv 5),
   every tower spot open by Lv 14 (x_w4; was 17; the hero is ~12-13 at
@@ -140,7 +140,7 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   after each wave: rate 10/15/20% by level, the best bank's rate counts;
   each bank adds 12/25/45 to the cap),
   Gate (blocks its lane, has HP 154 / 294 / 490, costs 45 / 60 / 90
-  (user, v0.2.4: 70% of the HP at twice the price; v0.2.8: x0.75, was 60 / 80 / 120), repaired after
+  (user, v0.2.4: 70% of the HP at twice the price; v0.2.9: x0.75, was 60 / 80 / 120), repaired after
   each wave). Range rings: on an empty tower spot the first tap on a
   tower previews its reach (blue; a mortar's dead zone red), the second
   builds; a built tower shows its reach and the next level's (gold).
@@ -282,8 +282,12 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
 
 - The user keeps play-testing (v0.2.4-0.2.7 "feel more challenging"
   after the warlord / Cluster / 4-wide gate / shade changes and the
-  healer, necromancer and gate buffs) and says what is too hard / easy;
-  tune from that, not from the bot.
+  healer, necromancer and gate buffs; v0.2.9 answers "we fail at wave
+  10 for want of tower spots" with earlier spots and cheaper gates) and
+  says what is too hard / easy; tune from that, not from the bot.
+- Watch for: a bone mage healing a crowd at a wall can outheal the hero
+  (who shoots the nearest enemy, not the mage); the standing bot stalls
+  on it for good.
 - Picking-page rows for the provisional names above.
 - Later (user): endless mode + mutators; card evolutions + new relics;
   gate-set synergy; second map (the user designs it); Japanese; QoL
@@ -416,8 +420,13 @@ Game args (after `--`): `--auto --ff=SEC --speed=X (0 = freeze) --seed=N
 --bowrot=X,Y,Z` (main.gd header explains each). `--demo=clips` (raw
 hero clips side by side) is how the carry pitch was picked; render it
 with `--resolution 1500x600`. `--bench` prints [prof] per-section ms and
-[render] counters. README screenshots (docs/screens) were taken with
-`shot` + `--build`, `--offer=cards`, `--lightning`.
+[render] counters. README screenshots (docs/screens, retaken v0.2.9),
+all with `--mute`: build `--shot-delay=7 --hero=0,2
+--build=f_1:bank,k_west:mortar:4,k_east:archer:4,x_e1:frost:4,g_c1:gate:2,g_e1:gate:2`;
+level_up `--shot-delay=7 --offer=cards --perks=blast:1,multi:1
+--build=f_1:bank`; menu plain; battle `--auto --seed=1021 --ff=728
+--speed=0 --shot-delay=8` (frozen until the 7 s "NEW:" card fades).
+Retake them when locked-pad labels or the HUD change.
 
 ## Target device
 
@@ -507,7 +516,7 @@ Windows build, never in WSL.
   to 2 m outside the walkable area and marked (user: enemies "in range"
   at the bottom of the centre lane weren't shot); score = keep % x 10 +
   gold for ties on waves.
-- v0.2.8 (play-tests: losses at wave 10 for want of tower spots):
+- v0.2.9 (v0.2.8 an interim build; play-tests: losses at wave 10 for want of tower spots):
   spots unlock earlier, centre lane from Lv 2; gates cost 45 / 60 / 90.
   Gotcha: the test full run stalls for good on most seeds (a bone mage
   heals a crowd at the unbreakable keep; the bot's hero shoots the

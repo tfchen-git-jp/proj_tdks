@@ -136,7 +136,7 @@ const BUILDINGS := {
 	gate = {name = "Gate", spot = "gate", desc = "Blocks its lane until broken; rebuilt each wave.",
 		weak = "bats (fly over), crossbowmen (shoot from range)", strong = "grunts, runners, slimes (held in tower range)",
 		# User, v0.2.4: gates too strong: 70% of the HP (220 / 420 / 700) at
-		# twice the cost (30 / 40 / 60). v0.2.8 (user): 60 / 80 / 120 -> 45 / 60 / 90 (x0.75).
+		# twice the cost (30 / 40 / 60). v0.2.9 (user): 60 / 80 / 120 -> 45 / 60 / 90 (x0.75).
 		levels = [{cost = 45, hp = 154.0}, {cost = 60, hp = 294.0}, {cost = 90, hp = 490.0}]},
 }
 const TOWER_KINDS := ["archer", "ballista", "mortar", "frost", "banner"]
@@ -145,7 +145,7 @@ const TOWER_KINDS := ["archer", "ballista", "mortar", "frost", "banner"]
 ## name their lane.
 ## lv: the hero level that unlocks the spot. Since v0.1.30 (user,
 ## 2026-10-11) by TACTICAL value: one-lane spots and the keep's flanks
-## first, the crossroads spot x_w4 (all three lanes) last. v0.2.8 (user,
+## first, the crossroads spot x_w4 (all three lanes) last. v0.2.9 (user,
 ## play-tests stalled at wave 10 short of tower spots): the centre lane
 ## gets spots from level 2 (gc_t, then x_c2 / x_c1), every spot opens
 ## two to five levels sooner, all by level 14 (the hero is ~12-13 at

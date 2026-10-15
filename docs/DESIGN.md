@@ -36,14 +36,17 @@ keeps the decisions, the original analysis and what is left to build.
   towers: no building HP, no hero death.
 - **Spots unlock with the hero's level, by tactical value** (user,
   v0.1.30): one-lane spots and the keep's flanks first (4 tower + 1 gold
-  at level 1), spots reaching two lanes from level 6, the crossroads spot
-  (all three lanes) last at level 17; 5 gold plots (1, 4, 7, 12, 15).
+  at level 1), the crossroads spot (all three lanes) last; 5 gold plots
+  (1, 4, 7, 12, 15). v0.2.9 (user: play-tests failed at wave 10 short of
+  spots): the centre lane gets a spot from level 2, every tower spot is
+  open by level 14 (was 17).
   Gates come in two sets of three (one per lane), the inner set at
   level 3, the outer one nearer the lane mouths at level 9. Idea for
   later: synergy when a whole gate set stands.
 - **Walls take up to 4 attackers at once**, side by side (a giant counts
   as two; user, v0.2.2: one or two in a line was too easy on gates).
-  Gates have 70% of their old HP at twice the cost (user, v0.2.4).
+  Gates have 70% of their old HP at twice the cost (user, v0.2.4); then
+  25% cheaper, 45 / 60 / 90 (user, v0.2.9).
 - **Level-IV specs look different** (v0.2.5, lineup approved by the user):
   parts and colours from the same CC0 kits; the Harpoon Ballista shoots
   tridents.
@@ -197,7 +200,8 @@ gold left over at the end is only the plan running out.
 ## Roadmap (agreed 2026-10-10; batch 1 done in v0.1.18)
 
 0. NOW: the user play-tests (v0.2.7: "more challenging" after the
-   v0.2.2-0.2.4 enemy buffs); tune from that.
+   v0.2.2-0.2.4 enemy buffs; v0.2.9: earlier spots, cheaper gates after
+   losses at wave 10 for want of tower spots); tune from that.
 1. DONE: armour, flyers (bats), ranged siege (crossbowmen), wave-10 boss;
    v0.1.28 slimes, bone mages, captains; v0.2.1 warded, shades, sappers,
    drakes, necromancers.

@@ -432,7 +432,7 @@ func _unlocks() -> void:
 		if sp.kind == "tower":
 			per_level[int(sp.lv)] = int(per_level.get(int(sp.lv), 0)) + 1
 	# v0.1.30: spread thin, at most two tower spots a level, and every
-	# level opens something; v0.2.8 (user): all open by level 15.
+	# level opens something; v0.2.9 (user): all open by level 15.
 	var any := {}
 	for sp in Level.SPOTS:
 		any[int(sp.lv)] = true
@@ -1037,7 +1037,7 @@ func _layout() -> void:
 ## most games), so its keep can't fall and it is rich: this checks the full path,
 ## not the balance (tools/meta_report.py measures that).
 ## Seed: a bone mage healing a crowd at the keep stalls the standing bot
-## for good on most seeds (v0.2.8: 4 of 1017-1022, old and new spot
+## for good on most seeds (v0.2.9: 4 of 1017-1022, old and new spot
 ## unlocks alike); 1021 plays through with both.
 func _full_run() -> void:
 	var s = SimS.new(1021)
