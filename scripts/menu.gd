@@ -14,6 +14,10 @@ var _pages := {}  # name -> Control
 var _continue: Button
 var _scores_box: GridContainer
 var _shade: ColorRect
+## The licence texts the engine and the font require with every copy
+## (Godot MIT + its third-party parts, the font's SIL OFL); filled the
+## first time the page opens (long text).
+var _licenses_box: VBoxContainer
 
 
 func _ready() -> void:
@@ -24,6 +28,7 @@ func _ready() -> void:
 	_pages.main = _main_page()
 	_pages.scores = _scores_page()
 	_pages.credits = _credits_page()
+	_pages.licenses = _licenses_page()
 	_pages.guide = _guide_page()
 	for p in _pages.values():
 		add_child(p)
@@ -47,6 +52,13 @@ func show_page(name: String) -> void:
 		_continue.text = tr("Continue  (wave %d)") % (int(run.wave) + 1) if not run.is_empty() else tr("Continue")
 	if name == "scores":
 		_fill_scores()
+	if name == "licenses" and _licenses_box.get_child_count() == 0:
+		for sec in _licenses():  # a label per section: one 90 KB label is slow
+			var l := _label(sec, 16)
+			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			l.custom_minimum_size = Vector2(600, 0)
+			_licenses_box.add_child(l)
 
 
 # --- pages ------------------------------------------------------------------------
@@ -208,8 +220,60 @@ func _credits_page() -> Control:
 	text.custom_minimum_size = Vector2(600, 0)
 	scroll.add_child(text)
 	box.add_child(scroll)
-	box.add_child(_button(tr("Back"), Color(0.35, 0.35, 0.4), func() -> void: show_page("main")))
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 20)
+	for b in [_button(tr("Licenses"), Color(0.3, 0.4, 0.5), func() -> void: show_page("licenses")),
+			_button(tr("Back"), Color(0.35, 0.35, 0.4), func() -> void: show_page("main"))]:
+		b.custom_minimum_size.x = 300  # two side by side within the 620 px page
+		row.add_child(b)
+	box.add_child(row)
 	return _centered(box)
+
+
+func _licenses_page() -> Control:
+	var box := _column(20)
+	var title := _label(tr("Licenses"), 72)
+	title.add_theme_color_override("font_color", TITLE_GOLD)
+	box.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(620, 820)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_licenses_box = VBoxContainer.new()
+	_licenses_box.add_theme_constant_override("separation", 24)
+	scroll.add_child(_licenses_box)
+	box.add_child(scroll)
+	box.add_child(_button(tr("Back"), Color(0.35, 0.35, 0.4), func() -> void: show_page("credits")))
+	return _centered(box)
+
+
+static func _licenses() -> PackedStringArray:
+	var out := PackedStringArray()
+	out.append("GODOT ENGINE\n\n" + Engine.get_license_text())
+	out.append("NOTO SANS TC (font, subset)\n\n" + FileAccess.get_file_as_string("res://assets/fonts/OFL.txt"))
+	var parts := PackedStringArray()
+	for c in Engine.get_copyright_info():
+		for p in c.parts:
+			parts.append("%s: %s (%s)" % [c.name, ", ".join(p.copyright), p.license])
+	out.append("GODOT THIRD-PARTY COMPONENTS\n\n" + "\n\n".join(parts))
+	var info := Engine.get_license_info()
+	for k in info:
+		out.append(String(k).to_upper() + "\n\n" + String(info[k]))
+	for i in out.size():
+		out[i] = _reflow(out[i])
+	return out
+
+
+## Licence files break lines at ~70 columns: join the lines of each
+## paragraph so the narrow page wraps them cleanly.
+static func _reflow(text: String) -> String:
+	var paras := PackedStringArray()
+	for p in text.replace("\r", "").split("\n\n"):
+		var lines := PackedStringArray()
+		for l in p.split("\n"):
+			lines.append(l.strip_edges())
+		paras.append(" ".join(lines).strip_edges())
+	return "\n\n".join(paras).strip_edges()
 
 
 const CREDITS := """RogueShot Tower Defense

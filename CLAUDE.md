@@ -68,7 +68,9 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   every wave start and clear; Sim.to_save / from_save, SAVE_VERSION 4),
   Scores (top 10 in user://scores.json: waves cleared, then
   Save.score_of = keep HP % x 10 + gold + 50 per hero level,
-  XP progress counting its share), Credits, Exit. Esc / Android
+  XP progress counting its share), Credits (+ a Licenses page: Godot's
+  licence and its third-party parts, the font's OFL; required with every
+  copy), Exit. Esc / Android
   back pauses and asks before leaving a game (mid-wave: Continue resumes
   from the wave's start; build phase: saved as it stands) or quitting.
   Save v4 (v0.1.28): buildings [id, kind, level, spec, spent], relics
@@ -264,8 +266,8 @@ user and friends, never published. Repo: github.com/tfchen-git-jp/proj_tdks
   (`support`) use 適合／不適合.
 - **Provisional (not yet on the picking page, the user's to pick):**
   the v0.2.1 enemy names 符文兵 (warded), 暗影 (shade), 爆破兵
-  (sapper), 飛龍 (drake), 死靈法師 (necromancer) and the v0.2.2 labels
-  適合／不適合 (Good with / Bad with). Add them as rows, then adopt the
+  (sapper), 飛龍 (drake), 死靈法師 (necromancer), the v0.2.2 labels
+  適合／不適合 (Good with / Bad with) and 授權條款 (Licenses, v0.2.10). Add them as rows, then adopt the
   picks in gen_zh_tw.py G.
 - `tools/loc_check.py` (run by `./build.sh test`): every tr / Loc.t
   literal and table text has an entry, %-slots kept, characters in the
@@ -406,6 +408,10 @@ is a separate install the user can delete.
 
 ## Build / test (`./build.sh`, see its header)
 
+`release` (clean tree, BGM present, test, bump, release-mode APK signed
+with the same key via GODOT_ANDROID_KEYSTORE_RELEASE_* env vars + the
+exe zipped, into D:\wsl_scratch\proj_tdks\release\; tagging, pushing
+and `gh release create` are done by hand after the user says so),
 `check` (import + parse every script), `test` (headless rule tests incl. a
 full 15-wave bot run with an unbreakable keep and 99999 gold), `sim [--seed=N] [--idle] [--nopicks]` (balance timeline,
 ~5 s), `shot

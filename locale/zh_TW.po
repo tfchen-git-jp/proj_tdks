@@ -34,6 +34,9 @@ msgstr "離開"
 msgid "Back"
 msgstr "返回"
 
+msgid "Licenses"
+msgstr "授權條款"
+
 msgid "Language: %s"
 msgstr "語言：%s"
 

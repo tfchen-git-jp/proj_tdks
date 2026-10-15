@@ -14,6 +14,8 @@
 #                                 then  ./build.sh adb pair IP:PORT CODE  and  ./build.sh adb connect IP:PORT)
 #   ./build.sh adb ARGS          run Windows adb.exe with ARGS
 #   ./build.sh logcat            phone's Godot log (Ctrl-C to stop)
+#   ./build.sh release           test, bump, release-signed APK + zipped exe -> $DIST/release/
+#                                (then tag, push and `gh release create` by hand)
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -167,6 +169,36 @@ t_apk() {
   grn "APK v$VERSION: $(du -h "$APK" | cut -f1)  (Windows: $(wslpath -w "$APK"))"
 }
 
+## Files for a public release (build only; tagging and uploading are done
+## by hand): the APK exported in release mode, signed with the same key as
+## the debug builds so it installs over them (Godot reads the key from
+## these env vars, nothing in the repo), and the exe zipped. Both land in
+## $DIST/release/. The BGM must be present.
+KEYSTORE="${KEYSTORE:-$HOME/opt/android-debug.keystore}"
+t_release() {
+  [[ -z "$(git -C "$ROOT" status --porcelain)" ]] || { red "commit or stash first: a release is built from a clean tree"; return 1; }
+  [[ -f "$BGM" ]] || { red "no BGM (assets/music/bgm_city.mp3): a release must have music"; return 1; }
+  [[ -f "$KEYSTORE" ]] || { red "no keystore at $KEYSTORE"; return 1; }
+  t_test || return 1
+  bump_version
+  t_check || return 1
+  local tag="v$VERSION" rel="$DIST/release"
+  local apk="$rel/RogueShotTD-$tag.apk" zip="$rel/RogueShotTD-$tag-windows.zip"
+  mkdir -p "$rel"; rm -f "$apk" "$zip"
+  info "exporting release APK -> $apk"
+  GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$KEYSTORE" GODOT_ANDROID_KEYSTORE_RELEASE_USER=androiddebugkey \
+    GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=android \
+    timeout 600 "$GODOT" --headless --path "$ROOT" --export-release "Android" "$apk" > "$LOGS/release_apk.log" 2>&1
+  [[ -f "$apk" ]] || { red "release APK export FAILED"; grep -E "ERROR|error" "$LOGS/release_apk.log" | head -20; return 1; }
+  rm -f "$apk.idsig"
+  t_export || return 1
+  python3 -c "import sys,zipfile; z=zipfile.ZipFile(sys.argv[1],'w',zipfile.ZIP_DEFLATED); z.write(sys.argv[2],'RogueShotTD.exe'); z.close()" "$zip" "$EXE"
+  [[ -f "$zip" ]] || { red "zip FAILED"; return 1; }
+  grn "release $tag built: $(wslpath -w "$rel")"
+  grn "  $(basename "$apk") $(du -h "$apk" | cut -f1), $(basename "$zip") $(du -h "$zip" | cut -f1)"
+  echo "Next (by hand): commit the version bump, tag $tag, push, gh release create."
+}
+
 adbw() { (cd /mnt/c && "$ADB" "$@"); }
 
 t_install() {
@@ -188,6 +220,7 @@ case "$cmd" in
   native)  t_native "$@" ;;
   apk)     t_apk ;;
   install) t_install ;;
+  release) t_release ;;
   adb)     adbw "$@" ;;
   logcat)  adbw logcat -s godot:V ;;
   wait)    wait_idle ;;

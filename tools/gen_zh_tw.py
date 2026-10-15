@@ -79,6 +79,7 @@ def build():
     t("Credits", "製作群")
     t("Exit", "離開")
     t("Back", "返回")
+    t("Licenses", "授權條款")  # provisional: not on the picking page yet
     t("Language: %s", "語言：%s")
     t("Top 10", g["top10"])
     t("Most waves cleared, then score:\nkeep HP % x 10 + gold left + 50 per hero level",
